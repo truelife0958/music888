@@ -42,8 +42,6 @@
 
 🌐 **[在线演示](https://music.weny888.com/)** - 立即体验
 
-📦 **[Vercel 部署示例](https://music888-alpha.vercel.app)** - Vercel 托管版本
-
 ### 一键部署到 Vercel
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/truelife0958/music888)
