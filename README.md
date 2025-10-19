@@ -40,7 +40,29 @@
 
 ### 在线访问
 
-🌐 [在线演示](https://your-demo-url.vercel.app) *(待部署)*
+🌐 **[在线演示](https://music.weny888.com/)** - 立即体验
+
+### 一键部署到 Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/truelife0958/music888)
+
+点击上方按钮即可一键部署到 Vercel,完全免费!
+
+#### 部署步骤:
+
+1. **点击部署按钮** - 点击上方的 "Deploy with Vercel" 按钮
+2. **登录 Vercel** - 使用 GitHub 账号登录 Vercel
+3. **克隆仓库** - Vercel 会自动从 GitHub 克隆项目
+4. **开始部署** - 点击 "Deploy" 按钮开始自动部署
+5. **等待完成** - 通常 1-2 分钟即可完成部署
+6. **访问网站** - 部署完成后会自动生成访问链接
+
+#### 自定义域名(可选):
+
+1. 在 Vercel 项目设置中点击 "Domains"
+2. 添加您的自定义域名
+3. 按照提示配置 DNS 记录
+4. 等待 SSL 证书自动配置完成
 
 ### 本地运行
 
