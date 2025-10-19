@@ -128,3 +128,70 @@ async function handleParsePlaylist(): Promise<void> {
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp);
+
+// 移动端页面切换功能
+(window as any).switchMobilePage = function(pageIndex: number): void {
+    const sections = [
+        document.querySelector('.content-section'),
+        document.querySelector('.player-section'),
+        document.querySelector('.lyrics-section')
+    ];
+
+    const indicators = document.querySelectorAll('.page-indicator');
+
+    // 移除所有 active 类
+    sections.forEach(section => section?.classList.remove('mobile-active'));
+    indicators.forEach(indicator => indicator.classList.remove('active'));
+
+    // 添加当前页面的 active 类
+    if (sections[pageIndex]) {
+        sections[pageIndex]!.classList.add('mobile-active');
+    }
+    if (indicators[pageIndex]) {
+        indicators[pageIndex].classList.add('active');
+    }
+};
+
+// 初始化移动端第一个页面
+if (window.innerWidth <= 768) {
+    (window as any).switchMobilePage(0);
+
+    // 添加触摸滑动支持
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let currentPage = 0;
+    const mainContainer = document.querySelector('.main-container');
+
+    mainContainer?.addEventListener('touchstart', (e) => {
+        touchStartX = (e as TouchEvent).changedTouches[0].screenX;
+    }, { passive: true });
+
+    mainContainer?.addEventListener('touchend', (e) => {
+        touchEndX = (e as TouchEvent).changedTouches[0].screenX;
+        handleSwipe();
+    }, { passive: true });
+
+    function handleSwipe() {
+        const swipeThreshold = 50; // 最小滑动距离
+        const diff = touchStartX - touchEndX;
+
+        if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0 && currentPage < 2) {
+                // 向左滑动 - 下一页
+                currentPage++;
+                (window as any).switchMobilePage(currentPage);
+            } else if (diff < 0 && currentPage > 0) {
+                // 向右滑动 - 上一页
+                currentPage--;
+                (window as any).switchMobilePage(currentPage);
+            }
+        }
+    }
+
+    // 同步页面指示器点击
+    const originalSwitchPage = (window as any).switchMobilePage;
+    (window as any).switchMobilePage = function(pageIndex: number) {
+        currentPage = pageIndex;
+        originalSwitchPage(pageIndex);
+    };
+}
