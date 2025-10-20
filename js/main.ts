@@ -39,6 +39,7 @@ function initializeApp(): void {
     // --- Event Listeners ---
     document.querySelector('.search-btn')!.addEventListener('click', handleSearch);
     document.getElementById('exploreRadarBtn')!.addEventListener('click', handleExplore);
+    document.getElementById('shufflePlayBtn')!.addEventListener('click', handleShufflePlay);
     document.querySelector('.playlist-btn')!.addEventListener('click', handleParsePlaylist);
     
     // Player controls
@@ -46,6 +47,12 @@ function initializeApp(): void {
     document.querySelector('.player-controls .control-btn.small:nth-child(2)')!.addEventListener('click', player.previousSong);
     document.querySelector('.player-controls .control-btn.small:nth-child(4)')!.addEventListener('click', player.nextSong);
     document.getElementById('playModeBtn')!.addEventListener('click', player.togglePlayMode);
+    document.getElementById('playerFavoriteBtn')!.addEventListener('click', () => {
+        const currentSong = player.getCurrentSong();
+        if (currentSong) {
+            player.toggleFavoriteButton(currentSong);
+        }
+    });
     document.getElementById('volumeSlider')!.addEventListener('input', (e) => player.setVolume((e.target as HTMLInputElement).value));
     document.querySelector('.progress-bar')!.addEventListener('click', (e) => player.seekTo(e as MouseEvent));
     
@@ -68,6 +75,157 @@ function initializeApp(): void {
 
     // Initial tab state
     switchTab('saved');
+
+    // 初始化"我的歌单"标签的折叠/展开功能
+    initSavedTabToggles();
+
+    // 加载并显示播放历史和收藏
+    updatePlayHistoryDisplay();
+    updateFavoritesDisplay();
+
+    // 监听收藏变化
+    window.addEventListener('favoritesUpdated', () => {
+        updateFavoritesDisplay();
+    });
+}
+
+// 初始化"我的歌单"标签的折叠/展开功能
+function initSavedTabToggles(): void {
+    // 播放历史折叠/展开
+    const historyHeader = document.getElementById('historyHeader');
+    const historyList = document.getElementById('playHistoryList');
+    const historyToggleIcon = document.getElementById('historyToggleIcon');
+
+    historyHeader?.addEventListener('click', () => {
+        const isHidden = historyList?.style.display === 'none';
+        if (historyList) {
+            historyList.style.display = isHidden ? 'block' : 'none';
+        }
+        if (historyToggleIcon) {
+            historyToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+        }
+    });
+
+    // 我的喜欢折叠/展开
+    const favoritesHeader = document.getElementById('favoritesHeader');
+    const favoritesList = document.getElementById('favoritesList');
+    const favoritesToggleIcon = document.getElementById('favoritesToggleIcon');
+
+    favoritesHeader?.addEventListener('click', () => {
+        const isHidden = favoritesList?.style.display === 'none';
+        if (favoritesList) {
+            favoritesList.style.display = isHidden ? 'block' : 'none';
+        }
+        if (favoritesToggleIcon) {
+            favoritesToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+        }
+    });
+
+    // 我保存的歌单折叠/展开
+    const playlistsHeader = document.getElementById('playlistsHeader');
+    const savedPlaylistsList = document.getElementById('savedPlaylistsList');
+    const playlistsToggleIcon = document.getElementById('playlistsToggleIcon');
+
+    playlistsHeader?.addEventListener('click', () => {
+        const isHidden = savedPlaylistsList?.style.display === 'none';
+        if (savedPlaylistsList) {
+            savedPlaylistsList.style.display = isHidden ? 'block' : 'none';
+        }
+        if (playlistsToggleIcon) {
+            playlistsToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+        }
+    });
+
+    // 清空播放历史
+    document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
+        if (confirm('确定要清空播放历史吗?')) {
+            player.clearPlayHistory();
+            updatePlayHistoryDisplay();
+            ui.showNotification('播放历史已清空', 'success');
+        }
+    });
+
+    // 清空收藏
+    document.getElementById('clearFavoritesBtn')?.addEventListener('click', () => {
+        if (confirm('确定要清空收藏列表吗?')) {
+            player.clearFavorites();
+            updateFavoritesDisplay();
+            ui.showNotification('收藏列表已清空', 'success');
+        }
+    });
+}
+
+// 更新播放历史显示
+function updatePlayHistoryDisplay(): void {
+    const historyList = document.getElementById('playHistoryList');
+    if (!historyList) return;
+
+    const history = player.getPlayHistory();
+
+    if (history.length === 0) {
+        historyList.innerHTML = `
+            <div class="empty-saved-state">
+                <i class="fas fa-history"></i>
+                <div>暂无播放记录</div>
+            </div>
+        `;
+        return;
+    }
+
+    historyList.innerHTML = `
+        <div class="mini-playlist-item" style="padding: 10px; cursor: pointer; border-radius: 8px; transition: background 0.2s;"
+             onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+             onmouseout="this.style.background='transparent'">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-history" style="color: #1db954;"></i>
+                <span style="font-weight: 500;">播放历史 (${history.length}首)</span>
+            </div>
+        </div>
+    `;
+
+    const playlistItem = historyList.querySelector('.mini-playlist-item');
+    playlistItem?.addEventListener('click', () => {
+        ui.displaySearchResults(history, 'savedResults', history);
+        ui.showNotification(`已加载播放历史 (${history.length}首)`, 'success');
+    });
+}
+
+// 更新收藏显示
+function updateFavoritesDisplay(): void {
+    const favoritesList = document.getElementById('favoritesList');
+    if (!favoritesList) return;
+
+    const favorites = player.getFavoriteSongs();
+
+    if (favorites.length === 0) {
+        favoritesList.innerHTML = `
+            <div class="empty-saved-state">
+                <i class="fas fa-heart"></i>
+                <div>暂无收藏歌曲</div>
+                <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
+                    点击播放器的爱心按钮收藏歌曲
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    favoritesList.innerHTML = `
+        <div class="mini-playlist-item" style="padding: 10px; cursor: pointer; border-radius: 8px; transition: background 0.2s;"
+             onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+             onmouseout="this.style.background='transparent'">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-heart" style="color: #ff6b6b;"></i>
+                <span style="font-weight: 500;">我的喜欢 (${favorites.length}首)</span>
+            </div>
+        </div>
+    `;
+
+    const playlistItem = favoritesList.querySelector('.mini-playlist-item');
+    playlistItem?.addEventListener('click', () => {
+        ui.displaySearchResults(favorites, 'savedResults', favorites);
+        ui.showNotification(`已加载我的喜欢 (${favorites.length}首)`, 'success');
+    });
 }
 
 async function handleSearch(): Promise<void> {
@@ -95,6 +253,27 @@ async function handleExplore(): Promise<void> {
     } catch (error) {
         console.error('Explore failed:', error);
         ui.showError('探索失败，请稍后重试', 'searchResults');
+    }
+}
+
+async function handleShufflePlay(): Promise<void> {
+    ui.showLoading('searchResults');
+    try {
+        const songs = await api.exploreRadarAPI();
+
+        // 随机打乱歌曲顺序
+        const shuffled = songs.sort(() => Math.random() - 0.5);
+
+        ui.displaySearchResults(shuffled, 'searchResults', shuffled);
+        ui.showNotification(`已加载${shuffled.length}首随机歌曲，开始播放`, 'success');
+
+        // 自动播放第一首
+        if (shuffled.length > 0) {
+            player.playSong(0, shuffled, 'searchResults');
+        }
+    } catch (error) {
+        console.error('Shuffle play failed:', error);
+        ui.showError('随机播放失败，请稍后重试', 'searchResults');
     }
 }
 

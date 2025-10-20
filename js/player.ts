@@ -11,10 +11,16 @@ let playMode: 'loop' | 'random' | 'single' = 'loop';
 let playHistory: number[] = [];
 let historyPosition: number = -1;
 let lastActiveContainer: string = 'searchResults';
+let consecutiveFailures: number = 0; // 连续播放失败计数
+const MAX_CONSECUTIVE_FAILURES = 5; // 最大连续失败次数
 
 // --- Playlist & Favorites State ---
 let playlistStorage = new Map<string, any>();
 let playlistCounter: number = 0;
+
+// --- Play History State ---
+let playHistorySongs: Song[] = []; // 播放历史歌曲列表
+const MAX_HISTORY_SIZE = 50; // 最多保存50首历史记录
 
 // --- Core Player Functions ---
 
@@ -60,25 +66,61 @@ export async function playSong(index: number, playlist: Song[], containerId: str
         // 确保首选品质在队列首位
         const qualityQueue = [preferredQuality, ...qualityFallback.filter(q => q !== preferredQuality)];
 
-        let urlData: { url: string; br: string } | null = null;
+        let urlData: { url: string; br: string; error?: string; usedSource?: string } | null = null;
         let successQuality = '';
+        let lastError = '';
+        let usedFallback = false;
 
         // 依次尝试各个品质
         for (const quality of qualityQueue) {
             try {
-                const result = await api.getSongUrl(song, quality);
+                // 先尝试原始音乐源
+                let result = await api.getSongUrl(song, quality);
+
+                // 如果原始源失败,尝试多音乐源切换
+                if (!result || !result.url) {
+                    console.log(`原始音乐源失败,尝试多音乐源获取...`);
+                    result = await api.getSongUrlWithFallback(song, quality);
+                    if (result && result.url && result.usedSource !== song.source) {
+                        usedFallback = true;
+                    }
+                }
+
                 if (result && result.url) {
                     urlData = result;
                     successQuality = quality;
+                    api.resetApiFailureCount(); // 成功时重置API失败计数
                     break;
+                } else if (result && result.error) {
+                    lastError = result.error;
                 }
             } catch (err) {
                 console.warn(`获取品质 ${quality} 失败:`, err);
+                lastError = err instanceof Error ? err.message : String(err);
                 continue;
             }
         }
 
         if (urlData && urlData.url) {
+            // 播放成功,重置连续失败计数
+            consecutiveFailures = 0;
+
+            // 提示音乐源切换信息
+            if (usedFallback && urlData.usedSource) {
+                const sourceNames: { [key: string]: string } = {
+                    'netease': '网易云音乐',
+                    'tencent': 'QQ音乐',
+                    'kugou': '酷狗音乐',
+                    'kuwo': '酷我音乐',
+                    'xiami': '虾米音乐',
+                    'baidu': '百度音乐'
+                };
+                ui.showNotification(
+                    `已从备用音乐源 ${sourceNames[urlData.usedSource] || urlData.usedSource} 获取`,
+                    'success'
+                );
+            }
+
             // 提示品质降级信息
             if (successQuality !== preferredQuality) {
                 const qualityNames: { [key: string]: string } = {
@@ -97,6 +139,9 @@ export async function playSong(index: number, playlist: Song[], containerId: str
             audioPlayer.src = urlData.url.replace(/^http:/, 'https:');
             audioPlayer.load();
 
+            // 添加到播放历史
+            addToPlayHistory(song);
+
             const lyricsData = await api.getLyrics(song);
             const lyrics = lyricsData.lyric ? parseLyrics(lyricsData.lyric) : [];
             ui.updateLyrics(lyrics, 0);
@@ -112,13 +157,54 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                 ui.updatePlayButton(false);
             }
         } else {
-            ui.showNotification(`无法获取音乐链接 (${song.name})，将尝试下一首`, 'error');
-            console.error('所有品质尝试均失败:', song);
+            // 播放失败,增加连续失败计数
+            consecutiveFailures++;
+            console.error('所有品质尝试均失败:', song, `连续失败: ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}`);
+
+            // 触发API失败处理(可能切换API)
+            await api.handleApiFailure();
+
+            // 构建详细错误信息
+            let errorMsg = `无法获取音乐链接 (${song.name})`;
+            if (lastError.includes('版权') || lastError.includes('copyright')) {
+                errorMsg += ' - 版权保护';
+            } else if (lastError.includes('空URL')) {
+                errorMsg += ' - 音乐源无此资源';
+            } else if (lastError.includes('timeout') || lastError.includes('超时')) {
+                errorMsg += ' - 网络超时';
+            }
+
+            // 检查是否达到连续失败阈值
+            if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                ui.showNotification(
+                    `连续失败${consecutiveFailures}首，已暂停播放。建议检查网络或更换歌单`,
+                    'error'
+                );
+                consecutiveFailures = 0; // 重置计数
+                isPlaying = false;
+                ui.updatePlayButton(false);
+                return; // 停止自动播放
+            }
+
+            ui.showNotification(`${errorMsg}，将尝试下一首 (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})`, 'error');
             setTimeout(() => nextSong(), 1500);
         }
     } catch (error) {
-        console.error('Error playing song:', error);
-        ui.showNotification('播放失败，将尝试下一首', 'error');
+        consecutiveFailures++;
+        console.error('Error playing song:', error, `连续失败: ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}`);
+
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            ui.showNotification(
+                `连续失败${consecutiveFailures}首，已暂停播放。建议检查网络或更换歌单`,
+                'error'
+            );
+            consecutiveFailures = 0;
+            isPlaying = false;
+            ui.updatePlayButton(false);
+            return;
+        }
+
+        ui.showNotification(`播放失败，将尝试下一首 (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})`, 'error');
         setTimeout(() => nextSong(), 1500);
     }
 }
@@ -227,8 +313,67 @@ export function loadSavedPlaylists(): void {
             playlistCounter = data.counter || 0;
         }
         initializeFavoritesPlaylist();
+
+        //加载播放历史
+        const savedHistory = localStorage.getItem('musicPlayerHistory');
+        if (savedHistory) {
+            playHistorySongs = JSON.parse(savedHistory);
+        }
     } catch (error) {
         console.error('加载我的歌单失败:', error);
+    }
+}
+
+// 添加歌曲到播放历史
+function addToPlayHistory(song: Song): void {
+    // 移除重复的歌曲
+    playHistorySongs = playHistorySongs.filter(
+        s => !(s.id === song.id && s.source === song.source)
+    );
+
+    // 添加到历史开头
+    playHistorySongs.unshift(song);
+
+    // 限制历史记录数量
+    if (playHistorySongs.length > MAX_HISTORY_SIZE) {
+        playHistorySongs = playHistorySongs.slice(0, MAX_HISTORY_SIZE);
+    }
+
+    // 保存到localStorage
+    try {
+        localStorage.setItem('musicPlayerHistory', JSON.stringify(playHistorySongs));
+    } catch (error) {
+        console.error('保存播放历史失败:', error);
+    }
+}
+
+// 获取播放历史
+export function getPlayHistory(): Song[] {
+    return playHistorySongs;
+}
+
+// 清空播放历史
+export function clearPlayHistory(): void {
+    playHistorySongs = [];
+    localStorage.removeItem('musicPlayerHistory');
+}
+
+// 获取收藏歌曲列表
+export function getFavoriteSongs(): Song[] {
+    const key = getFavoritesPlaylistKey();
+    if (!key) return [];
+    const favorites = playlistStorage.get(key);
+    return favorites?.songs || [];
+}
+
+// 清空收藏列表
+export function clearFavorites(): void {
+    const key = getFavoritesPlaylistKey();
+    if (!key) return;
+    const favorites = playlistStorage.get(key);
+    if (favorites) {
+        favorites.songs = [];
+        savePlaylistsToStorage();
     }
 }
 
@@ -264,7 +409,7 @@ export function isSongInFavorites(song: Song): boolean {
 export function toggleFavoriteButton(song: Song): void {
     const key = getFavoritesPlaylistKey();
     if (!key) return;
-    
+
     const favorites = playlistStorage.get(key);
     const songIndex = favorites.songs.findIndex((favSong: Song) => favSong.id === song.id && favSong.source === song.source);
 
@@ -275,9 +420,12 @@ export function toggleFavoriteButton(song: Song): void {
         favorites.songs.unshift(song);
         ui.showNotification(`已添加到"我的喜欢"`, 'success');
     }
-    
+
     savePlaylistsToStorage();
     updatePlayerFavoriteButton();
+
+    // 触发全局事件,通知main.ts更新显示
+    window.dispatchEvent(new CustomEvent('favoritesUpdated'));
 }
 
 function updatePlayerFavoriteButton(): void {
