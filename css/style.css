@@ -1161,3 +1161,85 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
 }
+
+/* Footer Styles */
+.footer {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px 0;
+    margin-top: 40px;
+}
+.footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 30px;
+    text-align: center;
+}
+.footer-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+.footer-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+.footer-links a:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #1db954;
+    transform: translateY(-2px);
+}
+.footer-links a i {
+    font-size: 16px;
+}
+.footer-divider {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 14px;
+}
+.footer-info {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    margin-top: 10px;
+}
+.footer-info p {
+    margin: 0;
+}
+
+/* Mobile Footer Responsive */
+@media (max-width: 768px) {
+    .footer {
+        padding: 20px 0;
+        margin-top: 20px;
+    }
+    .footer-content {
+        padding: 0 15px;
+    }
+    .footer-links {
+        gap: 10px;
+    }
+    .footer-links a {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    .footer-links a i {
+        font-size: 14px;
+    }
+    .footer-divider {
+        display: none;
+    }
+    .footer-info {
+        font-size: 11px;
+    }
+}
