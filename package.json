@@ -1,19 +1,33 @@
 {
   "name": "music888",
-  "version": "1.0.0",
-  "description": "",
+  "version": "2.0.0",
+  "description": "一个功能强大的在线音乐播放器,支持多平台音乐搜索、播放、下载和歌单管理",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "music",
+    "player",
+    "online-music",
+    "music-player",
+    "typescript",
+    "vite"
+  ],
+  "author": "truelife0958",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
+    "@vitest/ui": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
     "typescript": "^5.9.3",
-    "vite": "^7.1.10"
+    "vite": "^7.1.10",
+    "vitest": "^1.0.0"
   }
 }

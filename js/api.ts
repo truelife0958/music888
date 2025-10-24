@@ -427,9 +427,51 @@ export async function searchMusicAPI(keyword: string, source: string): Promise<S
     const url = API_BASE.includes('meting')
         ? `${API_BASE}?server=${source}&type=search&id=${encodeURIComponent(keyword)}&count=30`
         : `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=30`;
+
+    console.log('🔍 搜索 API 请求:', url);
     const response = await fetchWithRetry(url);
     const data = await response.json();
-    return data.map((song: any) => ({ ...song, source: source }));
+    console.log('📥 搜索 API 响应类型:', typeof data, '是否为数组:', Array.isArray(data));
+    console.log('📥 搜索 API 响应内容:', JSON.stringify(data).substring(0, 500));
+
+    // 处理不同的响应格式
+    let songs: any[] = [];
+
+    if (Array.isArray(data)) {
+        console.log('✅ 响应格式: 直接数组');
+        songs = data;
+    } else if (data && typeof data === 'object') {
+        // 尝试多种可能的字段名
+        if (Array.isArray(data.data)) {
+            console.log('✅ 响应格式: data 字段');
+            songs = data.data;
+        } else if (Array.isArray(data.songs)) {
+            console.log('✅ 响应格式: songs 字段');
+            songs = data.songs;
+        } else if (Array.isArray(data.result)) {
+            console.log('✅ 响应格式: result 字段');
+            songs = data.result;
+        } else if (Array.isArray(data.list)) {
+            console.log('✅ 响应格式: list 字段');
+            songs = data.list;
+        } else {
+            // 打印所有可用的键
+            console.error('❌ 未找到歌曲数组，可用的键:', Object.keys(data));
+            console.error('❌ 完整响应:', data);
+            throw new Error(`API 返回数据格式不正确，可用字段: ${Object.keys(data).join(', ')}`);
+        }
+    } else {
+        console.error('❌ 搜索 API 返回格式错误，既不是数组也不是对象:', data);
+        throw new Error('API 返回数据格式不正确');
+    }
+
+    if (songs.length === 0) {
+        console.warn('⚠️ API 返回空数组');
+        return [];
+    }
+
+    console.log(`✅ 成功解析 ${songs.length} 首歌曲`);
+    return songs.map((song: any) => ({ ...song, source: source }));
 }
 
 export async function exploreRadarAPI(): Promise<Song[]> {
@@ -440,9 +482,51 @@ export async function exploreRadarAPI(): Promise<Song[]> {
     const url = API_BASE.includes('meting')
         ? `${API_BASE}?server=${randomSource}&type=search&id=${encodeURIComponent(randomKeyword)}&count=50`
         : `${API_BASE}?types=search&source=${randomSource}&name=${encodeURIComponent(randomKeyword)}&count=50`;
+
+    console.log('🔍 探索雷达 API 请求:', url);
     const response = await fetchWithRetry(url);
     const data = await response.json();
-    return data.map((song: any) => ({ ...song, source: randomSource }));
+    console.log('📥 探索雷达 API 响应类型:', typeof data, '是否为数组:', Array.isArray(data));
+    console.log('📥 探索雷达 API 响应内容:', JSON.stringify(data).substring(0, 500));
+
+    // 处理不同的响应格式
+    let songs: any[] = [];
+
+    if (Array.isArray(data)) {
+        console.log('✅ 响应格式: 直接数组');
+        songs = data;
+    } else if (data && typeof data === 'object') {
+        // 尝试多种可能的字段名
+        if (Array.isArray(data.data)) {
+            console.log('✅ 响应格式: data 字段');
+            songs = data.data;
+        } else if (Array.isArray(data.songs)) {
+            console.log('✅ 响应格式: songs 字段');
+            songs = data.songs;
+        } else if (Array.isArray(data.result)) {
+            console.log('✅ 响应格式: result 字段');
+            songs = data.result;
+        } else if (Array.isArray(data.list)) {
+            console.log('✅ 响应格式: list 字段');
+            songs = data.list;
+        } else {
+            // 打印所有可用的键
+            console.error('❌ 未找到歌曲数组，可用的键:', Object.keys(data));
+            console.error('❌ 完整响应:', data);
+            throw new Error(`API 返回数据格式不正确，可用字段: ${Object.keys(data).join(', ')}`);
+        }
+    } else {
+        console.error('❌ 探索雷达 API 返回格式错误，既不是数组也不是对象:', data);
+        throw new Error('API 返回数据格式不正确');
+    }
+
+    if (songs.length === 0) {
+        console.warn('⚠️ API 返回空数组');
+        return [];
+    }
+
+    console.log(`✅ 成功解析 ${songs.length} 首歌曲`);
+    return songs.map((song: any) => ({ ...song, source: randomSource }));
 }
 
 export async function parsePlaylistAPI(playlistUrlOrId: string): Promise<{ songs: Song[]; name?: string; count?: number }> {

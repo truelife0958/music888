@@ -1,6 +1,7 @@
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as player from './player.js';
+import { debounce, renderPlaylistItem, renderEmptyState } from './utils.js';
 
 // --- Tab Switching Logic ---
 function switchTab(tabName: string): void {
@@ -37,7 +38,15 @@ function initializeApp(): void {
     player.loadSavedPlaylists();
 
     // --- Event Listeners ---
+    const debouncedSearch = debounce(handleSearch, 300);
     document.querySelector('.search-btn')!.addEventListener('click', handleSearch);
+    document.getElementById('searchInput')!.addEventListener('keyup', (e) => {
+        if ((e as KeyboardEvent).key === 'Enter') {
+            handleSearch();
+        } else {
+            debouncedSearch();
+        }
+    });
     document.getElementById('exploreRadarBtn')!.addEventListener('click', handleExplore);
     document.getElementById('shufflePlayBtn')!.addEventListener('click', handleShufflePlay);
     document.querySelector('.playlist-btn')!.addEventListener('click', handleParsePlaylist);
@@ -163,25 +172,11 @@ function updatePlayHistoryDisplay(): void {
     const history = player.getPlayHistory();
 
     if (history.length === 0) {
-        historyList.innerHTML = `
-            <div class="empty-saved-state">
-                <i class="fas fa-history"></i>
-                <div>暂无播放记录</div>
-            </div>
-        `;
+        historyList.innerHTML = renderEmptyState('fas fa-history', '暂无播放记录');
         return;
     }
 
-    historyList.innerHTML = `
-        <div class="mini-playlist-item" style="padding: 10px; cursor: pointer; border-radius: 8px; transition: background 0.2s;"
-             onmouseover="this.style.background='rgba(255,255,255,0.05)'"
-             onmouseout="this.style.background='transparent'">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-history" style="color: #1db954;"></i>
-                <span style="font-weight: 500;">播放历史 (${history.length}首)</span>
-            </div>
-        </div>
-    `;
+    historyList.innerHTML = renderPlaylistItem('播放历史', history.length, 'fas fa-history', '#1db954');
 
     const playlistItem = historyList.querySelector('.mini-playlist-item');
     playlistItem?.addEventListener('click', () => {
@@ -198,28 +193,15 @@ function updateFavoritesDisplay(): void {
     const favorites = player.getFavoriteSongs();
 
     if (favorites.length === 0) {
-        favoritesList.innerHTML = `
-            <div class="empty-saved-state">
-                <i class="fas fa-heart"></i>
-                <div>暂无收藏歌曲</div>
-                <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
-                    点击播放器的爱心按钮收藏歌曲
-                </div>
-            </div>
-        `;
+        favoritesList.innerHTML = renderEmptyState(
+            'fas fa-heart',
+            '暂无收藏歌曲',
+            '点击播放器的爱心按钮收藏歌曲'
+        );
         return;
     }
 
-    favoritesList.innerHTML = `
-        <div class="mini-playlist-item" style="padding: 10px; cursor: pointer; border-radius: 8px; transition: background 0.2s;"
-             onmouseover="this.style.background='rgba(255,255,255,0.05)'"
-             onmouseout="this.style.background='transparent'">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-heart" style="color: #ff6b6b;"></i>
-                <span style="font-weight: 500;">我的喜欢 (${favorites.length}首)</span>
-            </div>
-        </div>
-    `;
+    favoritesList.innerHTML = renderPlaylistItem('我的喜欢', favorites.length, 'fas fa-heart', '#ff6b6b');
 
     const playlistItem = favoritesList.querySelector('.mini-playlist-item');
     playlistItem?.addEventListener('click', () => {
@@ -238,10 +220,17 @@ async function handleSearch(): Promise<void> {
     ui.showLoading('searchResults');
     try {
         const songs = await api.searchMusicAPI(keyword, source);
+        if (songs.length === 0) {
+            ui.showError('未找到相关歌曲，请尝试其他关键词或音乐平台', 'searchResults');
+            return;
+        }
         ui.displaySearchResults(songs, 'searchResults', songs);
+        ui.showNotification(`找到 ${songs.length} 首歌曲`, 'success');
     } catch (error) {
         console.error('Search failed:', error);
-        ui.showError('搜索失败，请稍后重试', 'searchResults');
+        const errorMsg = error instanceof Error ? error.message : '搜索失败';
+        ui.showError(`搜索失败: ${errorMsg}，请稍后重试`, 'searchResults');
+        ui.showNotification('搜索失败，请检查网络连接', 'error');
     }
 }
 
