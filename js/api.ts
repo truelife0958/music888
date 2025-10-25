@@ -21,20 +21,17 @@ interface ApiSource {
 // 1. Multiple API sources for improved reliability
 const API_SOURCES: ApiSource[] = [
     {
+        name: 'Vercel 代理 API',
+        url: '/api/music-proxy',
+        type: 'proxy'
+    },
+    {
         name: '主 API',
         url: 'https://music-api.gdstudio.xyz/api.php'
     },
     {
         name: '备用 API',
         url: 'https://music-api.gdstudio.org/api.php'
-    },
-    {
-        name: '备用 API 2',
-        url: 'https://api.injahow.cn/meting/'
-    },
-    {
-        name: '备用 API 3',
-        url: 'https://api.vkeys.cn/meting/'
     }
 ];
 
