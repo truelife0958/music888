@@ -125,7 +125,7 @@ body {
     margin: 0 auto;
     padding: 20px;
     display: grid;
-    grid-template-columns: 600px 450px 350px;
+    grid-template-columns: 1fr 450px 350px;
     gap: 25px;
     min-height: calc(var(--vh, 1vh) * 100 - 200px);
     align-items: start;
@@ -590,6 +590,41 @@ body {
     background: linear-gradient(135deg, #ff5252, #ff4444);
     box-shadow: 0 12px 35px rgba(255, 107, 107, 0.6);
 }
+/* 播放器内部歌词显示 */
+.lyrics-container-inline {
+    max-height: 120px;
+    overflow-y: auto;
+    margin: 15px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    text-align: center;
+}
+.lyrics-container-inline::-webkit-scrollbar {
+    width: 4px;
+}
+.lyrics-container-inline::-webkit-scrollbar-track {
+    background: transparent;
+}
+.lyrics-container-inline::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+.lyrics-container-inline .lyric-line {
+    padding: 6px 0;
+    transition: all 0.3s ease;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.5;
+    font-size: 14px;
+}
+.lyrics-container-inline .lyric-line.active {
+    color: #ff6b6b;
+    font-weight: 600;
+    font-size: 16px;
+    transform: scale(1.05);
+}
 .progress-container {
     margin-bottom: 20px;
 }
@@ -922,9 +957,6 @@ body {
         gap: 20px;
         max-width: 1200px;
     }
-    .lyrics-section {
-        display: none;
-    }
 }
 @media (max-width: 1024px) {
     .main-container {
@@ -937,10 +969,6 @@ body {
     }
     .search-container {
         margin: 0 20px;
-    }
-    .lyrics-section {
-        display: block;
-        position: static;
     }
     .player-section {
         position: static;

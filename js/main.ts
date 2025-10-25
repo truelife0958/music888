@@ -1,10 +1,13 @@
+// Generated file
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as player from './player.js';
 import { debounce, renderPlaylistItem, renderEmptyState } from './utils.js';
+import { initializeEnhancements } from './main-enhancements.js';
+import * as uiEnhancements from './ui-enhancements.js';
 
 // --- Tab Switching Logic ---
-function switchTab(tabName: string): void {
+export function switchTab(tabName: string): void {
     document.querySelectorAll('.tab-content').forEach(content => {
         (content as HTMLElement).style.display = 'none';
         content.classList.remove('active');
@@ -26,7 +29,7 @@ function switchTab(tabName: string): void {
 }
 
 function initializeApp(): void {
-    console.log('云音乐 App 初始化...');
+    console.log('沄听 App 初始化...');
     ui.init();
     api.findWorkingAPI().then(result => {
         if (result.success) {
@@ -47,14 +50,57 @@ function initializeApp(): void {
             debouncedSearch();
         }
     });
-    document.getElementById('exploreRadarBtn')!.addEventListener('click', handleExplore);
-    document.getElementById('shufflePlayBtn')!.addEventListener('click', handleShufflePlay);
+
+    // 探索雷达按钮事件监听 - 增强错误处理
+    const exploreRadarBtn = document.getElementById('exploreRadarBtn');
+    if (exploreRadarBtn) {
+        exploreRadarBtn.addEventListener('click', async () => {
+            console.log('探索雷达按钮被点击');
+            try {
+                await handleExplore();
+            } catch (error) {
+                console.error('探索雷达处理失败:', error);
+                ui.showError('探索雷达功能暂时不可用，请稍后重试', 'searchResults');
+            }
+        });
+    } else {
+        console.warn('探索雷达按钮未找到');
+    }
+
+    // 榜单平台选择器事件监听
+    const chartSourceSelect = document.getElementById('chartSourceSelect');
+    if (chartSourceSelect) {
+        chartSourceSelect.addEventListener('change', async () => {
+            const selectedSource = (chartSourceSelect as HTMLSelectElement).value;
+            console.log(`切换榜单平台到: ${selectedSource}`);
+
+            // 重新加载当前展开的榜单
+            const expandedHeader = document.querySelector('.chart-header[data-expanded="true"]');
+            if (expandedHeader) {
+                const chartType = (expandedHeader as HTMLElement).dataset.chart as 'soar' | 'new' | 'hot';
+                const chartList = document.getElementById(`${chartType}Chart`);
+
+                if (chartList) {
+                    try {
+                        ui.showLoading(`${chartType}Chart`);
+                        const songs = await api.getChartList(chartType);
+                        uiEnhancements.displayChartResults(songs, `${chartType}Chart`);
+                        ui.showNotification(`已切换到${selectedSource === 'netease' ? '网易云音乐' : 'QQ音乐'}榜单`, 'success');
+                    } catch (error) {
+                        console.error(`加载${chartType}榜单失败:`, error);
+                        uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
+                    }
+                }
+            }
+        });
+    }
+
     document.querySelector('.playlist-btn')!.addEventListener('click', handleParsePlaylist);
     
     // Player controls
     document.getElementById('playBtn')!.addEventListener('click', player.togglePlay);
-    document.querySelector('.player-controls .control-btn.small:nth-child(2)')!.addEventListener('click', player.previousSong);
-    document.querySelector('.player-controls .control-btn.small:nth-child(4)')!.addEventListener('click', player.nextSong);
+    document.querySelector('.player-controls .control-btn.small:nth-child(3)')!.addEventListener('click', player.previousSong);
+    document.querySelector('.player-controls .control-btn.small:nth-child(5)')!.addEventListener('click', player.nextSong);
     document.getElementById('playModeBtn')!.addEventListener('click', player.togglePlayMode);
     document.getElementById('playerFavoriteBtn')!.addEventListener('click', () => {
         const currentSong = player.getCurrentSong();
@@ -83,9 +129,10 @@ function initializeApp(): void {
     });
 
     // Initial tab state
-    switchTab('saved');
+    switchTab('discover');
 
-    // 初始化"我的歌单"标签的折叠/展开功能
+    // 初始化榜单和保存的标签功能
+    initChartToggles();
     initSavedTabToggles();
 
     // 加载并显示播放历史和收藏
@@ -96,6 +143,45 @@ function initializeApp(): void {
     window.addEventListener('favoritesUpdated', () => {
         updateFavoritesDisplay();
     });
+
+    // 初始化所有增强功能
+    initializeEnhancements();
+}
+
+// 初始化榜单折叠/展开功能
+function initChartToggles(): void {
+        document.querySelectorAll('.chart-header').forEach(header => {
+            header.addEventListener('click', async () => {
+                const chartType = (header as HTMLElement).dataset.chart as 'soar' | 'new' | 'hot';
+                const chartList = document.getElementById(`${chartType}Chart`);
+                const toggleIcon = header.querySelector('.toggle-icon');
+                const isExpanded = header.getAttribute('data-expanded') === 'true';
+
+                if (!isExpanded) {
+                    // 展开并加载数据
+                    try {
+                        ui.showLoading(`${chartType}Chart`);
+                        chartList!.style.display = 'block';
+
+                        const songs = await api.getChartList(chartType);
+                        uiEnhancements.displayChartResults(songs, `${chartType}Chart`);
+
+                        header.setAttribute('data-expanded', 'true');
+                        toggleIcon?.classList.remove('fa-chevron-down');
+                        toggleIcon?.classList.add('fa-chevron-up');
+                    } catch (error) {
+                        console.error(`加载${chartType}榜单失败:`, error);
+                        uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
+                    }
+                } else {
+                    // 折叠
+                    chartList!.style.display = 'none';
+                    header.setAttribute('data-expanded', 'false');
+                    toggleIcon?.classList.remove('fa-chevron-up');
+                    toggleIcon?.classList.add('fa-chevron-down');
+                }
+            });
+        });
 }
 
 // 初始化"我的歌单"标签的折叠/展开功能
@@ -130,7 +216,7 @@ function initSavedTabToggles(): void {
         }
     });
 
-    // 我保存的歌单折叠/展开
+    // 我保存的歌单折叠/展开（在"我的"标签页中）
     const playlistsHeader = document.getElementById('playlistsHeader');
     const savedPlaylistsList = document.getElementById('savedPlaylistsList');
     const playlistsToggleIcon = document.getElementById('playlistsToggleIcon');
@@ -142,6 +228,21 @@ function initSavedTabToggles(): void {
         }
         if (playlistsToggleIcon) {
             playlistsToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+        }
+    });
+
+    // 我保存的歌单折叠/展开（在"解析歌单"标签页中）
+    const savedPlaylistsHeader = document.getElementById('savedPlaylistsHeader');
+    const savedPlaylistsListInParse = document.getElementById('savedPlaylistsListInParse');
+    const savedPlaylistsToggleIcon = document.getElementById('savedPlaylistsToggleIcon');
+
+    savedPlaylistsHeader?.addEventListener('click', () => {
+        const isHidden = savedPlaylistsListInParse?.style.display === 'none';
+        if (savedPlaylistsListInParse) {
+            savedPlaylistsListInParse.style.display = isHidden ? 'block' : 'none';
+        }
+        if (savedPlaylistsToggleIcon) {
+            savedPlaylistsToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
         }
     });
 
@@ -268,18 +369,24 @@ async function handleShufflePlay(): Promise<void> {
 
 async function handleParsePlaylist(): Promise<void> {
     const playlistIdInput = (document.getElementById('playlistIdInput') as HTMLInputElement).value;
+    const playlistSourceSelect = (document.getElementById('playlistSourceSelect') as HTMLSelectElement).value;
+
     if (!playlistIdInput.trim()) {
         ui.showNotification('请输入歌单ID或链接', 'warning');
         return;
     }
     ui.showLoading('parseResults');
     try {
-        const playlist = await api.parsePlaylistAPI(playlistIdInput);
-        ui.displaySearchResults(playlist.songs, 'parseResults', playlist.songs);
+        const playlist = await api.parsePlaylistAPI(playlistIdInput, playlistSourceSelect);
+        
+        // 使用增强UI显示歌单（带多选功能）
+        const uiEnhancements = await import('./ui-enhancements.js');
+        uiEnhancements.displaySearchResultsWithSelection(playlist.songs, 'parseResults', playlist.songs);
 
         // 显示成功解析的歌单信息
         if (playlist.name) {
-            ui.showNotification(`成功解析歌单《${playlist.name}》，共 ${playlist.count || 0} 首歌曲`, 'success');
+            const sourceName = playlistSourceSelect === 'netease' ? '网易云音乐' : 'QQ音乐';
+            ui.showNotification(`成功从${sourceName}解析歌单《${playlist.name}》，共 ${playlist.count || 0} 首歌曲`, 'success');
         }
     } catch (error) {
         console.error('Parse playlist failed:', error);
@@ -294,8 +401,6 @@ async function handleParsePlaylist(): Promise<void> {
         ui.showNotification(errorMessage, 'error');
     }
 }
-
-document.addEventListener('DOMContentLoaded', initializeApp);
 
 // 移动端页面切换功能
 (window as any).switchMobilePage = function(pageIndex: number): void {
@@ -355,11 +460,7 @@ if (window.innerWidth <= 768) {
             }
         }
     }
-
-    // 同步页面指示器点击
-    const originalSwitchPage = (window as any).switchMobilePage;
-    (window as any).switchMobilePage = function(pageIndex: number) {
-        currentPage = pageIndex;
-        originalSwitchPage(pageIndex);
-    };
 }
+
+// 启动应用
+initializeApp();

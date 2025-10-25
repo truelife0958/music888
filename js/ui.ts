@@ -10,6 +10,10 @@ interface LyricLine {
 // --- DOM Element Cache ---
 let DOM: { [key: string]: HTMLElement | HTMLImageElement | HTMLButtonElement };
 
+// --- 多选状态管理 ---
+let selectedSongs = new Set<number>();
+let currentSongList: Song[] = [];
+
 export function init(): void {
     DOM = {
         searchResults: document.getElementById('searchResults')!,
@@ -72,7 +76,7 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
             <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
             <div class="song-info">
                 <div class="song-name">${song.name}</div>
-                <div class="song-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist} · ${song.album}</div>
+                <div class="song-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : (song.artist || '未知歌手')} · ${song.album || '未知专辑'}</div>
             </div>
             <div class="song-actions">
                 <button class="action-btn favorite-btn" title="添加到我的喜欢">
@@ -117,7 +121,7 @@ export function updatePlayButton(isPlaying: boolean): void {
 
 export function updateCurrentSongInfo(song: Song, coverUrl: string): void {
     DOM.currentTitle.textContent = song.name;
-    DOM.currentArtist.textContent = `${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist} · ${song.album}`;
+    DOM.currentArtist.textContent = `${Array.isArray(song.artist) ? song.artist.join(' / ') : (song.artist || '未知歌手')} · ${song.album || '未知专辑'}`;
     (DOM.currentCover as HTMLImageElement).src = coverUrl;
     (DOM.downloadSongBtn as HTMLButtonElement).disabled = false;
     (DOM.downloadLyricBtn as HTMLButtonElement).disabled = false;
@@ -131,8 +135,16 @@ export function updateProgress(currentTime: number, duration: number): void {
 }
 
 export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
+    // 更新原有的歌词容器（右侧）
     if (!lyrics.length) {
-        DOM.lyricsContainer.innerHTML = '<div class="lyric-line">暂无歌词</div>';
+        if (DOM.lyricsContainer) {
+            DOM.lyricsContainer.innerHTML = '<div class="lyric-line">暂无歌词</div>';
+        }
+        // 同时更新播放器内部的歌词容器
+        const inlineContainer = document.getElementById('lyricsContainerInline');
+        if (inlineContainer) {
+            inlineContainer.innerHTML = '<div class="lyric-line">暂无歌词</div>';
+        }
         return;
     }
 
@@ -141,13 +153,28 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
         return currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
     });
 
-    DOM.lyricsContainer.innerHTML = lyrics.map((line, index) => 
+    const lyricsHTML = lyrics.map((line, index) =>
         `<div class="lyric-line ${index === activeIndex ? 'active' : ''}" data-time="${line.time}">${line.text}</div>`
     ).join('');
 
-    const activeLine = DOM.lyricsContainer.querySelector('.active');
-    if (activeLine) {
-        activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 更新原有的歌词容器
+    if (DOM.lyricsContainer) {
+        DOM.lyricsContainer.innerHTML = lyricsHTML;
+
+        const activeLine = DOM.lyricsContainer.querySelector('.active');
+        if (activeLine) {
+            activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    // 同时更新播放器内部的歌词容器
+    const inlineContainer = document.getElementById('lyricsContainerInline');
+    if (inlineContainer) {
+        inlineContainer.innerHTML = lyricsHTML;
+        const inlineActiveLine = inlineContainer.querySelector('.active');
+        if (inlineActiveLine) {
+            inlineActiveLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 }
 

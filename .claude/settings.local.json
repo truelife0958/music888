@@ -7,7 +7,8 @@
       "Bash(git config:*)",
       "Bash(git branch:*)",
       "Bash(npm run dev:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: 全面优化项目 - v2.0.0\n\n🎨 CSS 样式优化\n- 添加 will-change 性能优化\n- 提高文字对比度到 WCAG 2.1 AA 标准\n- 添加焦点可见性样式\n- 支持减少动画偏好 (prefers-reduced-motion)\n- 添加骨架屏加载样式\n- 移动端触摸目标优化 (44px)\n\n📝 文档完善\n- 添加项目预览截图占位符\n- 添加性能指标说明\n- 添加 8 个常见问题 FAQ\n- 添加开发指南和项目架构说明\n- 创建 CHANGELOG.md 版本更新日志\n- 创建 CONTRIBUTING.md 贡献指南\n- 创建 LICENSE (MIT)\n- 创建 IMPROVEMENTS.md 改进总结\n\n🔧 代码优化\n- 创建 utils.ts 工具模块 (10+ 实用函数)\n- 添加防抖搜索 (300ms)\n- 提取代码复用函数 (renderPlaylistItem, renderEmptyState)\n- 增强错误处理和详细日志\n- 修复 API 响应格式兼容性问题\n- 支持多种 API 响应格式 (data/songs/result/list)\n\n🧪 测试框架\n- 集成 Vitest 测试框架\n- 配置测试环境 (vitest.config.ts)\n- 创建测试设置文件 (tests/setup.ts)\n- 添加工具函数单元测试 (tests/utils.test.ts)\n- 创建测试指南 (tests/README.md)\n\n📦 配置更新\n- 更新版本号到 2.0.0\n- 添加测试脚本 (test, test:ui, test:coverage)\n- 更改许可证为 MIT\n- 添加项目关键词和作者信息\n\n🐛 Bug 修复\n- 修复搜索和探索雷达 API 响应格式错误\n- 修复 data.map is not a function 错误\n- 添加详细的调试日志\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

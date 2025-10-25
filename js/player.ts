@@ -113,7 +113,8 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                     'kugou': '酷狗音乐',
                     'kuwo': '酷我音乐',
                     'xiami': '虾米音乐',
-                    'baidu': '百度音乐'
+                    'baidu': '百度音乐',
+                    'bilibili': 'Bilibili音乐'
                 };
                 ui.showNotification(
                     `已从备用音乐源 ${sourceNames[urlData.usedSource] || urlData.usedSource} 获取`,
@@ -136,7 +137,15 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                 );
             }
 
-            audioPlayer.src = urlData.url.replace(/^http:/, 'https:');
+            // Bilibili 音乐源使用代理服务
+            if (song.source === 'bilibili') {
+                // 优先使用代理服务，支持范围请求和流式播放
+                const proxyUrl = `/api/bilibili-proxy?url=${encodeURIComponent(urlData.url)}`;
+                audioPlayer.src = proxyUrl;
+                console.log('🎵 使用 Bilibili 代理服务:', proxyUrl);
+            } else {
+                audioPlayer.src = urlData.url.replace(/^http:/, 'https:');
+            }
             audioPlayer.load();
 
             // 添加到播放历史
@@ -145,6 +154,11 @@ export async function playSong(index: number, playlist: Song[], containerId: str
             const lyricsData = await api.getLyrics(song);
             const lyrics = lyricsData.lyric ? parseLyrics(lyricsData.lyric) : [];
             ui.updateLyrics(lyrics, 0);
+
+            // 触发播放事件（用于 Wake Lock 和 Media Session）
+            window.dispatchEvent(new CustomEvent('songPlaying', {
+                detail: { song, coverUrl }
+            }));
 
             try {
                 await audioPlayer.play();
@@ -211,12 +225,32 @@ export async function playSong(index: number, playlist: Song[], containerId: str
 
 export function nextSong(): void {
     if (currentPlaylist.length === 0) return;
+
     let newIndex: number;
     if (playMode === 'random') {
         newIndex = Math.floor(Math.random() * currentPlaylist.length);
     } else {
         newIndex = (currentIndex + 1) % currentPlaylist.length;
     }
+
+    // 检查是否应该尝试切换音乐源而不是直接播放下一首
+    if (consecutiveFailures >= 2) {
+        console.log(`连续失败${consecutiveFailures}次，尝试切换音乐源...`);
+
+        // 尝试找到同一首歌的其他源
+        const currentSong = currentPlaylist[currentIndex];
+        const alternativeSources = getAlternativeSources(currentSong);
+
+        if (alternativeSources.length > 0) {
+            // 优先尝试同一首歌的不同源
+            const alternativeSong = alternativeSources[0];
+            const tempPlaylist = [alternativeSong];
+            playSong(0, tempPlaylist, lastActiveContainer);
+            consecutiveFailures = 0; // 重置失败计数
+            return;
+        }
+    }
+
     playSong(newIndex, currentPlaylist, lastActiveContainer);
 }
 
@@ -235,8 +269,10 @@ export function togglePlay(): void {
     if (!audioPlayer.src) return;
     if (isPlaying) {
         audioPlayer.pause();
+        window.dispatchEvent(new Event('songPaused'));
     } else {
         audioPlayer.play();
+        window.dispatchEvent(new Event('songPlaying'));
     }
 }
 
@@ -443,16 +479,42 @@ function updatePlayerFavoriteButton(): void {
     }
 }
 
-function savePlaylistsToStorage(): void {
-    try {
-        const data = {
-            playlists: Array.from(playlistStorage.entries()),
-            counter: playlistCounter
+// 获取同一首歌的其他音乐源版本
+function getAlternativeSources(originalSong: Song): Song[] {
+    const alternativeSources: Song[] = [];
+    const availableSources = ['netease', 'tencent', 'kugou', 'xiami', 'baidu', 'bilibili'];
+
+    // 排除当前源和已知的坏源
+    const sourcesToTry = availableSources.filter(source =>
+        source !== originalSong.source && source !== 'kuwo' // kuwo源暂不支持
+    );
+
+    for (const source of sourcesToTry) {
+        // 在实际应用中，这里应该调用相应的API搜索相同的歌曲
+        // 由于我们没有跨源搜索功能，这里只是示例框架
+        // 可以考虑在用户同意时用相似的歌曲名和艺术家搜索
+
+        // 创建一个替代歌曲对象（实际使用时需要通过API搜索获取）
+        const alternativeSong: any = {
+            ...originalSong,
+            source: source,
+            // 可以在这里添加标识，表示这是替代源
+            _isAlternativeSource: true
         };
-        localStorage.setItem('musicPlayerPlaylists', JSON.stringify(data));
-    } catch (error) {
-        console.error('保存歌单失败:', error);
+
+        alternativeSources.push(alternativeSong);
     }
+
+    return alternativeSources;
+}
+
+// 保存歌单到本地存储
+function savePlaylistsToStorage(): void {
+    const playlistsData = Array.from(playlistStorage.entries()).map(([key, value]) => ({
+        id: key,
+        ...value
+    }));
+    localStorage.setItem('savedPlaylists', JSON.stringify(playlistsData));
 }
 
 audioPlayer.addEventListener('play', () => {
@@ -506,3 +568,161 @@ function parseLyrics(lrc: string): LyricLine[] {
     }
     return result;
 }
+
+// ========== 播放列表管理增强 ==========
+
+// 获取当前播放列表
+export function getCurrentPlaylist(): Song[] {
+    return currentPlaylist;
+}
+
+// 获取当前播放索引
+export function getCurrentIndex(): number {
+    return currentIndex;
+}
+
+// 从播放列表播放指定索引的歌曲
+export function playSongFromPlaylist(index: number): void {
+    if (index >= 0 && index < currentPlaylist.length) {
+        playSong(index, currentPlaylist, lastActiveContainer);
+    }
+}
+
+// 从播放列表移除歌曲
+export function removeFromPlaylist(index: number): void {
+    if (index < 0 || index >= currentPlaylist.length) return;
+
+    currentPlaylist.splice(index, 1);
+
+    // 调整当前播放索引
+    if (currentIndex > index) {
+        currentIndex--;
+    } else if (currentIndex === index) {
+        // 如果删除的是当前播放的歌曲
+        if (currentIndex >= currentPlaylist.length) {
+            currentIndex = currentPlaylist.length - 1;
+        }
+        // 可以选择自动播放下一首或停止
+        if (currentPlaylist.length > 0 && currentIndex >= 0) {
+            playSong(currentIndex, currentPlaylist, lastActiveContainer);
+        } else {
+            // 播放列表为空，停止播放
+            audioPlayer.pause();
+        }
+    }
+
+    ui.showNotification('已从播放列表移除', 'info');
+}
+
+// 清空播放列表
+export function clearPlaylist(): void {
+    currentPlaylist = [];
+    currentIndex = -1;
+    audioPlayer.pause();
+    audioPlayer.src = '';
+    ui.showNotification('播放列表已清空', 'info');
+}
+
+// 添加歌曲到当前播放列表
+export function addToCurrentPlaylist(songs: Song[]): void {
+    currentPlaylist.push(...songs);
+    ui.showNotification(`已添加 ${songs.length} 首歌曲到播放列表`, 'success');
+}
+
+// 保存当前播放列表为歌单
+export function saveCurrentPlaylistAs(playlistName: string): void {
+    if (currentPlaylist.length === 0) {
+        ui.showNotification('播放列表为空', 'warning');
+        return;
+    }
+
+    const savedPlaylists = JSON.parse(localStorage.getItem('savedPlaylists') || '[]');
+    const newPlaylist = {
+        name: playlistName,
+        songs: currentPlaylist,
+        createdAt: Date.now()
+    };
+
+    savedPlaylists.push(newPlaylist);
+    localStorage.setItem('savedPlaylists', JSON.stringify(savedPlaylists));
+
+    ui.showNotification(`歌单"${playlistName}"保存成功`, 'success');
+
+    // 触发歌单更新事件
+    window.dispatchEvent(new Event('playlistsUpdated'));
+}
+
+// ========== 批量操作功能 ==========
+
+// 批量添加到收藏
+export function addMultipleToFavorites(songs: Song[]): void {
+    const favoriteSongs = getFavoriteSongs();
+    let addedCount = 0;
+
+    songs.forEach(song => {
+        const exists = favoriteSongs.some(fav =>
+            fav.id === song.id && fav.source === song.source
+        );
+        if (!exists) {
+            favoriteSongs.push(song);
+            addedCount++;
+        }
+    });
+
+    if (addedCount > 0) {
+        localStorage.setItem('favoriteSongs', JSON.stringify(favoriteSongs));
+        ui.showNotification(`成功添加 ${addedCount} 首歌曲到收藏`, 'success');
+        window.dispatchEvent(new Event('favoritesUpdated'));
+    } else {
+        ui.showNotification('所选歌曲已在收藏中', 'info');
+    }
+}
+
+// 批量下载歌曲
+export async function downloadMultipleSongs(songs: Song[]): Promise<void> {
+    const BATCH_SIZE = 3; // 每批下载3首
+    const qualitySelect = document.getElementById('qualitySelect') as HTMLSelectElement;
+    const quality = qualitySelect ? qualitySelect.value : '320';
+
+    ui.showNotification(`开始下载 ${songs.length} 首歌曲...`, 'info');
+
+    for (let i = 0; i < songs.length; i += BATCH_SIZE) {
+        const batch = songs.slice(i, i + BATCH_SIZE);
+
+        await Promise.all(batch.map(async (song) => {
+            try {
+                const urlData = await api.getSongUrl(song, quality);
+                if (urlData && urlData.url) {
+                    const response = await fetch(urlData.url);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}.mp3`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }
+            } catch (error) {
+                console.error(`下载失败: ${song.name}`, error);
+            }
+        }));
+
+        // 显示进度
+        const downloaded = Math.min(i + BATCH_SIZE, songs.length);
+        ui.showNotification(`下载进度: ${downloaded}/${songs.length}`, 'info');
+
+        // 批次间延迟，避免请求过快
+        if (i + BATCH_SIZE < songs.length) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+    ui.showNotification('所有歌曲下载完成', 'success');
+}
+
+// 初始化时保存歌单到本地存储
+loadSavedPlaylists();
+
+

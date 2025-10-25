@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>云音乐 - 在线音乐播放器</title>
+    <title>沄听 - 在线音乐播放器</title>
+    <link rel="icon" type="image/x-icon" href="ytmusic.ico">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/additions.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -14,7 +16,7 @@
         <div class="nav-container">
             <div class="logo">
                 <i class="fas fa-music"></i>
-                <span>云音乐</span>
+                <span>沄听</span>
             </div>
             <div class="search-container">
                 <div class="search-wrapper">
@@ -26,6 +28,7 @@
                         <option value="kuwo">酷我音乐</option>
                         <option value="xiami">虾米音乐</option>
                         <option value="baidu">百度音乐</option>
+                        <option value="bilibili">Bilibili音乐</option>
                     </select>
                     <button class="search-btn">
                         <i class="fas fa-search"></i>
@@ -37,39 +40,75 @@
     <div class="main-container">
         <div class="content-section">
             <div class="tabs">
-                <button class="tab-btn" data-tab="search">
+                <button class="tab-btn active" data-tab="search">
                     <i class="fas fa-search"></i> 搜索结果
                 </button>
-                <button class="tab-btn active" data-tab="saved">
-                    <i class="fas fa-bookmark"></i> 我的歌单
+                <button class="tab-btn" data-tab="discover">
+                    <i class="fas fa-compass"></i> 发现音乐
                 </button>
                 <button class="tab-btn" data-tab="parse">
-                    <i class="fas fa-cloud-download-alt"></i> 解析网易云歌单
+                    <i class="fas fa-cloud-download-alt"></i> 解析歌单
                 </button>
             </div>
-            <div id="searchTab" class="tab-content">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <button class="explore-radar-btn" id="exploreRadarBtn" style="flex: 1;">
-                        <i class="fas fa-satellite-dish"></i>
-                        <span>探索雷达 - 发现热门音乐</span>
-                    </button>
-                    <button class="explore-radar-btn" id="shufflePlayBtn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <i class="fas fa-random"></i>
-                        <span>随机播放全部</span>
-                    </button>
-                </div>
-                <div class="search-results" id="searchResults">
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <div>在上方搜索框输入关键词或点击探索雷达开始搜索音乐</div>
+
+            <!-- 发现音乐标签 -->
+            <div id="discoverTab" class="tab-content">
+                <!-- 热门专辑 -->
+                <div class="discover-section">
+                    <div class="discover-header" data-section="albums" data-expanded="false">
+                        <div class="discover-header-left">
+                            <i class="fas fa-compact-disc"></i>
+                            <span>热门专辑</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
+                    <div class="discover-content" id="hotAlbums" style="display: none;"></div>
+                </div>
+
+                <!-- 热门歌曲 -->
+                <div class="discover-section">
+                    <div class="discover-header" data-section="songs" data-expanded="false">
+                        <div class="discover-header-left">
+                            <i class="fas fa-fire"></i>
+                            <span>热门歌曲</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="discover-content" id="hotSongs" style="display: none;"></div>
                 </div>
             </div>
             <div id="parseTab" class="tab-content">
+                <!-- 我保存的歌单 -->
+                <div class="saved-playlists-container" style="margin-bottom: 15px;">
+                    <div class="saved-playlists-header">
+                        <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="savedPlaylistsHeader">
+                            <i class="fas fa-bookmark"></i>
+                            我保存的歌单
+                            <i class="fas fa-chevron-down" id="savedPlaylistsToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
+                        </h4>
+                        <button class="clear-all-btn" id="clearSavedPlaylistsBtn" title="清空所有歌单">
+                            <i class="fas fa-trash"></i> 清空
+                        </button>
+                    </div>
+                    <div class="saved-playlists-list" id="savedPlaylistsListInParse" style="display: none;">
+                        <div class="empty-saved-state">
+                            <i class="fas fa-music"></i>
+                            <div>暂无保存的歌单</div>
+                            <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
+                                在下方解析歌单后保存
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="playlist-input-container">
-                    <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入网易云歌单ID (如: 60198, 3778678) 或链接...">
+                    <select class="playlist-source-select" id="playlistSourceSelect" style="margin-bottom: 10px;">
+                        <option value="netease">网易云音乐</option>
+                        <option value="tencent">QQ音乐</option>
+                    </select>
+                    <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入歌单ID (如: 60198, 3778678) 或链接...">
                     <button class="playlist-btn">
-                        <i class="fas fa-download"></i> 解析网易云歌单
+                        <i class="fas fa-download"></i> 解析歌单
                     </button>
                 </div>
                 <div id="currentParsedPlaylist" style="display: none;">
@@ -177,7 +216,25 @@
                     </div>
                 </div>
             </div>
+            <div id="searchTab" class="tab-content active">
+                <!-- 探索雷达 -->
+                <div class="discover-section">
+                    <button class="explore-radar-btn" id="exploreRadarBtn">
+                        <i class="fas fa-satellite-dish"></i>
+                        <span>探索雷达 - 发现热门音乐</span>
+                    </button>
+                </div>
+                <div class="search-results" id="searchResults">
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <div>在上方搜索框输入关键词开始搜索音乐，或点击探索雷达发现热门音乐</div>
+                    </div>
+                </div>
+            </div>
+            <audio id="audioPlayer" preload="metadata"></audio>
         </div>
+
+        <!-- 播放器区域 -->
         <div class="player-section">
             <div class="player-content">
                 <div class="current-song">
@@ -190,6 +247,9 @@
                     </div>
                 </div>
                 <div class="player-controls">
+                    <button class="control-btn small" id="playlistBtn" title="播放列表">
+                        <i class="fas fa-list-ul"></i>
+                    </button>
                     <button class="control-btn small" id="playerFavoriteBtn" title="添加到我的喜欢">
                         <i class="far fa-heart"></i>
                     </button>
@@ -205,6 +265,10 @@
                     <button class="control-btn small" id="playModeBtn" title="列表循环">
                         <i class="fas fa-repeat"></i>
                     </button>
+                </div>
+                <!-- 歌词显示区域 -->
+                <div class="lyrics-container-inline" id="lyricsContainerInline">
+                    <div class="lyric-line">暂无歌词</div>
                 </div>
                 <div class="progress-container">
                     <div class="progress-bar">
@@ -239,21 +303,98 @@
             </div>
             <audio id="audioPlayer" preload="metadata"></audio>
         </div>
-        <div class="lyrics-section">
+
+        <!-- 我的区域 -->
+        <div class="my-section">
             <h2 class="section-title">
-                <i class="fas fa-align-left"></i>
-                歌词
+                <i class="fas fa-bookmark"></i> 我的
             </h2>
-            <div class="lyrics-container" id="lyricsContainer">
-                <div class="lyric-line">暂无歌词</div>
+
+            <!-- 播放历史 -->
+            <div class="saved-playlists-container" style="margin-bottom: 15px;">
+                <div class="saved-playlists-header">
+                    <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="historyHeader">
+                        <i class="fas fa-history"></i>
+                        播放历史
+                        <i class="fas fa-chevron-down" id="historyToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
+                    </h4>
+                    <button class="clear-all-btn" id="clearHistoryBtn" title="清空播放历史">
+                        <i class="fas fa-trash"></i> 清空
+                    </button>
+                </div>
+                <div class="saved-playlists-list" id="playHistoryList" style="display: none;">
+                    <div class="empty-saved-state">
+                        <i class="fas fa-history"></i>
+                        <div>暂无播放记录</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的喜欢 -->
+            <div class="saved-playlists-container" style="margin-bottom: 15px;">
+                <div class="saved-playlists-header">
+                    <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="favoritesHeader">
+                        <i class="fas fa-heart"></i>
+                        我的喜欢
+                        <i class="fas fa-chevron-down" id="favoritesToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
+                    </h4>
+                    <button class="clear-all-btn" id="clearFavoritesBtn" title="清空收藏">
+                        <i class="fas fa-trash"></i> 清空
+                    </button>
+                </div>
+                <div class="saved-playlists-list" id="favoritesList" style="display: none;">
+                    <div class="empty-saved-state">
+                        <i class="fas fa-heart"></i>
+                        <div>暂无收藏歌曲</div>
+                        <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
+                            点击播放器的爱心按钮收藏歌曲
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="search-results" id="savedResults">
+                <div class="empty-state">
+                    <i class="fas fa-hand-pointer"></i>
+                    <div>点击上方播放历史、收藏或歌单查看详情</div>
+                </div>
             </div>
         </div>
+
         <div class="mobile-page-indicators">
             <div class="page-indicator active" onclick="switchMobilePage(0)"></div>
             <div class="page-indicator" onclick="switchMobilePage(1)"></div>
             <div class="page-indicator" onclick="switchMobilePage(2)"></div>
         </div>
     </div>
+
+    <!-- 播放列表弹窗 -->
+    <div class="playlist-modal" id="playlistModal">
+        <div class="playlist-modal-content">
+            <div class="playlist-modal-header">
+                <h3><i class="fas fa-list-ul"></i> 当前播放列表</h3>
+                <button class="close-modal-btn" id="closePlaylistModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="playlist-modal-body" id="playlistModalBody">
+                <div class="empty-state">
+                    <i class="fas fa-music"></i>
+                    <div>播放列表为空</div>
+                </div>
+            </div>
+            <div class="playlist-modal-footer">
+                <button class="modal-btn" id="clearPlaylistBtn">
+                    <i class="fas fa-trash"></i> 清空列表
+                </button>
+                <button class="modal-btn" id="savePlaylistBtn">
+                    <i class="fas fa-save"></i> 保存为歌单
+                </button>
+            </div>
+        </div>
+    </div>
+
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-links">
@@ -273,7 +414,7 @@
                 </a>
             </div>
             <div class="footer-info">
-                <p>© 2025 云音乐 - 开源在线音乐播放器</p>
+                <p>© 2025 沄听 - 开源在线音乐播放器</p>
             </div>
         </div>
     </footer>

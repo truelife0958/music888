@@ -1,7 +1,7 @@
 {
   "name": "music888",
-  "version": "2.0.0",
-  "description": "一个功能强大的在线音乐播放器,支持多平台音乐搜索、播放、下载和歌单管理",
+  "version": "3.0.0",
+  "description": "企业级在线音乐播放器 - 支持7个音乐平台、智能推荐、批量操作、完善的容错机制",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
