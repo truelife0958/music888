@@ -175,21 +175,49 @@ export async function getAlbumCoverUrl(song: Song, size: number = 300): Promise<
     if (!song.pic_id) {
         return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
     }
+
     try {
-        if (API_BASE.includes('meting')) {
-            // Meting API 直接返回图片URL（重定向）
-            const url = `${API_BASE}?server=${song.source}&type=pic&id=${song.pic_id}`;
-            return url; // 直接返回URL，让浏览器处理重定向
-        } else {
-            // 其他API返回JSON格式
-            const url = `${API_BASE}?types=pic&source=${song.source}&id=${song.pic_id}&size=${size}`;
-            const response = await fetchWithRetry(url);
-            const data = await response.json();
-            return data?.url || '';
+        // 先尝试本地代理API
+        if (API_BASE === '/api/music-proxy') {
+            const localUrl = `${API_BASE}?types=pic&source=${song.source}&id=${song.pic_id}&size=${size}`;
+            console.log('尝试本地代理获取图片:', localUrl);
+
+            try {
+                const response = await fetchWithRetry(localUrl);
+                const data = await response.json();
+                if (data && data.url) {
+                    return data.url;
+                }
+            } catch (localError) {
+                console.warn('本地代理获取图片失败，尝试外部API:', localError);
+                // 继续尝试外部API
+            }
         }
+
+        // 尝试外部API
+        for (const api of API_SOURCES.slice(1)) { // 跳过本地代理，尝试外部API
+            try {
+                const url = api.url.includes('meting')
+                    ? `${api.url}?server=${song.source}&type=pic&id=${song.pic_id}`
+                    : `${api.url}?types=pic&source=${song.source}&id=${song.pic_id}&size=${size}`;
+
+                console.log('尝试外部API获取图片:', url);
+                const response = await fetchWithRetry(url);
+                const data = await response.json();
+                if (data && data.url) {
+                    return data.url;
+                }
+            } catch (error) {
+                console.warn(`外部API ${api.name} 获取图片失败:`, error);
+                continue;
+            }
+        }
+
+        // 所有尝试都失败
+        console.warn('所有API均无法获取图片');
+        return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
     } catch (error) {
         console.warn('获取专辑图失败:', error);
-        // 返回默认图片而不是空字符串
         return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
     }
 }
@@ -341,70 +369,142 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
     // 动态获取音乐源列表(根据成功率排序)
     const sourcesToTry = getSortedSources(song.source);
 
-    for (const source of sourcesToTry) {
-        try {
-            console.log(`尝试从 ${source} 获取: ${song.name}`);
+    // 先尝试本地代理API
+    if (API_BASE === '/api/music-proxy') {
+        for (const source of sourcesToTry) {
+            try {
+                console.log(`尝试从本地代理获取: ${song.name} (源: ${source})`);
 
-            // 如果不是原始音乐源,需要先搜索获取该源的歌曲ID
-            let songIdForSource = song.id;
-            if (source !== song.source) {
-                // 先尝试精确匹配
-                let searchResults = await searchMusicAPI(song.name, source);
-
-                // 如果精确搜索失败,尝试智能搜索替代版本
-                if (searchResults.length === 0) {
-                    console.log(`精确搜索失败,尝试智能搜索替代版本...`);
-                    searchResults = await searchAlternativeVersions(song.name, source);
-                }
-
-                if (searchResults.length === 0) {
-                    console.warn(`${source} 未找到歌曲: ${song.name}`);
-                    recordSourceResult(source, false); // 记录失败
-                    continue;
-                }
-
-                // 匹配最相似的歌曲
-                const matchedSong = searchResults.find(s =>
-                    s.name === song.name || s.name.includes(song.name) || song.name.includes(s.name)
-                ) || searchResults[0];
-                songIdForSource = matchedSong.id;
-
-                if (matchedSong.name !== song.name) {
-                    console.log(`使用替代版本: "${matchedSong.name}"`);
-                }
-            }
-
-            const url = API_BASE.includes('meting')
-                ? `${API_BASE}?server=${source}&type=url&id=${songIdForSource}&br=${quality}`
-                : `${API_BASE}?types=url&source=${source}&id=${songIdForSource}&br=${quality}`;
-
-            const response = await fetchWithRetry(url, {}, 1); // 减少重试次数以加快切换
-            const data = await response.json();
-
-            if (data && data.url) {
-                // 验证URL有效性
-                const isValid = await validateSongUrl(data.url);
-                if (!isValid) {
-                    console.warn(`${source} 返回的URL无效`);
-                    recordSourceResult(source, false); // 记录失败
-                    continue;
-                }
-
-                // 记录成功
-                recordSourceResult(source, true);
-
+                // 如果不是原始音乐源,需要先搜索获取该源的歌曲ID
+                let songIdForSource = song.id;
                 if (source !== song.source) {
-                    const sourceName = MUSIC_SOURCES.find(s => s.id === source)?.name || source;
-                    console.log(`✅ 成功从备用音乐源 ${sourceName} 获取`);
+                    // 先尝试精确匹配
+                    let searchResults = await searchMusicAPI(song.name, source);
+
+                    // 如果精确搜索失败,尝试智能搜索替代版本
+                    if (searchResults.length === 0) {
+                        console.log(`精确搜索失败,尝试智能搜索替代版本...`);
+                        searchResults = await searchAlternativeVersions(song.name, source);
+                    }
+
+                    if (searchResults.length === 0) {
+                        console.warn(`${source} 未找到歌曲: ${song.name}`);
+                        recordSourceResult(source, false); // 记录失败
+                        continue;
+                    }
+
+                    // 匹配最相似的歌曲
+                    const matchedSong = searchResults.find(s =>
+                        s.name === song.name || s.name.includes(song.name) || song.name.includes(s.name)
+                    ) || searchResults[0];
+                    songIdForSource = matchedSong.id;
+
+                    if (matchedSong.name !== song.name) {
+                        console.log(`使用替代版本: "${matchedSong.name}"`);
+                    }
                 }
-                return { ...data, usedSource: source };
-            } else {
+
+                const url = `${API_BASE}?types=url&source=${source}&id=${songIdForSource}&br=${quality}`;
+                console.log('本地代理URL请求:', url);
+
+                const response = await fetchWithRetry(url, {}, 1); // 减少重试次数以加快切换
+                const data = await response.json();
+
+                if (data && data.url) {
+                    // 验证URL有效性
+                    const isValid = await validateSongUrl(data.url);
+                    if (!isValid) {
+                        console.warn(`${source} 返回的URL无效`);
+                        recordSourceResult(source, false); // 记录失败
+                        continue;
+                    }
+
+                    // 记录成功
+                    recordSourceResult(source, true);
+
+                    if (source !== song.source) {
+                        const sourceName = MUSIC_SOURCES.find(s => s.id === source)?.name || source;
+                        console.log(`✅ 成功从本地代理备用音乐源 ${sourceName} 获取`);
+                    }
+                    return { ...data, usedSource: source };
+                } else {
+                    recordSourceResult(source, false); // 记录失败
+                }
+            } catch (error) {
+                console.warn(`${source} 本地代理获取失败:`, error);
                 recordSourceResult(source, false); // 记录失败
+                continue;
             }
-        } catch (error) {
-            console.warn(`${source} 获取失败:`, error);
-            recordSourceResult(source, false); // 记录失败
-            continue;
+        }
+    }
+
+    // 如果本地代理失败，尝试外部API
+    for (const source of sourcesToTry) {
+        for (const api of API_SOURCES.slice(1)) { // 跳过本地代理
+            try {
+                console.log(`尝试从外部API ${api.name} 获取: ${song.name} (源: ${source})`);
+
+                // 如果不是原始音乐源,需要先搜索获取该源的歌曲ID
+                let songIdForSource = song.id;
+                if (source !== song.source) {
+                    // 先尝试精确匹配
+                    let searchResults = await searchMusicAPI(song.name, source);
+
+                    // 如果精确搜索失败,尝试智能搜索替代版本
+                    if (searchResults.length === 0) {
+                        console.log(`精确搜索失败,尝试智能搜索替代版本...`);
+                        searchResults = await searchAlternativeVersions(song.name, source);
+                    }
+
+                    if (searchResults.length === 0) {
+                        console.warn(`${source} 未找到歌曲: ${song.name}`);
+                        recordSourceResult(source, false); // 记录失败
+                        continue;
+                    }
+
+                    // 匹配最相似的歌曲
+                    const matchedSong = searchResults.find(s =>
+                        s.name === song.name || s.name.includes(song.name) || song.name.includes(s.name)
+                    ) || searchResults[0];
+                    songIdForSource = matchedSong.id;
+
+                    if (matchedSong.name !== song.name) {
+                        console.log(`使用替代版本: "${matchedSong.name}"`);
+                    }
+                }
+
+                const url = api.url.includes('meting')
+                    ? `${api.url}?server=${source}&type=url&id=${songIdForSource}&br=${quality}`
+                    : `${api.url}?types=url&source=${source}&id=${songIdForSource}&br=${quality}`;
+
+                const response = await fetchWithRetry(url, {}, 1); // 减少重试次数以加快切换
+                const data = await response.json();
+
+                if (data && data.url) {
+                    // 验证URL有效性
+                    const isValid = await validateSongUrl(data.url);
+                    if (!isValid) {
+                        console.warn(`${source} 返回的URL无效`);
+                        recordSourceResult(source, false); // 记录失败
+                        continue;
+                    }
+
+                    // 记录成功
+                    recordSourceResult(source, true);
+
+                    if (source !== song.source) {
+                        const sourceName = MUSIC_SOURCES.find(s => s.id === source)?.name || source;
+                        console.log(`✅ 成功从外部API备用音乐源 ${sourceName} 获取`);
+                    }
+                    return { ...data, usedSource: `${api.name}:${source}` };
+                } else {
+                    recordSourceResult(source, false); // 记录失败
+                }
+            } catch (error) {
+                console.warn(`${source} 外部API获取失败:`, error);
+                recordSourceResult(source, false); // 记录失败
+                continue;
+            }
         }
     }
 
@@ -420,20 +520,59 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
     }
 
     try {
-        const url = API_BASE.includes('meting')
-            ? `${API_BASE}?server=${song.source}&type=url&id=${song.id}&br=${quality}`
-            : `${API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
-        const response = await fetchWithRetry(url);
-        const data = await response.json();
+        // 先尝试本地代理API
+        if (API_BASE === '/api/music-proxy') {
+            const localUrl = `${API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
+            console.log('尝试本地代理获取音乐URL:', localUrl);
 
-        // 增强错误日志
-        if (!data || !data.url) {
-            const errorMsg = `音乐源返回空URL - 歌曲: ${song.name}, 品质: ${quality}, 音乐源: ${song.source}`;
-            console.error(errorMsg, data);
-            return { url: '', br: '', error: errorMsg };
+            try {
+                const response = await fetchWithRetry(localUrl);
+                const data = await response.json();
+                if (data && data.url) {
+                    // 验证URL有效性
+                    const isValid = await validateSongUrl(data.url);
+                    if (isValid) {
+                        return data;
+                    } else {
+                        console.warn('本地代理返回的URL无效，尝试外部API');
+                    }
+                }
+            } catch (localError) {
+                console.warn('本地代理获取音乐URL失败，尝试外部API:', localError);
+                // 继续尝试外部API
+            }
         }
 
-        return data;
+        // 尝试外部API
+        for (const api of API_SOURCES.slice(1)) { // 跳过本地代理，尝试外部API
+            try {
+                const url = api.url.includes('meting')
+                    ? `${api.url}?server=${song.source}&type=url&id=${song.id}&br=${quality}`
+                    : `${api.url}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
+
+                console.log('尝试外部API获取音乐URL:', url);
+                const response = await fetchWithRetry(url);
+                const data = await response.json();
+
+                if (data && data.url) {
+                    // 验证URL有效性
+                    const isValid = await validateSongUrl(data.url);
+                    if (isValid) {
+                        return { ...data, usedSource: api.name };
+                    } else {
+                        console.warn(`外部API ${api.name} 返回的URL无效`);
+                        continue;
+                    }
+                }
+            } catch (error) {
+                console.warn(`外部API ${api.name} 获取音乐URL失败:`, error);
+                continue;
+            }
+        }
+
+        const errorMsg = `所有音乐源均无法获取 - 歌曲: ${song.name}, 品质: ${quality}`;
+        console.error(errorMsg);
+        return { url: '', br: '', error: errorMsg };
     } catch (error) {
         const errorMsg = `API请求失败 - ${error instanceof Error ? error.message : String(error)}`;
         console.error(errorMsg, { song: song.name, quality, source: song.source });
