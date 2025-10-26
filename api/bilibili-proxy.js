@@ -1,71 +1,79 @@
-// Bilibili 音频代理服务
-// 用于解决 CORS 和 Referer 问题
+/**
+ * Vercel Serverless Function - Bilibili API 代理
+ * 解决 CORS 跨域问题
+ */
 
 export default async function handler(req, res) {
-    // 只允许 GET 请求
-    if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+
+    const { action, query, bvid, quality, page = 1, limit = 100 } = req.query;
+
+    if (!action) {
+        res.status(400).json({ error: '缺少 action 参数' });
+        return;
     }
 
     try {
-        const { url } = req.query;
+        let url = 'https://api.cenguigui.cn/api/bilibili/bilibili.php';
 
-        if (!url) {
-            return res.status(400).json({ error: 'Missing url parameter' });
+        if (action === 'search') {
+            if (!query) {
+                res.status(400).json({ error: '搜索请求缺少 query 参数' });
+                return;
+            }
+            url += `?action=search&query=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
+        } else if (action === 'media') {
+            if (!bvid) {
+                res.status(400).json({ error: '媒体请求缺少 bvid 参数' });
+                return;
+            }
+            url += `?action=media&bvid=${bvid}`;
+            if (quality) {
+                url += `&quality=${quality}`;
+            }
+        } else {
+            res.status(400).json({ error: '不支持的 action 类型' });
+            return;
         }
 
-        // 验证URL是否来自Bilibili
-        if (!url.includes('bilivideo.com') && !url.includes('hdslb.com')) {
-            return res.status(403).json({ error: 'Invalid URL source' });
-        }
+        console.log(`[Bilibili Proxy] 请求: ${url}`);
 
-        // 代理请求到Bilibili
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const response = await fetch(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Referer': 'https://www.bilibili.com/',
-                'Origin': 'https://www.bilibili.com',
-                'Accept': 'audio/webm,audio/ogg,audio/wav,audio/*;q=0.9,*/*;q=0.8'
-            }
+                'User-Agent': 'Mozilla/5.0',
+                'Referer': 'https://music.weny888.com/'
+            },
+            signal: controller.signal
         });
 
-        if (!response.ok) {
-            return res.status(response.status).json({ 
-                error: 'Failed to fetch audio' 
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log(`[Bilibili Proxy] ✅ 成功`);
+            res.status(200).json(data);
+        } else {
+            console.log(`[Bilibili Proxy] ❌ HTTP错误: ${response.status}`);
+            res.status(response.status).json({
+                error: `Bilibili API 返回错误: ${response.status}`
             });
         }
 
-        // 获取内容类型
-        const contentType = response.headers.get('content-type') || 'audio/mpeg';
-        const contentLength = response.headers.get('content-length');
-
-        // 设置响应头
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
-        res.setHeader('Accept-Ranges', 'bytes');
-        
-        if (contentLength) {
-            res.setHeader('Content-Length', contentLength);
-        }
-
-        // 支持范围请求（用于拖动进度条）
-        const range = req.headers.range;
-        if (range) {
-            res.setHeader('Content-Range', `bytes ${range}/`);
-            res.status(206);
-        }
-
-        // 流式传输音频数据
-        const buffer = await response.arrayBuffer();
-        res.send(Buffer.from(buffer));
-
     } catch (error) {
-        console.error('Bilibili proxy error:', error);
-        res.status(500).json({ 
-            error: 'Proxy error',
-            message: error.message 
+        console.error('[Bilibili Proxy] 错误:', error);
+        res.status(500).json({
+            error: '服务器内部错误',
+            message: error.message
         });
     }
 }
