@@ -14,6 +14,10 @@
   ],
   "routes": [
     {
+      "src": "/api/music-proxy",
+      "dest": "/api/proxy.js"
+    },
+    {
       "src": "/api/proxy",
       "dest": "/api/proxy.js"
     },
