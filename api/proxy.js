@@ -20,8 +20,14 @@ module.exports = async (req, res) => {
                 // Bilibili API 特殊处理
                 apiUrl = `${API_ENDPOINTS.backup2}?action=search&query=${encodeURIComponent(name)}&page=1&limit=${count || 1000}`;
             } else {
-                // 其他音乐API
-                apiUrl = `${API_ENDPOINTS.main}?types=${types}&source=${source}&name=${encodeURIComponent(name)}&count=${count || 1000}`;
+                // 其他音乐API - 根据请求类型选择不同的API端点
+                if (types === 'pic' || types === 'url') {
+                    // 图片和URL请求直接使用主API
+                    apiUrl = `${API_ENDPOINTS.main}?types=${types}&source=${source}&name=${encodeURIComponent(name)}&count=${count || 1000}`;
+                } else {
+                    // 搜索请求使用代理逻辑
+                    apiUrl = `${API_ENDPOINTS.main}?types=${types}&source=${source}&name=${encodeURIComponent(name)}&count=${count || 1000}`;
+                }
             }
 
             const response = await fetch(apiUrl, {
@@ -91,6 +97,12 @@ module.exports = async (req, res) => {
                 }
             }
 
+            // 对于图片和URL请求，直接返回原始数据
+            if (types === 'pic' || types === 'url') {
+                res.setHeader('Content-Type', 'application/json');
+                return res.json(data);
+            }
+
             res.setHeader('Content-Type', 'application/json');
             return res.json(data);
 
@@ -98,19 +110,58 @@ module.exports = async (req, res) => {
             // 处理通用URL代理请求
             const decodedUrl = decodeURIComponent(url);
 
-            const response = await fetch(decodedUrl, {
-                headers: {
-                    'Referer': 'https://y.qq.com/',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+            // 特殊处理音乐API的图片和URL请求
+            if (url.includes('types=pic') || url.includes('types=url')) {
+                // 对于图片和URL请求，直接转发到主API
+                try {
+                    const response = await fetch(decodedUrl, {
+                        headers: {
+                            'Referer': 'https://y.qq.com/',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        // 如果主API失败，尝试备用API
+                        console.log(`主API失败，尝试备用API: ${decodedUrl}`);
+                        const backupUrl = decodedUrl.replace(API_ENDPOINTS.main, API_ENDPOINTS.backup1);
+                        const backupResponse = await fetch(backupUrl, {
+                            headers: {
+                                'Referer': 'https://y.qq.com/',
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+                            }
+                        });
+
+                        if (backupResponse.ok) {
+                            res.setHeader('Content-Type', backupResponse.headers.get('content-type'));
+                            backupResponse.body.pipe(res);
+                        } else {
+                            return res.status(500).json({ error: 'Both main and backup API failed' });
+                        }
+                    } else {
+                        res.setHeader('Content-Type', response.headers.get('content-type'));
+                        response.body.pipe(res);
+                    }
+                } catch (error) {
+                    console.error('图片/URL代理请求失败:', error);
+                    return res.status(500).json({ error: 'Proxy request failed' });
                 }
-            });
+            } else {
+                // 通用URL代理
+                const response = await fetch(decodedUrl, {
+                    headers: {
+                        'Referer': 'https://y.qq.com/',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+                    }
+                });
 
-            if (!response.ok) {
-                return res.status(response.status).json({ error: `API responded with status: ${response.status}` });
+                if (!response.ok) {
+                    return res.status(response.status).json({ error: `API responded with status: ${response.status}` });
+                }
+
+                res.setHeader('Content-Type', response.headers.get('content-type'));
+                response.body.pipe(res);
             }
-
-            res.setHeader('Content-Type', response.headers.get('content-type'));
-            response.body.pipe(res);
 
         } else {
             return res.status(400).json({ error: 'Invalid request parameters' });
