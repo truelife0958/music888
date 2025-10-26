@@ -3,7 +3,9 @@ const fetch = require('node-fetch');
 const API_ENDPOINTS = {
     main: 'https://music-api.gdstudio.xyz/api.php',
     backup1: 'https://music-api.gdstudio.org/api.php',
-    backup2: 'https://api.cenguigui.cn/api/bilibili/bilibili.php'
+    backup2: 'https://api.cenguigui.cn/api/bilibili/bilibili.php',
+    backup3: 'https://netease-wapi.vercel.app/api/search',
+    backup4: 'https://music.xianqiao.wang/api'
 };
 
 module.exports = async (req, res) => {
@@ -55,6 +57,40 @@ module.exports = async (req, res) => {
                 }
             }
 
+            // 特殊处理网易云音乐API响应格式
+            if (source === 'netease' && API_ENDPOINTS.main.includes('gdstudio.xyz')) {
+                // 尝试备用网易云音乐API
+                try {
+                    const neteaseUrl = `${API_ENDPOINTS.backup3}?keywords=${encodeURIComponent(name)}&type=1&limit=${count || 30}`;
+                    const neteaseResponse = await fetch(neteaseUrl, {
+                        headers: {
+                            'Referer': 'https://music.163.com/',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+                        }
+                    });
+
+                    if (neteaseResponse.ok) {
+                        const neteaseData = await neteaseResponse.json();
+                        if (neteaseData.result && neteaseData.result.songs && neteaseData.result.songs.length > 0) {
+                            const formattedData = neteaseData.result.songs.map(song => ({
+                                id: song.id,
+                                name: song.name,
+                                artist: song.artists.map(artist => artist.name),
+                                album: song.album.name,
+                                url_id: song.id,
+                                pic_id: song.album.pic || '',
+                                lyric_id: song.id,
+                                source: 'netease'
+                            }));
+                            res.setHeader('Content-Type', 'application/json');
+                            return res.json(formattedData);
+                        }
+                    }
+                } catch (neteaseError) {
+                    console.error('Netease API fallback failed:', neteaseError);
+                }
+            }
+
             res.setHeader('Content-Type', 'application/json');
             return res.json(data);
 
@@ -81,6 +117,64 @@ module.exports = async (req, res) => {
         }
     } catch (error) {
         console.error('Proxy error:', error);
+
+        // 如果主要API失败，尝试备用API
+        if (req.query.types && req.query.source && req.query.name && API_ENDPOINTS.main.includes('gdstudio.xyz')) {
+            // 尝试备用API
+            const backupEndpoints = [API_ENDPOINTS.backup1, API_ENDPOINTS.backup3, API_ENDPOINTS.backup4];
+
+            for (const backupUrl of backupEndpoints) {
+                try {
+                    let backupApiUrl;
+
+                    if (backupUrl === API_ENDPOINTS.backup3) {
+                        // 网易云音乐专用备用API
+                        backupApiUrl = `${backupUrl}?keywords=${encodeURIComponent(req.query.name)}&type=1&limit=${req.query.count || 30}`;
+                    } else if (backupUrl === API_ENDPOINTS.backup4) {
+                        // 通用音乐API
+                        backupApiUrl = `${backupUrl}?type=search&source=${req.query.source}&name=${encodeURIComponent(req.query.name)}&count=${req.query.count || 1000}`;
+                    } else {
+                        // 其他备用API
+                        backupApiUrl = `${backupUrl}?types=${req.query.types}&source=${req.query.source}&name=${encodeURIComponent(req.query.name)}&count=${req.query.count || 1000}`;
+                    }
+
+                    console.log(`尝试备用API: ${backupApiUrl}`);
+                    const backupResponse = await fetch(backupApiUrl, {
+                        headers: {
+                            'Referer': 'https://y.qq.com/',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+                        }
+                    });
+
+                    if (backupResponse.ok) {
+                        const backupData = await backupResponse.json();
+
+                        // 特殊处理备用API响应格式
+                        if (backupUrl === API_ENDPOINTS.backup3 && backupData.result && backupData.result.songs) {
+                            const formattedData = backupData.result.songs.map(song => ({
+                                id: song.id,
+                                name: song.name,
+                                artist: song.artists.map(artist => artist.name),
+                                album: song.album.name,
+                                url_id: song.id,
+                                pic_id: song.album.pic || '',
+                                lyric_id: song.id,
+                                source: 'netease'
+                            }));
+                            res.setHeader('Content-Type', 'application/json');
+                            return res.json(formattedData);
+                        } else {
+                            res.setHeader('Content-Type', 'application/json');
+                            return res.json(backupData);
+                        }
+                    }
+                } catch (backupError) {
+                    console.error(`备用API ${backupUrl} 也失败:`, backupError);
+                    continue;
+                }
+            }
+        }
+
         return res.status(500).json({ error: 'Failed to proxy request', details: error.message });
     }
 };
