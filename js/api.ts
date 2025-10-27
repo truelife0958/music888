@@ -18,6 +18,49 @@ interface ApiSource {
     type?: string; // API类型标识，用于特殊处理
 }
 
+/**
+ * 解析API响应，处理多种可能的响应格式
+ * @param data API响应数据
+ * @returns 歌曲数组
+ * @throws {Error} 如果无法解析响应格式
+ */
+function parseApiResponse(data: any): any[] {
+    console.log('📥 API 响应类型:', typeof data, '是否为数组:', Array.isArray(data));
+    console.log('📥 API 响应内容:', JSON.stringify(data).substring(0, 500));
+
+    let songs: any[] = [];
+
+    if (Array.isArray(data)) {
+        console.log('✅ 响应格式: 直接数组');
+        songs = data;
+    } else if (data && typeof data === 'object') {
+        // 尝试多种可能的字段名
+        if (Array.isArray(data.data)) {
+            console.log('✅ 响应格式: data 字段');
+            songs = data.data;
+        } else if (Array.isArray(data.songs)) {
+            console.log('✅ 响应格式: songs 字段');
+            songs = data.songs;
+        } else if (Array.isArray(data.result)) {
+            console.log('✅ 响应格式: result 字段');
+            songs = data.result;
+        } else if (Array.isArray(data.list)) {
+            console.log('✅ 响应格式: list 字段');
+            songs = data.list;
+        } else {
+            // 打印所有可用的键
+            console.error('❌ 未找到歌曲数组，可用的键:', Object.keys(data));
+            console.error('❌ 完整响应:', data);
+            throw new Error(`API 返回数据格式不正确，可用字段: ${Object.keys(data).join(', ')}`);
+        }
+    } else {
+        console.error('❌ API 返回格式错误，既不是数组也不是对象:', data);
+        throw new Error('API 返回数据格式不正确');
+    }
+
+    return songs;
+}
+
 // 1. Multiple API sources for improved reliability
 const API_SOURCES: ApiSource[] = [
     {
@@ -33,6 +76,8 @@ const API_SOURCES: ApiSource[] = [
         name: '备用 API',
         url: 'https://music-api.gdstudio.org/api.php'
     }
+    // 注意：https://api.injahow.cn/meting 不支持 type=search，只支持 song/playlist/url/pic/lrc
+    // 无法作为备用API使用
 ];
 
 let API_BASE = API_SOURCES[0].url;
@@ -351,8 +396,8 @@ function recordSourceResult(sourceId: string, success: boolean): void {
 function getSortedSources(currentSource: string): string[] {
     const sources = MUSIC_SOURCES.map(s => s.id);
 
-    // 当前音乐源优先
-    const otherSources = sources.filter(s => s !== currentSource && s !== 'kuwo');
+    // 过滤掉当前音乐源
+    const otherSources = sources.filter(s => s !== currentSource);
 
     // 根据成功率排序
     otherSources.sort((a, b) => {
@@ -663,8 +708,6 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         }
         
         const data = await response.json();
-        console.log('📥 搜索 API 响应类型:', typeof data, '是否为数组:', Array.isArray(data));
-        console.log('📥 搜索 API 响应内容:', JSON.stringify(data).substring(0, 500));
 
         // 检查API是否返回错误
         if (data && data.error) {
@@ -673,37 +716,14 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
             throw new Error(data.error || 'API 返回错误');
         }
 
-        // 处理不同的响应格式
-        let songs: any[] = [];
-
-        if (Array.isArray(data)) {
-            console.log('✅ 响应格式: 直接数组');
-            songs = data;
-        } else if (data && typeof data === 'object') {
-            // 尝试多种可能的字段名
-            if (Array.isArray(data.data)) {
-                console.log('✅ 响应格式: data 字段');
-                songs = data.data;
-            } else if (Array.isArray(data.songs)) {
-                console.log('✅ 响应格式: songs 字段');
-                songs = data.songs;
-            } else if (Array.isArray(data.result)) {
-                console.log('✅ 响应格式: result 字段');
-                songs = data.result;
-            } else if (Array.isArray(data.list)) {
-                console.log('✅ 响应格式: list 字段');
-                songs = data.list;
-            } else {
-                // 打印所有可用的键
-                console.error('❌ 未找到歌曲数组，可用的键:', Object.keys(data));
-                console.error('❌ 完整响应:', data);
-                await handleApiFailure();
-                throw new Error(`API 返回数据格式不正确，可用字段: ${Object.keys(data).join(', ')}`);
-            }
-        } else {
-            console.error('❌ 搜索 API 返回格式错误，既不是数组也不是对象:', data);
+        // 使用公共函数解析响应
+        let songs: any[];
+        try {
+            songs = parseApiResponse(data);
+        } catch (parseError) {
+            console.error('❌ 解析响应失败:', parseError);
             await handleApiFailure();
-            throw new Error('API 返回数据格式不正确');
+            throw parseError;
         }
 
         if (songs.length === 0) {
@@ -811,8 +831,6 @@ export async function exploreRadarAPI(limit: number = 1000): Promise<Song[]> {
         }
         
         const data = await response.json();
-        console.log('📥 探索雷达 API 响应类型:', typeof data, '是否为数组:', Array.isArray(data));
-        console.log('📥 探索雷达 API 响应内容:', JSON.stringify(data).substring(0, 500));
 
         // 检查API是否返回错误
         if (data && data.error) {
@@ -821,37 +839,14 @@ export async function exploreRadarAPI(limit: number = 1000): Promise<Song[]> {
             throw new Error(data.error || 'API 返回错误');
         }
 
-        // 处理不同的响应格式
-        let songs: any[] = [];
-
-        if (Array.isArray(data)) {
-            console.log('✅ 响应格式: 直接数组');
-            songs = data;
-        } else if (data && typeof data === 'object') {
-            // 尝试多种可能的字段名
-            if (Array.isArray(data.data)) {
-                console.log('✅ 响应格式: data 字段');
-                songs = data.data;
-            } else if (Array.isArray(data.songs)) {
-                console.log('✅ 响应格式: songs 字段');
-                songs = data.songs;
-            } else if (Array.isArray(data.result)) {
-                console.log('✅ 响应格式: result 字段');
-                songs = data.result;
-            } else if (Array.isArray(data.list)) {
-                console.log('✅ 响应格式: list 字段');
-                songs = data.list;
-            } else {
-                // 打印所有可用的键
-                console.error('❌ 未找到歌曲数组，可用的键:', Object.keys(data));
-                console.error('❌ 完整响应:', data);
-                await handleApiFailure();
-                throw new Error(`API 返回数据格式不正确，可用字段: ${Object.keys(data).join(', ')}`);
-            }
-        } else {
-            console.error('❌ 探索雷达 API 返回格式错误，既不是数组也不是对象:', data);
+        // 使用公共函数解析响应
+        let songs: any[];
+        try {
+            songs = parseApiResponse(data);
+        } catch (parseError) {
+            console.error('❌ 解析响应失败:', parseError);
             await handleApiFailure();
-            throw new Error('API 返回数据格式不正确');
+            throw parseError;
         }
 
         if (songs.length === 0) {

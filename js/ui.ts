@@ -1,5 +1,6 @@
 import { Song } from './api.js';
 import * as player from './player.js';
+import { formatTime } from './utils.js';
 
 // --- Type Definitions ---
 interface LyricLine {
@@ -199,10 +200,4 @@ export function showLoading(containerId: string = 'searchResults'): void {
 export function showError(message: string, containerId: string = 'searchResults'): void {
     const container = document.getElementById(containerId)!;
     container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i><div>${message}</div></div>`;
-}
-
-function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }

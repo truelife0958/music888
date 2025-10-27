@@ -271,6 +271,17 @@ export function isMobile(): boolean {
 }
 
 /**
+ * 生成歌曲文件名
+ * @param song 歌曲对象
+ * @param extension 文件扩展名（默认为.mp3）
+ * @returns 文件名字符串
+ */
+export function generateSongFileName(song: { name: string; artist: string | string[] }, extension: string = '.mp3'): string {
+    const artistStr = Array.isArray(song.artist) ? song.artist.join(',') : song.artist;
+    return `${song.name} - ${artistStr}${extension}`;
+}
+
+/**
  * 复制文本到剪贴板
  * @param text 要复制的文本
  * @returns 是否成功

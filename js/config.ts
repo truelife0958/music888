@@ -100,12 +100,13 @@ export const QUALITY_NAMES: Record<string, string> = {
 export const QUALITY_FALLBACK = ['999', '740', '320', '192', '128'] as const;
 
 /**
- * 可用音乐源列表
+ * 可用音乐源列表（根据API文档，kuwo是稳定源之一）
  */
 export const AVAILABLE_SOURCES = [
     'netease',
     'tencent',
     'kugou',
+    'kuwo',    // kuwo是稳定源，不应屏蔽
     'xiami',
     'baidu',
     'bilibili'

@@ -1,6 +1,8 @@
 import * as api from './api.js';
 import { Song } from './api.js';
 import * as ui from './ui.js';
+import { PLAYER_CONFIG, STORAGE_CONFIG, SOURCE_NAMES, QUALITY_NAMES, QUALITY_FALLBACK, DOWNLOAD_CONFIG, AVAILABLE_SOURCES } from './config.js';
+import { generateSongFileName } from './utils.js';
 
 // --- Player State ---
 let currentPlaylist: Song[] = [];
@@ -12,7 +14,6 @@ let playHistory: number[] = [];
 let historyPosition: number = -1;
 let lastActiveContainer: string = 'searchResults';
 let consecutiveFailures: number = 0; // 连续播放失败计数
-const MAX_CONSECUTIVE_FAILURES = 5; // 最大连续失败次数
 
 // --- Playlist & Favorites State ---
 let playlistStorage = new Map<string, any>();
@@ -20,7 +21,6 @@ let playlistCounter: number = 0;
 
 // --- Play History State ---
 let playHistorySongs: Song[] = []; // 播放历史歌曲列表
-const MAX_HISTORY_SIZE = 50; // 最多保存50首历史记录
 
 // --- Core Player Functions ---
 
@@ -37,9 +37,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
     const song = currentPlaylist[index];
 
     if (song.source === 'kuwo') {
-        ui.showNotification('酷我音乐源暂不支持，跳到下一首', 'warning');
-        setTimeout(() => nextSong(), 500);
-        return;
+        ui.showNotification('正在播放酷我音乐...', 'info');
     }
 
     if (!fromHistory) {
@@ -61,10 +59,9 @@ export async function playSong(index: number, playlist: Song[], containerId: str
         // 品质降级队列：按优先级尝试
         const qualitySelect = document.getElementById('qualitySelect') as HTMLSelectElement;
         const preferredQuality = qualitySelect.value;
-        const qualityFallback = ['999', '740', '320', '192', '128'];
 
         // 确保首选品质在队列首位
-        const qualityQueue = [preferredQuality, ...qualityFallback.filter(q => q !== preferredQuality)];
+        const qualityQueue = [preferredQuality, ...QUALITY_FALLBACK.filter(q => q !== preferredQuality)];
 
         let urlData: { url: string; br: string; error?: string; usedSource?: string } | null = null;
         let successQuality = '';
@@ -107,32 +104,16 @@ export async function playSong(index: number, playlist: Song[], containerId: str
 
             // 提示音乐源切换信息
             if (usedFallback && urlData.usedSource) {
-                const sourceNames: { [key: string]: string } = {
-                    'netease': '网易云音乐',
-                    'tencent': 'QQ音乐',
-                    'kugou': '酷狗音乐',
-                    'kuwo': '酷我音乐',
-                    'xiami': '虾米音乐',
-                    'baidu': '百度音乐',
-                    'bilibili': 'Bilibili音乐'
-                };
                 ui.showNotification(
-                    `已从备用音乐源 ${sourceNames[urlData.usedSource] || urlData.usedSource} 获取`,
+                    `已从备用音乐源 ${SOURCE_NAMES[urlData.usedSource] || urlData.usedSource} 获取`,
                     'success'
                 );
             }
 
             // 提示品质降级信息
             if (successQuality !== preferredQuality) {
-                const qualityNames: { [key: string]: string } = {
-                    '128': '标准 128K',
-                    '192': '较高 192K',
-                    '320': '高品质 320K',
-                    '740': '无损 FLAC',
-                    '999': 'Hi-Res'
-                };
                 ui.showNotification(
-                    `原品质不可用，已自动切换到 ${qualityNames[successQuality] || successQuality}`,
+                    `原品质不可用，已自动切换到 ${QUALITY_NAMES[successQuality] || successQuality}`,
                     'warning'
                 );
             }
@@ -173,7 +154,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
         } else {
             // 播放失败,增加连续失败计数
             consecutiveFailures++;
-            console.error('所有品质尝试均失败:', song, `连续失败: ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}`);
+            console.error('所有品质尝试均失败:', song, `连续失败: ${consecutiveFailures}/${PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES}`);
 
             // 触发API失败处理(可能切换API)
             await api.handleApiFailure();
@@ -189,7 +170,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
             }
 
             // 检查是否达到连续失败阈值
-            if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            if (consecutiveFailures >= PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES) {
                 ui.showNotification(
                     `连续失败${consecutiveFailures}首，已暂停播放。建议检查网络或更换歌单`,
                     'error'
@@ -200,14 +181,14 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                 return; // 停止自动播放
             }
 
-            ui.showNotification(`${errorMsg}，将尝试下一首 (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})`, 'error');
-            setTimeout(() => nextSong(), 1500);
+            ui.showNotification(`${errorMsg}，将尝试下一首 (${consecutiveFailures}/${PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES})`, 'error');
+            setTimeout(() => nextSong(), PLAYER_CONFIG.RETRY_DELAY);
         }
     } catch (error) {
         consecutiveFailures++;
-        console.error('Error playing song:', error, `连续失败: ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}`);
+        console.error('Error playing song:', error, `连续失败: ${consecutiveFailures}/${PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES}`);
 
-        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        if (consecutiveFailures >= PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES) {
             ui.showNotification(
                 `连续失败${consecutiveFailures}首，已暂停播放。建议检查网络或更换歌单`,
                 'error'
@@ -218,8 +199,8 @@ export async function playSong(index: number, playlist: Song[], containerId: str
             return;
         }
 
-        ui.showNotification(`播放失败，将尝试下一首 (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})`, 'error');
-        setTimeout(() => nextSong(), 1500);
+        ui.showNotification(`播放失败，将尝试下一首 (${consecutiveFailures}/${PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES})`, 'error');
+        setTimeout(() => nextSong(), PLAYER_CONFIG.RETRY_DELAY);
     }
 }
 
@@ -234,7 +215,7 @@ export function nextSong(): void {
     }
 
     // 检查是否应该尝试切换音乐源而不是直接播放下一首
-    if (consecutiveFailures >= 2) {
+    if (consecutiveFailures >= PLAYER_CONFIG.SOURCE_SWITCH_THRESHOLD) {
         console.log(`连续失败${consecutiveFailures}次，尝试切换音乐源...`);
 
         // 尝试找到同一首歌的其他源
@@ -311,7 +292,7 @@ export function downloadSongByData(song: Song | null): void {
                 .then(blob => {
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(',') : song.artist}.mp3`;
+                    a.download = generateSongFileName(song);
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -330,7 +311,7 @@ export function downloadLyricByData(song: Song | null): void {
             const blob = new Blob([lyricData.lyric], { type: 'text/plain;charset=utf-8' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(',') : song.artist}.lrc`;
+            a.download = generateSongFileName(song, '.lrc');
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -342,7 +323,7 @@ export function downloadLyricByData(song: Song | null): void {
 
 export function loadSavedPlaylists(): void {
     try {
-        const saved = localStorage.getItem('musicPlayerPlaylists');
+        const saved = localStorage.getItem(STORAGE_CONFIG.KEY_PLAYLISTS);
         if (saved) {
             const data = JSON.parse(saved);
             playlistStorage = new Map(data.playlists || []);
@@ -351,7 +332,7 @@ export function loadSavedPlaylists(): void {
         initializeFavoritesPlaylist();
 
         //加载播放历史
-        const savedHistory = localStorage.getItem('musicPlayerHistory');
+        const savedHistory = localStorage.getItem(STORAGE_CONFIG.KEY_HISTORY);
         if (savedHistory) {
             playHistorySongs = JSON.parse(savedHistory);
         }
@@ -371,13 +352,13 @@ function addToPlayHistory(song: Song): void {
     playHistorySongs.unshift(song);
 
     // 限制历史记录数量
-    if (playHistorySongs.length > MAX_HISTORY_SIZE) {
-        playHistorySongs = playHistorySongs.slice(0, MAX_HISTORY_SIZE);
+    if (playHistorySongs.length > PLAYER_CONFIG.MAX_HISTORY_SIZE) {
+        playHistorySongs = playHistorySongs.slice(0, PLAYER_CONFIG.MAX_HISTORY_SIZE);
     }
 
     // 保存到localStorage
     try {
-        localStorage.setItem('musicPlayerHistory', JSON.stringify(playHistorySongs));
+        localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
     } catch (error) {
         console.error('保存播放历史失败:', error);
     }
@@ -391,7 +372,7 @@ export function getPlayHistory(): Song[] {
 // 清空播放历史
 export function clearPlayHistory(): void {
     playHistorySongs = [];
-    localStorage.removeItem('musicPlayerHistory');
+    localStorage.removeItem(STORAGE_CONFIG.KEY_HISTORY);
 }
 
 // 获取收藏歌曲列表
@@ -482,12 +463,11 @@ function updatePlayerFavoriteButton(): void {
 // 获取同一首歌的其他音乐源版本
 function getAlternativeSources(originalSong: Song): Song[] {
     const alternativeSources: Song[] = [];
-    const availableSources = ['netease', 'tencent', 'kugou', 'xiami', 'baidu', 'bilibili'];
 
-    // 排除当前源和已知的坏源
-    const sourcesToTry = availableSources.filter(source =>
-        source !== originalSong.source && source !== 'kuwo' // kuwo源暂不支持
-    );
+    // 排除当前源和已知的坏源（kuwo源暂不支持）
+    const sourcesToTry = (AVAILABLE_SOURCES as readonly string[]).filter(source =>
+        source !== originalSong.source
+    ) as string[];
 
     for (const source of sourcesToTry) {
         // 在实际应用中，这里应该调用相应的API搜索相同的歌曲
@@ -510,11 +490,15 @@ function getAlternativeSources(originalSong: Song): Song[] {
 
 // 保存歌单到本地存储
 function savePlaylistsToStorage(): void {
-    const playlistsData = Array.from(playlistStorage.entries()).map(([key, value]) => ({
-        id: key,
-        ...value
-    }));
-    localStorage.setItem('savedPlaylists', JSON.stringify(playlistsData));
+    try {
+        const playlistsData = {
+            playlists: Array.from(playlistStorage.entries()),
+            counter: playlistCounter
+        };
+        localStorage.setItem(STORAGE_CONFIG.KEY_PLAYLISTS, JSON.stringify(playlistsData));
+    } catch (error) {
+        console.error('保存歌单失败:', error);
+    }
 }
 
 audioPlayer.addEventListener('play', () => {
@@ -680,14 +664,13 @@ export function addMultipleToFavorites(songs: Song[]): void {
 
 // 批量下载歌曲
 export async function downloadMultipleSongs(songs: Song[]): Promise<void> {
-    const BATCH_SIZE = 3; // 每批下载3首
     const qualitySelect = document.getElementById('qualitySelect') as HTMLSelectElement;
     const quality = qualitySelect ? qualitySelect.value : '320';
 
     ui.showNotification(`开始下载 ${songs.length} 首歌曲...`, 'info');
 
-    for (let i = 0; i < songs.length; i += BATCH_SIZE) {
-        const batch = songs.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < songs.length; i += DOWNLOAD_CONFIG.BATCH_SIZE) {
+        const batch = songs.slice(i, i + DOWNLOAD_CONFIG.BATCH_SIZE);
 
         await Promise.all(batch.map(async (song) => {
             try {
@@ -698,7 +681,7 @@ export async function downloadMultipleSongs(songs: Song[]): Promise<void> {
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}.mp3`;
+                    a.download = generateSongFileName(song);
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -710,12 +693,12 @@ export async function downloadMultipleSongs(songs: Song[]): Promise<void> {
         }));
 
         // 显示进度
-        const downloaded = Math.min(i + BATCH_SIZE, songs.length);
+        const downloaded = Math.min(i + DOWNLOAD_CONFIG.BATCH_SIZE, songs.length);
         ui.showNotification(`下载进度: ${downloaded}/${songs.length}`, 'info');
 
         // 批次间延迟，避免请求过快
-        if (i + BATCH_SIZE < songs.length) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        if (i + DOWNLOAD_CONFIG.BATCH_SIZE < songs.length) {
+            await new Promise(resolve => setTimeout(resolve, DOWNLOAD_CONFIG.BATCH_DELAY));
         }
     }
 
