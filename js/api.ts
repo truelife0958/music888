@@ -69,26 +69,11 @@ const API_SOURCES: ApiSource[] = [
         type: 'custom'
     },
     {
-        name: 'Vercel 代理 API',
-        url: '/api/music-proxy',
-        type: 'proxy'
-    },
-    {
-        name: 'vkeys 落月 API',
-        url: 'https://api.vkeys.cn',
-        type: 'vkeys'
-    },
-    {
         name: '主 API',
         url: 'https://music-api.gdstudio.xyz/api.php'
-    },
-    {
-        name: '备用 API',
-        url: 'https://music-api.gdstudio.org/api.php'
     }
     // 注意：自建API无速率限制，优先使用
-    // vkeys API支持QQ音乐和网易云，多种音质
-    // gdstudio API有速率限制（60请求/5分钟），作为备用
+    // gdstudio.xyz API作为备用源
 ];
 
 let API_BASE = API_SOURCES[0].url;
