@@ -64,16 +64,16 @@ function parseApiResponse(data: any): any[] {
 // 1. Multiple API sources for improved reliability
 const API_SOURCES: ApiSource[] = [
     {
-        name: '自建 API',
-        url: 'https://music888-4swa.vercel.app/api.php',
-        type: 'custom'
+        name: 'Vite 代理 API',
+        url: '/api/music-proxy',
+        type: 'proxy'
     },
     {
         name: '主 API',
         url: 'https://music-api.gdstudio.xyz/api.php'
     }
-    // 注意：自建API无速率限制，优先使用
-    // gdstudio.xyz API作为备用源
+    // 注意：本地开发使用Vite代理避免CORS问题
+    // 生产环境需要配置Vercel函数或Cloudflare Worker代理
 ];
 
 let API_BASE = API_SOURCES[0].url;
@@ -674,7 +674,7 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
     return await response.json();
 }
 
-export async function searchMusicAPI(keyword: string, source: string, limit: number = 1000): Promise<Song[]> {
+export async function searchMusicAPI(keyword: string, source: string, limit: number = 50): Promise<Song[]> {
     // Bilibili 音乐源使用独立API，失败时自动降级
     if (source === 'bilibili') {
         try {
@@ -802,7 +802,7 @@ async function searchBilibiliMusic(keyword: string, page: number = 1, limit: num
     }
 }
 
-export async function exploreRadarAPI(limit: number = 1000): Promise<Song[]> {
+export async function exploreRadarAPI(limit: number = 50): Promise<Song[]> {
     const keywords = ['热门', '流行', '新歌榜', '热门榜', '抖音热歌', '网络热歌'];
     const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
     const sources = ['netease', 'tencent', 'kugou'];
