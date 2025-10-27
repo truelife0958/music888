@@ -74,6 +74,11 @@ const API_SOURCES: ApiSource[] = [
         type: 'proxy'
     },
     {
+        name: 'vkeys 落月 API',
+        url: 'https://api.vkeys.cn',
+        type: 'vkeys'
+    },
+    {
         name: '主 API',
         url: 'https://music-api.gdstudio.xyz/api.php'
     },
@@ -82,6 +87,7 @@ const API_SOURCES: ApiSource[] = [
         url: 'https://music-api.gdstudio.org/api.php'
     }
     // 注意：自建API无速率限制，优先使用
+    // vkeys API支持QQ音乐和网易云，多种音质
     // gdstudio API有速率限制（60请求/5分钟），作为备用
 ];
 
@@ -364,7 +370,7 @@ const MUSIC_SOURCES = [
     { id: 'bilibili', name: 'Bilibili音乐', priority: 7 }
 ];
 
-// Bilibili API 配置
+// Bilibili API 配置（笒鬼鬼API）
 const BILIBILI_API_BASE = 'https://api.cenguigui.cn/api/bilibili/bilibili.php';
 
 // 音乐源成功率统计
@@ -630,12 +636,12 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
     }
 }
 
-// 获取 Bilibili 媒体源URL
+// 获取 Bilibili 媒体源URL（使用笒鬼鬼API）
 async function getBilibiliMediaUrl(song: Song, quality: string = '320'): Promise<{ url: string; br: string; error?: string; usedSource?: string }> {
     try {
         const bvid = song.id;
 
-        // 映射品质参数
+        // 映射品质参数到cenguigui API的质量等级
         const qualityMap: { [key: string]: string } = {
             '128': 'low',
             '192': 'standard',
@@ -768,7 +774,7 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
     }
 }
 
-// Bilibili 音乐搜索
+// Bilibili 音乐搜索（使用笒鬼鬼API）
 async function searchBilibiliMusic(keyword: string, page: number = 1, limit: number = 100): Promise<Song[]> {
     try {
         const url = `${BILIBILI_API_BASE}?action=search&query=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`;
@@ -784,7 +790,7 @@ async function searchBilibiliMusic(keyword: string, page: number = 1, limit: num
             throw new Error(result.message || 'Bilibili API 返回数据格式不正确');
         }
 
-        // 转换 Bilibili 数据格式为统一格式
+        // 转换 Bilibili 数据格式为统一格式（兼容cenguigui API格式）
         const songs: Song[] = result.data.map((item: any) => ({
             id: item.bvid || item.id,
             name: item.title,
@@ -798,7 +804,8 @@ async function searchBilibiliMusic(keyword: string, page: number = 1, limit: num
                 bvid: item.bvid,
                 aid: item.aid,
                 duration: item.duration,
-                pic: item.pic
+                pic: item.pic,
+                play_count: item.play_count || 0
             }
         }));
 
