@@ -10,35 +10,59 @@ const API_ENDPOINTS = {
 
 module.exports = async (req, res) => {
     try {
-        const { url, types, source, name, count } = req.query;
+        const { url, types, source, name, count, id, br, size } = req.query;
 
-        if (types && source && name) {
+        if (types && source) {
             // 直接音乐源API配置
             const MUSIC_APIS = {
                 netease: {
                     search: (name, count) => `https://music-api.gdstudio.xyz/api.php?types=search&source=netease&name=${encodeURIComponent(name)}&count=${count || 30}`,
-                    pic: (id) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=netease&id=${id}&size=300`,
-                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${id}&br=${br || 320}`
+                    pic: (id, size) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=netease&id=${id}&size=${size || 300}`,
+                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=${id}&br=${br || 320}`,
+                    playlist: (id) => `https://music-api.gdstudio.xyz/api.php?types=playlist&source=netease&id=${id}`,
+                    lyric: (id) => `https://music-api.gdstudio.xyz/api.php?types=lyric&source=netease&id=${id}`
                 },
                 tencent: {
                     search: (name, count) => `https://music-api.gdstudio.xyz/api.php?types=search&source=tencent&name=${encodeURIComponent(name)}&count=${count || 30}`,
-                    pic: (id) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=tencent&id=${id}&size=300`,
-                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=tencent&id=${id}&br=${br || 320}`
+                    pic: (id, size) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=tencent&id=${id}&size=${size || 300}`,
+                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=tencent&id=${id}&br=${br || 320}`,
+                    playlist: (id) => `https://music-api.gdstudio.xyz/api.php?types=playlist&source=tencent&id=${id}`,
+                    lyric: (id) => `https://music-api.gdstudio.xyz/api.php?types=lyric&source=tencent&id=${id}`
                 },
                 kugou: {
                     search: (name, count) => `https://music-api.gdstudio.xyz/api.php?types=search&source=kugou&name=${encodeURIComponent(name)}&count=${count || 30}`,
-                    pic: (id) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=kugou&id=${id}&size=300`,
-                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=kugou&id=${id}&br=${br || 320}`
+                    pic: (id, size) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=kugou&id=${id}&size=${size || 300}`,
+                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=kugou&id=${id}&br=${br || 320}`,
+                    playlist: (id) => `https://music-api.gdstudio.xyz/api.php?types=playlist&source=kugou&id=${id}`,
+                    lyric: (id) => `https://music-api.gdstudio.xyz/api.php?types=lyric&source=kugou&id=${id}`
                 },
                 xiami: {
                     search: (name, count) => `https://music-api.gdstudio.xyz/api.php?types=search&source=xiami&name=${encodeURIComponent(name)}&count=${count || 30}`,
-                    pic: (id) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=xiami&id=${id}&size=300`,
-                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=xiami&id=${id}&br=${br || 320}`
+                    pic: (id, size) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=xiami&id=${id}&size=${size || 300}`,
+                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=xiami&id=${id}&br=${br || 320}`,
+                    playlist: (id) => `https://music-api.gdstudio.xyz/api.php?types=playlist&source=xiami&id=${id}`,
+                    lyric: (id) => `https://music-api.gdstudio.xyz/api.php?types=lyric&source=xiami&id=${id}`
                 },
                 baidu: {
                     search: (name, count) => `https://music-api.gdstudio.xyz/api.php?types=search&source=baidu&name=${encodeURIComponent(name)}&count=${count || 30}`,
-                    pic: (id) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=baidu&id=${id}&size=300`,
-                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=baidu&id=${id}&br=${br || 320}`
+                    pic: (id, size) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=baidu&id=${id}&size=${size || 300}`,
+                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=baidu&id=${id}&br=${br || 320}`,
+                    playlist: (id) => `https://music-api.gdstudio.xyz/api.php?types=playlist&source=baidu&id=${id}`,
+                    lyric: (id) => `https://music-api.gdstudio.xyz/api.php?types=lyric&source=baidu&id=${id}`
+                },
+                kuwo: {
+                    search: (name, count) => `https://music-api.gdstudio.xyz/api.php?types=search&source=kuwo&name=${encodeURIComponent(name)}&count=${count || 30}`,
+                    pic: (id, size) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=kuwo&id=${id}&size=${size || 300}`,
+                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=kuwo&id=${id}&br=${br || 320}`,
+                    playlist: (id) => `https://music-api.gdstudio.xyz/api.php?types=playlist&source=kuwo&id=${id}`,
+                    lyric: (id) => `https://music-api.gdstudio.xyz/api.php?types=lyric&source=kuwo&id=${id}`
+                },
+                bilibili: {
+                    search: (name, count) => `https://music-api.gdstudio.xyz/api.php?types=search&source=bilibili&name=${encodeURIComponent(name)}&count=${count || 30}`,
+                    pic: (id, size) => `https://music-api.gdstudio.xyz/api.php?types=pic&source=bilibili&id=${id}&size=${size || 300}`,
+                    url: (id, br) => `https://music-api.gdstudio.xyz/api.php?types=url&source=bilibili&id=${id}&br=${br || 320}`,
+                    playlist: (id) => `https://music-api.gdstudio.xyz/api.php?types=playlist&source=bilibili&id=${id}`,
+                    lyric: (id) => `https://music-api.gdstudio.xyz/api.php?types=lyric&source=bilibili&id=${id}`
                 }
             };
 
@@ -53,10 +77,16 @@ module.exports = async (req, res) => {
                     apiUrl = api.search(name, count);
                     break;
                 case 'pic':
-                    apiUrl = api.pic(name);
+                    apiUrl = api.pic(id, size);
                     break;
                 case 'url':
-                    apiUrl = api.url(name, count);
+                    apiUrl = api.url(id, br);
+                    break;
+                case 'playlist':
+                    apiUrl = api.playlist(id);
+                    break;
+                case 'lyric':
+                    apiUrl = api.lyric(id);
                     break;
                 default:
                     return res.status(400).json({ error: '不支持的请求类型' });
