@@ -64,6 +64,11 @@ function parseApiResponse(data: any): any[] {
 // 1. Multiple API sources for improved reliability
 const API_SOURCES: ApiSource[] = [
     {
+        name: '自建 API',
+        url: 'https://music888-4swa.vercel.app/api.php',
+        type: 'custom'
+    },
+    {
         name: 'Vercel 代理 API',
         url: '/api/music-proxy',
         type: 'proxy'
@@ -76,8 +81,8 @@ const API_SOURCES: ApiSource[] = [
         name: '备用 API',
         url: 'https://music-api.gdstudio.org/api.php'
     }
-    // 注意：https://api.injahow.cn/meting 不支持 type=search，只支持 song/playlist/url/pic/lrc
-    // 无法作为备用API使用
+    // 注意：自建API无速率限制，优先使用
+    // gdstudio API有速率限制（60请求/5分钟），作为备用
 ];
 
 let API_BASE = API_SOURCES[0].url;
