@@ -53,6 +53,20 @@
 
             <!-- 发现音乐标签 -->
             <div id="discoverTab" class="tab-content">
+                <!-- 平台选择器 -->
+                <div style="margin-bottom: 15px; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <i class="fas fa-layer-group" style="color: rgba(255, 255, 255, 0.7);"></i>
+                        <span style="font-weight: 500; font-size: 14px;">音乐平台</span>
+                    </div>
+                    <select class="playlist-source-select" id="discoverSourceSelect" style="width: 100%; margin: 0;">
+                        <option value="netease">网易云音乐</option>
+                        <option value="tencent">QQ音乐</option>
+                        <option value="kugou">酷狗音乐</option>
+                        <option value="bilibili">Bilibili音乐</option>
+                    </select>
+                </div>
+
                 <!-- 热门专辑 -->
                 <div class="discover-section">
                     <div class="discover-header" data-section="albums" data-expanded="false">

@@ -23,12 +23,16 @@ function initDiscoverToggles(): void {
                     try {
                         uiEnhancements.showLoading('hotAlbums');
                         albumsContent!.style.display = 'block';
-                        
-                        // 加载热门专辑（使用热门榜的前20首作为示例）
-                        const songs = await api.getChartList('hot');
-                        const albums = getUniqueAlbums(songs.slice(0, 20));
+
+                        // 获取选中的平台
+                        const sourceSelect = document.getElementById('discoverSourceSelect') as HTMLSelectElement;
+                        const source = sourceSelect ? sourceSelect.value as 'netease' | 'tencent' | 'kugou' | 'bilibili' : 'netease';
+
+                        // 加载热门歌曲（用于提取专辑）
+                        const songs = await api.getHotSongs(source, 50);
+                        const albums = getUniqueAlbums(songs.slice(0, 30));
                         displayAlbums(albums, 'hotAlbums');
-                        
+
                         header.setAttribute('data-expanded', 'true');
                         toggleIcon?.classList.remove('fa-chevron-down');
                         toggleIcon?.classList.add('fa-chevron-up');
@@ -48,11 +52,15 @@ function initDiscoverToggles(): void {
                     try {
                         uiEnhancements.showLoading('hotSongs');
                         songsContent!.style.display = 'block';
-                        
-                        // 加载热门歌曲（使用热门榜数据）
-                        const songs = await api.getChartList('hot');
+
+                        // 获取选中的平台
+                        const sourceSelect = document.getElementById('discoverSourceSelect') as HTMLSelectElement;
+                        const source = sourceSelect ? sourceSelect.value as 'netease' | 'tencent' | 'kugou' | 'bilibili' : 'netease';
+
+                        // 加载热门歌曲（使用新的getHotSongs API）
+                        const songs = await api.getHotSongs(source, 50);
                         uiEnhancements.displaySearchResultsWithSelection(songs.slice(0, 30), 'hotSongs', songs);
-                        
+
                         header.setAttribute('data-expanded', 'true');
                         toggleIcon?.classList.remove('fa-chevron-down');
                         toggleIcon?.classList.add('fa-chevron-up');
@@ -397,12 +405,36 @@ function updateMediaSession(song: any, coverUrl: string): void {
 function initializeEnhancements(): void {
     // 初始化发现音乐折叠功能
     initDiscoverToggles();
-    
+
     // 初始化榜单功能
     initChartToggles();
 
     // 初始化播放列表弹窗
     initPlaylistModal();
+
+    // 监听平台切换事件 - 自动刷新已展开的内容
+    const discoverSourceSelect = document.getElementById('discoverSourceSelect');
+    if (discoverSourceSelect) {
+        discoverSourceSelect.addEventListener('change', () => {
+            console.log('🔄 平台切换，刷新已展开的内容');
+
+            // 检查热门专辑是否已展开
+            const albumsHeader = document.querySelector('.discover-header[data-section="albums"]');
+            if (albumsHeader && albumsHeader.getAttribute('data-expanded') === 'true') {
+                // 先折叠再展开，触发重新加载
+                albumsHeader.setAttribute('data-expanded', 'false');
+                (albumsHeader as HTMLElement).click();
+            }
+
+            // 检查热门歌曲是否已展开
+            const songsHeader = document.querySelector('.discover-header[data-section="songs"]');
+            if (songsHeader && songsHeader.getAttribute('data-expanded') === 'true') {
+                // 先折叠再展开，触发重新加载
+                songsHeader.setAttribute('data-expanded', 'false');
+                (songsHeader as HTMLElement).click();
+            }
+        });
+    }
 
     // 替换搜索按钮事件（使用增强版）
     const searchBtn = document.querySelector('.search-btn');

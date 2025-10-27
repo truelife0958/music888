@@ -876,22 +876,68 @@ export async function exploreRadarAPI(limit: number = 50): Promise<Song[]> {
     }
 }
 
-// 获取榜单数据
-export async function getChartList(chartType: 'soar' | 'new' | 'hot'): Promise<Song[]> {
-    const chartIds = {
-        'soar': '19723756',  // 飙升榜
-        'new': '3779629',    // 新歌榜
-        'hot': '3778678'     // 热门榜
-    };
+// 多平台榜单ID配置
+const CHART_IDS = {
+    netease: {
+        'soar': '19723756',   // 飙升榜
+        'new': '3779629',     // 新歌榜
+        'hot': '3778678',     // 热门榜
+        'classic': '2884035', // 经典榜
+        'recommend': '3778678' // 推荐榜（使用热歌榜）
+    },
+    tencent: {
+        'soar': '108',        // 飙升榜
+        'new': '27',          // 新歌榜
+        'hot': '26',          // 热歌榜
+        'classic': '3',       // 经典榜
+        'recommend': '4'      // 推荐榜
+    },
+    kugou: {
+        'new': '8888',        // 新歌榜
+        'hot': '6666',        // 热歌榜
+        'soar': '31229',      // 飙升榜
+        'classic': '33',      // 经典500
+        'recommend': '6666'   // 推荐（热歌榜）
+    }
+};
 
+// 获取榜单数据 - 支持多平台
+export async function getChartList(
+    chartType: 'soar' | 'new' | 'hot' | 'classic' | 'recommend',
+    source: 'netease' | 'tencent' | 'kugou' | 'bilibili' = 'netease'
+): Promise<Song[]> {
     try {
-        console.log(`🔍 获取${chartType}榜单数据...`);
-        const playlist = await parsePlaylistAPI(chartIds[chartType], 'netease');
+        console.log(`🔍 获取 ${source} 平台的 ${chartType} 榜单数据...`);
+
+        // Bilibili特殊处理
+        if (source === 'bilibili') {
+            const bilibiliTypeMap: { [key: string]: 'hot' | 'new' | 'rank' } = {
+                'hot': 'hot',
+                'new': 'new',
+                'soar': 'rank',
+                'classic': 'hot',
+                'recommend': 'hot'
+            };
+            return await getBilibiliChartList(bilibiliTypeMap[chartType] || 'hot');
+        }
+
+        // 检查平台是否支持该榜单
+        const chartIds = CHART_IDS[source as 'netease' | 'tencent' | 'kugou'];
+        if (!chartIds || !chartIds[chartType]) {
+            console.warn(`${source} 平台不支持 ${chartType} 榜单，使用热歌榜代替`);
+            const fallbackId = chartIds?.hot || CHART_IDS.netease.hot;
+            const playlist = await parsePlaylistAPI(fallbackId, source);
+            return playlist.songs.slice(0, 50);
+        }
+
+        const playlistId = chartIds[chartType];
+        const playlist = await parsePlaylistAPI(playlistId, source);
         const songs = playlist.songs.slice(0, 50); // 限制50首
-        console.log(`✅ 成功获取${chartType}榜单，共 ${songs.length} 首歌曲`);
+
+        console.log(`✅ 成功获取 ${source} ${chartType} 榜单，共 ${songs.length} 首歌曲`);
         return songs;
     } catch (error) {
-        console.error(`❌ 获取${chartType}榜单失败:`, error);
+        console.error(`❌ 获取 ${source} ${chartType} 榜单失败:`, error);
         throw error;
     }
 }
@@ -1352,7 +1398,7 @@ export function exportPlaylistToText(songs: Song[], format: 'txt' | 'csv' | 'jso
 export async function importPlaylistFromText(text: string, source: string = 'netease'): Promise<Song[]> {
     const lines = text.split('\n').filter(line => line.trim());
     const songs: Song[] = [];
-    
+
     for (const line of lines) {
         try {
             // 尝试解析格式：歌曲名 - 艺术家 或 歌曲名
@@ -1368,6 +1414,150 @@ export async function importPlaylistFromText(text: string, source: string = 'net
             console.warn(`导入失败: ${line}`, error);
         }
     }
-    
+
     return songs;
 }
+
+// ========== 新增功能：专辑和歌单搜索 ==========
+
+/**
+ * 搜索专辑
+ * @param keyword 搜索关键词
+ * @param source 音乐平台
+ * @param limit 返回数量
+ */
+export async function searchAlbumAPI(keyword: string, source: string = 'netease', limit: number = 30): Promise<any[]> {
+    // 注意：Meting API不直接支持专辑搜索，我们通过歌单搜索模拟
+    // 实际项目中可以直接调用网易云API的专辑搜索接口
+    try {
+        console.log(`🔍 搜索专辑: "${keyword}" (${source})`);
+
+        // 使用search type=10 搜索专辑（网易云API参数）
+        const url = API_BASE.includes('meting')
+            ? `${API_BASE}?server=${source}&type=search&name=${encodeURIComponent(keyword)}&count=${limit}&search_type=10`
+            : `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}&search_type=10`;
+
+        const response = await fetchWithRetry(url);
+        const data = await response.json();
+
+        // 尝试解析响应
+        let albums: any[] = [];
+        if (Array.isArray(data)) {
+            albums = data;
+        } else if (data && data.albums) {
+            albums = data.albums;
+        } else if (data && data.result && data.result.albums) {
+            albums = data.result.albums;
+        }
+
+        console.log(`✅ 找到 ${albums.length} 个专辑`);
+        return albums;
+    } catch (error) {
+        console.error('❌ 搜索专辑失败:', error);
+        return [];
+    }
+}
+
+/**
+ * 搜索歌单
+ * @param keyword 搜索关键词
+ * @param source 音乐平台
+ * @param limit 返回数量
+ */
+export async function searchPlaylistAPI(keyword: string, source: string = 'netease', limit: number = 30): Promise<any[]> {
+    try {
+        console.log(`🔍 搜索歌单: "${keyword}" (${source})`);
+
+        // 使用search type=1000 搜索歌单（网易云API参数）
+        const url = API_BASE.includes('meting')
+            ? `${API_BASE}?server=${source}&type=search&name=${encodeURIComponent(keyword)}&count=${limit}&search_type=1000`
+            : `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}&search_type=1000`;
+
+        const response = await fetchWithRetry(url);
+        const data = await response.json();
+
+        // 尝试解析响应
+        let playlists: any[] = [];
+        if (Array.isArray(data)) {
+            playlists = data;
+        } else if (data && data.playlists) {
+            playlists = data.playlists;
+        } else if (data && data.result && data.result.playlists) {
+            playlists = data.result.playlists;
+        }
+
+        console.log(`✅ 找到 ${playlists.length} 个歌单`);
+        return playlists;
+    } catch (error) {
+        console.error('❌ 搜索歌单失败:', error);
+        return [];
+    }
+}
+
+// ========== 新增功能：热门专辑和热门歌曲 ==========
+
+/**
+ * 获取热门专辑
+ * @param source 音乐平台
+ * @param limit 返回数量
+ */
+export async function getHotAlbums(source: string = 'netease', limit: number = 20): Promise<any[]> {
+    try {
+        console.log(`🔥 获取热门专辑 (${source})`);
+
+        // 通过热门关键词搜索专辑
+        const hotKeywords = ['华语', '流行', '热门', '经典', '排行榜'];
+        const randomKeyword = hotKeywords[Math.floor(Math.random() * hotKeywords.length)];
+
+        return await searchAlbumAPI(randomKeyword, source, limit);
+    } catch (error) {
+        console.error('❌ 获取热门专辑失败:', error);
+        return [];
+    }
+}
+
+/**
+ * 获取热门歌曲（通过热门榜单）
+ * @param source 音乐平台
+ * @param limit 返回数量
+ */
+export async function getHotSongs(source: 'netease' | 'tencent' | 'kugou' | 'bilibili' = 'netease', limit: number = 50): Promise<Song[]> {
+    try {
+        console.log(`🔥 获取热门歌曲 (${source})`);
+
+        // 直接使用热门榜单
+        const songs = await getChartList('hot', source);
+        return songs.slice(0, limit);
+    } catch (error) {
+        console.error('❌ 获取热门歌曲失败:', error);
+        // 降级：通过关键词搜索
+        try {
+            const fallbackSongs = await searchMusicAPI('热门', source, limit);
+            return fallbackSongs;
+        } catch (fallbackError) {
+            console.error('❌ 降级搜索也失败:', fallbackError);
+            return [];
+        }
+    }
+}
+
+/**
+ * 获取推荐歌单
+ * @param source 音乐平台
+ * @param limit 返回数量
+ */
+export async function getRecommendPlaylists(source: string = 'netease', limit: number = 20): Promise<any[]> {
+    try {
+        console.log(`💡 获取推荐歌单 (${source})`);
+
+        // 通过热门关键词搜索歌单
+        const hotKeywords = ['热门', '精选', '经典', '必听', '流行'];
+        const randomKeyword = hotKeywords[Math.floor(Math.random() * hotKeywords.length)];
+
+        return await searchPlaylistAPI(randomKeyword, source, limit);
+    } catch (error) {
+        console.error('❌ 获取推荐歌单失败:', error);
+        return [];
+    }
+}
+
