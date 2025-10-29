@@ -61,7 +61,7 @@
             <div id="discoverTab" class="tab-content">
                 <!-- 新功能导航 -->
                 <div class="discover-nav" style="margin-bottom: 20px;">
-                    <button class="discover-nav-btn active" data-feature="recommend">
+                    <button class="discover-nav-btn active" data-feature="playlists">
                         <i class="fas fa-star"></i> 推荐歌单
                     </button>
                     <button class="discover-nav-btn" data-feature="newsongs">
@@ -79,32 +79,32 @@
                 </div>
 
                 <!-- 推荐歌单区域 -->
-                <div id="recommendPlaylistsArea" class="discover-feature-area">
+                <div class="discover-feature-area" data-feature="playlists">
                     <div class="section-header">
                         <h3><i class="fas fa-star"></i> 推荐歌单</h3>
                     </div>
-                    <div id="recommendPlaylists" class="playlist-grid"></div>
+                    <div id="recommendPlaylistsGrid"></div>
                 </div>
 
                 <!-- 新歌速递区域 -->
-                <div id="newSongsArea" class="discover-feature-area" style="display: none;">
+                <div class="discover-feature-area" data-feature="newsongs" style="display: none;">
                     <div class="section-header">
                         <h3><i class="fas fa-compact-disc"></i> 新歌速递</h3>
-                        <div id="newSongFilter"></div>
                     </div>
-                    <div id="newSongsList" class="song-list"></div>
+                    <div id="newSongsFilter" style="margin-bottom: 15px;"></div>
+                    <div id="newSongsGrid"></div>
                 </div>
 
                 <!-- 排行榜区域 -->
-                <div id="toplistsArea" class="discover-feature-area" style="display: none;">
+                <div class="discover-feature-area" data-feature="toplists" style="display: none;">
                     <div class="section-header">
                         <h3><i class="fas fa-trophy"></i> 排行榜</h3>
                     </div>
-                    <div id="toplistsGrid" class="toplist-grid"></div>
+                    <div id="toplistsGrid"></div>
                 </div>
 
                 <!-- 每日推荐区域 -->
-                <div id="dailyRecommendArea" class="discover-feature-area" style="display: none;">
+                <div class="discover-feature-area" data-feature="daily" style="display: none;">
                     <div class="section-header">
                         <h3><i class="fas fa-calendar-day"></i> 每日推荐</h3>
                     </div>
@@ -112,104 +112,12 @@
                 </div>
 
                 <!-- 播客电台区域 -->
-                <div id="podcastArea" class="discover-feature-area" style="display: none;">
+                <div class="discover-feature-area" data-feature="podcast" style="display: none;">
                     <div class="section-header">
                         <h3><i class="fas fa-podcast"></i> 播客电台</h3>
                     </div>
-                    <div id="radioCategories" class="radio-categories"></div>
-                    <div id="recommendRadios" class="radio-grid"></div>
-                </div>
-
-                <!-- 原有的热门专辑 -->
-                <div class="discover-section" style="margin-top: 30px;">
-                    <div class="discover-header" data-section="albums" data-expanded="false">
-                        <div class="discover-header-left">
-                            <i class="fas fa-compact-disc"></i>
-                            <span>热门专辑（旧版）</span>
-                        </div>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </div>
-                    <div class="discover-content" id="hotAlbums" style="display: none;">
-                        <!-- 各平台专辑列表 -->
-                        <div class="platform-section">
-                            <div class="platform-header" data-platform="netease" data-type="albums">
-                                <i class="fas fa-music platform-icon"></i>
-                                <span>网易云音乐</span>
-                                <i class="fas fa-chevron-right platform-toggle"></i>
-                            </div>
-                            <div class="platform-content" id="neteaseAlbums" style="display: none;"></div>
-                        </div>
-                        <div class="platform-section">
-                            <div class="platform-header" data-platform="tencent" data-type="albums">
-                                <i class="fas fa-music platform-icon"></i>
-                                <span>QQ音乐</span>
-                                <i class="fas fa-chevron-right platform-toggle"></i>
-                            </div>
-                            <div class="platform-content" id="tencentAlbums" style="display: none;"></div>
-                        </div>
-                        <div class="platform-section">
-                            <div class="platform-header" data-platform="kugou" data-type="albums">
-                                <i class="fas fa-music platform-icon"></i>
-                                <span>酷狗音乐</span>
-                                <i class="fas fa-chevron-right platform-toggle"></i>
-                            </div>
-                            <div class="platform-content" id="kugouAlbums" style="display: none;"></div>
-                        </div>
-                        <div class="platform-section">
-                            <div class="platform-header" data-platform="bilibili" data-type="albums">
-                                <i class="fas fa-music platform-icon"></i>
-                                <span>Bilibili音乐</span>
-                                <i class="fas fa-chevron-right platform-toggle"></i>
-                            </div>
-                            <div class="platform-content" id="bilibiliAlbums" style="display: none;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 热门歌曲 -->
-                <div class="discover-section">
-                    <div class="discover-header" data-section="songs" data-expanded="false">
-                        <div class="discover-header-left">
-                            <i class="fas fa-fire"></i>
-                            <span>热门歌曲</span>
-                        </div>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </div>
-                    <div class="discover-content" id="hotSongs" style="display: none;">
-                        <!-- 各平台歌曲列表 -->
-                        <div class="platform-section">
-                            <div class="platform-header" data-platform="netease" data-type="songs">
-                                <i class="fas fa-music platform-icon"></i>
-                                <span>网易云音乐</span>
-                                <i class="fas fa-chevron-right platform-toggle"></i>
-                            </div>
-                            <div class="platform-content" id="neteaseSongs" style="display: none;"></div>
-                        </div>
-                        <div class="platform-section">
-                            <div class="platform-header" data-platform="tencent" data-type="songs">
-                                <i class="fas fa-music platform-icon"></i>
-                                <span>QQ音乐</span>
-                                <i class="fas fa-chevron-right platform-toggle"></i>
-                            </div>
-                            <div class="platform-content" id="tencentSongs" style="display: none;"></div>
-                        </div>
-                        <div class="platform-section">
-                            <div class="platform-header" data-platform="kugou" data-type="songs">
-                                <i class="fas fa-music platform-icon"></i>
-                                <span>酷狗音乐</span>
-                                <i class="fas fa-chevron-right platform-toggle"></i>
-                            </div>
-                            <div class="platform-content" id="kugouSongs" style="display: none;"></div>
-                        </div>
-                        <div class="platform-section">
-                            <div class="platform-header" data-platform="bilibili" data-type="songs">
-                                <i class="fas fa-music platform-icon"></i>
-                                <span>Bilibili音乐</span>
-                                <i class="fas fa-chevron-right platform-toggle"></i>
-                            </div>
-                            <div class="platform-content" id="bilibiliSongs" style="display: none;"></div>
-                        </div>
-                    </div>
+                    <div id="podcastCategories" style="margin-bottom: 15px;"></div>
+                    <div id="podcastRecommend"></div>
                 </div>
             </div>
             <div id="parseTab" class="tab-content">
