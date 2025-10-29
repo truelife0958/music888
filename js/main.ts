@@ -2,6 +2,7 @@
 // CSS导入 - Vite需要显式引入CSS文件
 import '../css/style.css';
 import '../css/additions.css';
+import '../css/discover.css';
 
 import * as api from './api.js';
 import * as ui from './ui.js';
@@ -18,6 +19,9 @@ import { initQualitySelector } from './quality-selector.js';
 import { initAutoTheme } from './auto-theme.js';
 import { initDailyRecommend } from './daily-recommend.js';
 import { initPWAEnhanced } from './pwa-enhanced.js';
+import * as discover from './discover.js';
+import * as recommend from './recommend.js';
+import * as podcast from './podcast.js';
 
 // --- Tab Switching Logic ---
 export function switchTab(tabName: string): void {
@@ -184,6 +188,153 @@ function initializeApp(): void {
 
     // 初始化PWA增强
     initPWAEnhanced();
+
+    // 初始化新增模块
+    initNewFeatures();
+}
+
+// 初始化新增的三大功能模块
+function initNewFeatures(): void {
+    // 监听discover模块的事件
+    document.addEventListener('playPlaylist', ((e: CustomEvent) => {
+        const songs = e.detail.songs;
+        ui.displaySearchResults(songs, 'searchResults', songs);
+        ui.showNotification(`已加载歌单，共${songs.length}首歌曲`, 'success');
+        switchTab('search');
+    }) as EventListener);
+
+    document.addEventListener('showPlaylistDetail', ((e: CustomEvent) => {
+        const playlistId = e.detail.id;
+        ui.showNotification(`正在加载歌单详情...`, 'info');
+        // 这里可以调用API获取歌单详情
+    }) as EventListener);
+
+    document.addEventListener('playSong', ((e: CustomEvent) => {
+        const { song, songs } = e.detail;
+        const index = songs.findIndex((s: any) => s.id === song.id);
+        if (index !== -1) {
+            player.playSong(index, songs, 'searchResults');
+        }
+    }) as EventListener);
+
+    // 监听recommend模块的事件
+    document.addEventListener('playAll', ((e: CustomEvent) => {
+        const songs = e.detail.songs;
+        ui.displaySearchResults(songs, 'searchResults', songs);
+        ui.showNotification(`已加载推荐歌曲，共${songs.length}首`, 'success');
+        switchTab('search');
+        if (songs.length > 0) {
+            player.playSong(0, songs, 'searchResults');
+        }
+    }) as EventListener);
+
+    document.addEventListener('openPlaylist', ((e: CustomEvent) => {
+        const playlistId = e.detail.id;
+        ui.showNotification(`正在加载歌单...`, 'info');
+    }) as EventListener);
+
+    document.addEventListener('playMV', ((e: CustomEvent) => {
+        const mvId = e.detail.id;
+        ui.showNotification(`MV功能开发中...`, 'info');
+    }) as EventListener);
+
+    // 监听podcast模块的事件
+    document.addEventListener('openRadio', ((e: CustomEvent) => {
+        const radioId = e.detail.id;
+        ui.showNotification(`正在加载电台...`, 'info');
+    }) as EventListener);
+
+    document.addEventListener('playProgram', ((e: CustomEvent) => {
+        const programId = e.detail.id;
+        ui.showNotification(`正在加载节目...`, 'info');
+    }) as EventListener);
+
+    // 初始化导航按钮的切换逻辑
+    initDiscoverNavigation();
+}
+
+// 初始化发现音乐的导航切换
+function initDiscoverNavigation(): void {
+    const navButtons = document.querySelectorAll('.discover-nav-btn');
+    const featureAreas = document.querySelectorAll('.discover-feature-area');
+    
+    // 记录每个功能区域是否已初始化
+    const initialized: { [key: string]: boolean } = {};
+
+    navButtons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const feature = (button as HTMLElement).dataset.feature;
+            if (!feature) return;
+
+            // 切换导航按钮的激活状态
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            // 切换功能区域的显示状态
+            featureAreas.forEach(area => {
+                const areaFeature = (area as HTMLElement).dataset.feature;
+                if (areaFeature === feature) {
+                    (area as HTMLElement).style.display = 'block';
+                } else {
+                    (area as HTMLElement).style.display = 'none';
+                }
+            });
+
+            // 首次加载时初始化内容
+            if (!initialized[feature]) {
+                initialized[feature] = true;
+                
+                try {
+                    switch (feature) {
+                        case 'playlists':
+                            // 加载推荐歌单
+                            await discover.renderRecommendPlaylists('recommendPlaylistsGrid', 12);
+                            break;
+                            
+                        case 'newsongs':
+                            // 创建新歌速递筛选器并加载默认内容
+                            discover.createNewSongFilter('newSongsFilter', async (type: number) => {
+                                await discover.renderNewSongs('newSongsGrid', type);
+                            });
+                            await discover.renderNewSongs('newSongsGrid', 0);
+                            break;
+                            
+                        case 'toplists':
+                            // 加载排行榜
+                            await discover.renderTopLists('toplistsGrid');
+                            break;
+                            
+                        case 'daily':
+                            // 加载每日推荐
+                            await recommend.renderDailyRecommend('dailyRecommendContent');
+                            break;
+                            
+                        case 'podcast':
+                            // 加载播客电台
+                            await podcast.renderRadioCategories('podcastCategories', async (id: number, name: string) => {
+                                if (id === 0) {
+                                    // 推荐
+                                    await podcast.renderRecommendRadios('podcastRecommend');
+                                } else {
+                                    // 按分类加载热门电台
+                                    await podcast.renderHotRadios('podcastRecommend', id);
+                                }
+                            });
+                            await podcast.renderRecommendRadios('podcastRecommend');
+                            break;
+                    }
+                } catch (error) {
+                    console.error(`加载${feature}失败:`, error);
+                    ui.showNotification('加载失败，请稍后重试', 'error');
+                }
+            }
+        });
+    });
+
+    // 默认激活第一个按钮（推荐歌单）
+    if (navButtons.length > 0) {
+        (navButtons[0] as HTMLElement).click();
+    }
 }
 
 // 初始化发现音乐折叠/展开功能
