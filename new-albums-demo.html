@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新碟上架 - Music888</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/new-albums.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 0;
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 30px 0 20px 0;
+            padding-left: 12px;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🎵 新碟上架</h1>
+            <p>探索最新发布的音乐专辑</p>
+        </div>
+        
+        <!-- 地区筛选 -->
+        <div id="area-filter"></div>
+        
+        <!-- 新碟列表 -->
+        <div class="section-title">最新专辑</div>
+        <div id="albums-container"></div>
+    </div>
+
+    <!-- 专辑详情弹窗 -->
+    <div id="album-detail-modal" class="album-detail-modal">
+        <div class="album-detail-content">
+            <button class="album-detail-close" onclick="closeAlbumDetail()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            
+            <div class="album-detail-header">
+                <div class="album-detail-cover">
+                    <img id="detail-cover" src="" alt="">
+                </div>
+                <div class="album-detail-info">
+                    <h2 class="album-detail-title" id="detail-title"></h2>
+                    <div class="album-detail-artist" id="detail-artist"></div>
+                    <div class="album-detail-meta">
+                        <span id="detail-publish-time"></span>
+                        <span id="detail-song-count"></span>
+                    </div>
+                    <div class="album-detail-actions">
+                        <button class="btn-play-all" onclick="playAllSongs()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px; vertical-align: middle;">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            播放全部
+                        </button>
+                        <button class="btn-add-to-playlist">
+                            ➕ 添加到歌单
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="album-detail-songs">
+                <ul id="album-song-list" class="album-song-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载脚本 -->
+    <script type="module">
+        import { renderNewAlbums, createAreaFilter, getAlbumDetail } from './js/new-albums.js';
+        
+        let currentArea = 'ALL';
+        let currentAlbumData = null;
+        
+        // 初始化
+        async function init() {
+            // 创建地区筛选器
+            createAreaFilter('area-filter', async (area) => {
+                currentArea = area;
+                await renderNewAlbums('albums-container', area);
+            });
+            
+            // 加载默认专辑列表
+            await renderNewAlbums('albums-container', currentArea);
+            
+            // 监听自定义事件
+            document.addEventListener('showAlbumDetail', async (e) => {
+                await showAlbumDetail(e.detail.albumId);
+            });
+            
+            document.addEventListener('playAlbum', (e) => {
+                console.log('播放专辑:', e.detail.album.name);
+                console.log('歌曲列表:', e.detail.songs);
+                alert(`开始播放专辑：${e.detail.album.name}\n包含 ${e.detail.songs.length} 首歌曲`);
+            });
+        }
+        
+        // 显示专辑详情
+        async function showAlbumDetail(albumId) {
+            const modal = document.getElementById('album-detail-modal');
+            modal.classList.add('show');
+            
+            // 显示加载状态
+            document.getElementById('detail-title').textContent = '加载中...';
+            document.getElementById('album-song-list').innerHTML = '<li style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">加载中...</li>';
+            
+            try {
+                const result = await getAlbumDetail(albumId);
+                if (!result) {
+                    throw new Error('获取专辑详情失败');
+                }
+                
+                currentAlbumData = result;
+                
+                // 更新UI
+                document.getElementById('detail-cover').src = result.album.picUrl + '?param=300y300';
+                document.getElementById('detail-title').textContent = result.album.name;
+                document.getElementById('detail-artist').textContent = result.album.artist.join(', ');
+                
+                const publishDate = new Date(result.album.publishTime);
+                document.getElementById('detail-publish-time').textContent = publishDate.toLocaleDateString('zh-CN');
+                document.getElementById('detail-song-count').textContent = `${result.songs.length} 首歌曲`;
+                
+                // 渲染歌曲列表
+                const songList = document.getElementById('album-song-list');
+                songList.innerHTML = result.songs.map((song, index) => `
+                    <li class="album-song-item" onclick="playSong('${song.id}', '${song.name}')">
+                        <div class="album-song-number">${String(index + 1).padStart(2, '0')}</div>
+                        <div class="album-song-info">
+                            <div class="album-song-name">${song.name}</div>
+                            <div class="album-song-artist">${song.artist.join(', ')}</div>
+                        </div>
+                        <div class="album-song-duration">--:--</div>
+                    </li>
+                `).join('');
+                
+            } catch (error) {
+                console.error('显示专辑详情失败:', error);
+                document.getElementById('album-song-list').innerHTML = '<li style="text-align: center; padding: 40px; color: #f56c6c;">加载失败，请重试</li>';
+            }
+        }
+        
+        // 关闭专辑详情
+        window.closeAlbumDetail = function() {
+            const modal = document.getElementById('album-detail-modal');
+            modal.classList.remove('show');
+            currentAlbumData = null;
+        };
+        
+        // 播放所有歌曲
+        window.playAllSongs = function() {
+            if (!currentAlbumData) return;
+            
+            console.log('播放全部:', currentAlbumData.songs);
+            alert(`开始播放专辑：${currentAlbumData.album.name}\n包含 ${currentAlbumData.songs.length} 首歌曲`);
+        };
+        
+        // 播放单曲
+        window.playSong = function(songId, songName) {
+            console.log('播放歌曲:', songId, songName);
+            alert(`播放歌曲：${songName}`);
+        };
+        
+        // 点击模态框外部关闭
+        document.getElementById('album-detail-modal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('album-detail-modal')) {
+                closeAlbumDetail();
+            }
+        });
+        
+        // ESC键关闭
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAlbumDetail();
+            }
+        });
+        
+        // 启动应用
+        init();
+    </script>
+</body>
+</html>

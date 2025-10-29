@@ -1,0 +1,434 @@
+/* css/new-albums.css - 新碟上架样式 */
+
+/* 地区筛选器 */
+.area-filter {
+    display: flex;
+    gap: 12px;
+    padding: 20px 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.area-filter button {
+    padding: 8px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.area-filter button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.area-filter button.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    color: #fff;
+}
+
+/* 专辑网格 */
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+}
+
+@media (max-width: 768px) {
+    .album-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .album-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+/* 专辑卡片 */
+.album-card {
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.album-card:hover {
+    transform: translateY(-5px);
+}
+
+/* 专辑封面 */
+.album-cover {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.album-cover img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.album-card:hover .album-cover img {
+    transform: scale(1.05);
+}
+
+/* 专辑覆盖层 */
+.album-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.album-card:hover .album-overlay {
+    opacity: 1;
+}
+
+/* 播放按钮 */
+.play-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.play-btn:hover {
+    background: #fff;
+    transform: scale(1.1);
+}
+
+.play-btn svg {
+    margin-left: 2px;
+}
+
+/* 专辑信息 */
+.album-info {
+    padding: 12px 0;
+}
+
+.album-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.album-artist {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.album-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.album-meta span:not(:last-child)::after {
+    content: '•';
+    margin-left: 8px;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* 加载和空状态 */
+.loading,
+.empty,
+.error {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+}
+
+.error {
+    color: #f56c6c;
+}
+
+/* 专辑详情弹窗 */
+.album-detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.album-detail-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.album-detail-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 12px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.album-detail-modal.show .album-detail-content {
+    transform: scale(1);
+}
+
+.album-detail-header {
+    display: flex;
+    gap: 30px;
+    padding: 30px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.album-detail-cover {
+    flex-shrink: 0;
+    width: 200px;
+    height: 200px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.album-detail-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.album-detail-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.album-detail-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 12px;
+}
+
+.album-detail-artist {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 16px;
+}
+
+.album-detail-meta {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 20px;
+}
+
+.album-detail-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.album-detail-actions button {
+    padding: 10px 24px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.btn-play-all {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+}
+
+.btn-play-all:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-add-to-playlist {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.btn-add-to-playlist:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.album-detail-songs {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 30px 30px;
+}
+
+.album-song-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.album-song-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.album-song-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.album-song-number {
+    width: 40px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 14px;
+}
+
+.album-song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.album-song-name {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.album-song-artist {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.album-song-duration {
+    width: 60px;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+}
+
+.album-detail-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.album-detail-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .album-detail-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .album-detail-cover {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .album-detail-title {
+        font-size: 20px;
+    }
+    
+    .album-detail-artist {
+        font-size: 14px;
+    }
+    
+    .album-detail-actions {
+        justify-content: center;
+    }
+}
+
+/* 滚动条样式 */
+.album-detail-songs::-webkit-scrollbar {
+    width: 6px;
+}
+
+.album-detail-songs::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.album-detail-songs::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.album-detail-songs::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
