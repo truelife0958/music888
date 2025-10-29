@@ -3,6 +3,7 @@ import { Song } from './api.js';
 import * as ui from './ui.js';
 import { PLAYER_CONFIG, STORAGE_CONFIG, SOURCE_NAMES, QUALITY_NAMES, QUALITY_FALLBACK, DOWNLOAD_CONFIG, AVAILABLE_SOURCES } from './config.js';
 import { generateSongFileName } from './utils.js';
+import { LyricLine } from './types.js';
 
 // --- Player State ---
 let currentPlaylist: Song[] = [];
@@ -14,6 +15,7 @@ let playHistory: number[] = [];
 let historyPosition: number = -1;
 let lastActiveContainer: string = 'searchResults';
 let consecutiveFailures: number = 0; // 连续播放失败计数
+let currentLyrics: LyricLine[] = []; // 存储当前歌曲的歌词
 
 // --- Playlist & Favorites State ---
 let playlistStorage = new Map<string, any>();
@@ -76,8 +78,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
 
                 // 如果原始源失败,尝试多音乐源切换
                 if (!result || !result.url) {
-                    console.log(`原始音乐源失败,尝试多音乐源获取...`);
-                    result = await api.getSongUrlWithFallback(song, quality);
+                                        result = await api.getSongUrlWithFallback(song, quality);
                     if (result && result.url && result.usedSource !== song.source) {
                         usedFallback = true;
                     }
@@ -92,8 +93,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                     lastError = result.error;
                 }
             } catch (err) {
-                console.warn(`获取品质 ${quality} 失败:`, err);
-                lastError = err instanceof Error ? err.message : String(err);
+                                lastError = err instanceof Error ? err.message : String(err);
                 continue;
             }
         }
@@ -118,13 +118,18 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                 );
             }
 
+            // 启用下载按钮
+            const downloadSongBtn = document.getElementById('downloadSongBtn') as HTMLButtonElement;
+            const downloadLyricBtn = document.getElementById('downloadLyricBtn') as HTMLButtonElement;
+            if (downloadSongBtn) downloadSongBtn.disabled = false;
+            if (downloadLyricBtn) downloadLyricBtn.disabled = false;
+
             // Bilibili 音乐源使用代理服务
             if (song.source === 'bilibili') {
                 // 优先使用代理服务，支持范围请求和流式播放
                 const proxyUrl = `/api/bilibili-proxy?url=${encodeURIComponent(urlData.url)}`;
                 audioPlayer.src = proxyUrl;
-                console.log('🎵 使用 Bilibili 代理服务:', proxyUrl);
-            } else {
+                            } else {
                 audioPlayer.src = urlData.url.replace(/^http:/, 'https:');
             }
             audioPlayer.load();
@@ -134,6 +139,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
 
             const lyricsData = await api.getLyrics(song);
             const lyrics = lyricsData.lyric ? parseLyrics(lyricsData.lyric) : [];
+            currentLyrics = lyrics; // 保存当前歌词
             ui.updateLyrics(lyrics, 0);
 
             // 触发播放事件（用于 Wake Lock 和 Media Session）
@@ -144,8 +150,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
             try {
                 await audioPlayer.play();
             } catch (error) {
-                console.error('Playback failed:', error);
-                ui.showNotification('播放失败，请点击页面以允许自动播放', 'warning');
+                                ui.showNotification('播放失败，请点击页面以允许自动播放', 'warning');
                 // We don't automatically skip to the next song here,
                 // as it might be an autoplay issue that requires user interaction.
                 isPlaying = false;
@@ -154,9 +159,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
         } else {
             // 播放失败,增加连续失败计数
             consecutiveFailures++;
-            console.error('所有品质尝试均失败:', song, `连续失败: ${consecutiveFailures}/${PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES}`);
-
-            // 触发API失败处理(可能切换API)
+                        // 触发API失败处理(可能切换API)
             await api.handleApiFailure();
 
             // 构建详细错误信息
@@ -186,9 +189,7 @@ export async function playSong(index: number, playlist: Song[], containerId: str
         }
     } catch (error) {
         consecutiveFailures++;
-        console.error('Error playing song:', error, `连续失败: ${consecutiveFailures}/${PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES}`);
-
-        if (consecutiveFailures >= PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES) {
+                if (consecutiveFailures >= PLAYER_CONFIG.MAX_CONSECUTIVE_FAILURES) {
             ui.showNotification(
                 `连续失败${consecutiveFailures}首，已暂停播放。建议检查网络或更换歌单`,
                 'error'
@@ -216,9 +217,7 @@ export function nextSong(): void {
 
     // 检查是否应该尝试切换音乐源而不是直接播放下一首
     if (consecutiveFailures >= PLAYER_CONFIG.SOURCE_SWITCH_THRESHOLD) {
-        console.log(`连续失败${consecutiveFailures}次，尝试切换音乐源...`);
-
-        // 尝试找到同一首歌的其他源
+                // 尝试找到同一首歌的其他源
         const currentSong = currentPlaylist[currentIndex];
         const alternativeSources = getAlternativeSources(currentSong);
 
@@ -337,8 +336,7 @@ export function loadSavedPlaylists(): void {
             playHistorySongs = JSON.parse(savedHistory);
         }
     } catch (error) {
-        console.error('加载我的歌单失败:', error);
-    }
+            }
 }
 
 // 添加歌曲到播放历史
@@ -360,8 +358,7 @@ function addToPlayHistory(song: Song): void {
     try {
         localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
     } catch (error) {
-        console.error('保存播放历史失败:', error);
-    }
+            }
 }
 
 // 获取播放历史
@@ -497,8 +494,7 @@ function savePlaylistsToStorage(): void {
         };
         localStorage.setItem(STORAGE_CONFIG.KEY_PLAYLISTS, JSON.stringify(playlistsData));
     } catch (error) {
-        console.error('保存歌单失败:', error);
-    }
+            }
 }
 
 audioPlayer.addEventListener('play', () => {
@@ -524,6 +520,10 @@ audioPlayer.addEventListener('ended', () => {
 audioPlayer.addEventListener('timeupdate', () => {
     if (audioPlayer.duration) {
         ui.updateProgress(audioPlayer.currentTime, audioPlayer.duration);
+        // 更新歌词显示
+        if (currentLyrics.length > 0) {
+            ui.updateLyrics(currentLyrics, audioPlayer.currentTime);
+        }
     }
 });
 
@@ -533,10 +533,8 @@ audioPlayer.addEventListener('loadedmetadata', () => {
     }
 });
 
-interface LyricLine {
-    time: number;
-    text: string;
-}
+// 导出 LyricLine 接口供其他模块使用
+export type { LyricLine } from './types.js';
 
 function parseLyrics(lrc: string): LyricLine[] {
     const lines = lrc.split('\n');
@@ -688,8 +686,7 @@ export async function downloadMultipleSongs(songs: Song[]): Promise<void> {
                     window.URL.revokeObjectURL(url);
                 }
             } catch (error) {
-                console.error(`下载失败: ${song.name}`, error);
-            }
+                            }
         }));
 
         // 显示进度

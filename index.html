@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>沄听 - 在线音乐播放器</title>
+    <meta name="description" content="企业级在线音乐播放器 - 支持7个音乐平台、智能推荐、批量操作">
+    <meta name="theme-color" content="#1db954">
     <link rel="icon" type="image/x-icon" href="ytmusic.ico">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/additions.css">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="ytmusic.ico">
+    <!-- 老王注释：Vite会通过main.ts自动注入CSS，不需要手动引入 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -18,6 +21,9 @@
                 <i class="fas fa-music"></i>
                 <span>沄听</span>
             </div>
+            <button class="settings-btn" id="settingsBtn" title="设置">
+                <i class="fas fa-cog"></i>
+            </button>
             <div class="search-container">
                 <div class="search-wrapper">
                     <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput">
@@ -53,20 +59,6 @@
 
             <!-- 发现音乐标签 -->
             <div id="discoverTab" class="tab-content">
-                <!-- 平台选择器 -->
-                <div style="margin-bottom: 15px; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                        <i class="fas fa-layer-group" style="color: rgba(255, 255, 255, 0.7);"></i>
-                        <span style="font-weight: 500; font-size: 14px;">音乐平台</span>
-                    </div>
-                    <select class="playlist-source-select" id="discoverSourceSelect" style="width: 100%; margin: 0;">
-                        <option value="netease">网易云音乐</option>
-                        <option value="tencent">QQ音乐</option>
-                        <option value="kugou">酷狗音乐</option>
-                        <option value="bilibili">Bilibili音乐</option>
-                    </select>
-                </div>
-
                 <!-- 热门专辑 -->
                 <div class="discover-section">
                     <div class="discover-header" data-section="albums" data-expanded="false">
@@ -76,7 +68,41 @@
                         </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
-                    <div class="discover-content" id="hotAlbums" style="display: none;"></div>
+                    <div class="discover-content" id="hotAlbums" style="display: none;">
+                        <!-- 各平台专辑列表 -->
+                        <div class="platform-section">
+                            <div class="platform-header" data-platform="netease" data-type="albums">
+                                <i class="fas fa-music platform-icon"></i>
+                                <span>网易云音乐</span>
+                                <i class="fas fa-chevron-right platform-toggle"></i>
+                            </div>
+                            <div class="platform-content" id="neteaseAlbums" style="display: none;"></div>
+                        </div>
+                        <div class="platform-section">
+                            <div class="platform-header" data-platform="tencent" data-type="albums">
+                                <i class="fas fa-music platform-icon"></i>
+                                <span>QQ音乐</span>
+                                <i class="fas fa-chevron-right platform-toggle"></i>
+                            </div>
+                            <div class="platform-content" id="tencentAlbums" style="display: none;"></div>
+                        </div>
+                        <div class="platform-section">
+                            <div class="platform-header" data-platform="kugou" data-type="albums">
+                                <i class="fas fa-music platform-icon"></i>
+                                <span>酷狗音乐</span>
+                                <i class="fas fa-chevron-right platform-toggle"></i>
+                            </div>
+                            <div class="platform-content" id="kugouAlbums" style="display: none;"></div>
+                        </div>
+                        <div class="platform-section">
+                            <div class="platform-header" data-platform="bilibili" data-type="albums">
+                                <i class="fas fa-music platform-icon"></i>
+                                <span>Bilibili音乐</span>
+                                <i class="fas fa-chevron-right platform-toggle"></i>
+                            </div>
+                            <div class="platform-content" id="bilibiliAlbums" style="display: none;"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 热门歌曲 -->
@@ -88,7 +114,41 @@
                         </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
-                    <div class="discover-content" id="hotSongs" style="display: none;"></div>
+                    <div class="discover-content" id="hotSongs" style="display: none;">
+                        <!-- 各平台歌曲列表 -->
+                        <div class="platform-section">
+                            <div class="platform-header" data-platform="netease" data-type="songs">
+                                <i class="fas fa-music platform-icon"></i>
+                                <span>网易云音乐</span>
+                                <i class="fas fa-chevron-right platform-toggle"></i>
+                            </div>
+                            <div class="platform-content" id="neteaseSongs" style="display: none;"></div>
+                        </div>
+                        <div class="platform-section">
+                            <div class="platform-header" data-platform="tencent" data-type="songs">
+                                <i class="fas fa-music platform-icon"></i>
+                                <span>QQ音乐</span>
+                                <i class="fas fa-chevron-right platform-toggle"></i>
+                            </div>
+                            <div class="platform-content" id="tencentSongs" style="display: none;"></div>
+                        </div>
+                        <div class="platform-section">
+                            <div class="platform-header" data-platform="kugou" data-type="songs">
+                                <i class="fas fa-music platform-icon"></i>
+                                <span>酷狗音乐</span>
+                                <i class="fas fa-chevron-right platform-toggle"></i>
+                            </div>
+                            <div class="platform-content" id="kugouSongs" style="display: none;"></div>
+                        </div>
+                        <div class="platform-section">
+                            <div class="platform-header" data-platform="bilibili" data-type="songs">
+                                <i class="fas fa-music platform-icon"></i>
+                                <span>Bilibili音乐</span>
+                                <i class="fas fa-chevron-right platform-toggle"></i>
+                            </div>
+                            <div class="platform-content" id="bilibiliSongs" style="display: none;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="parseTab" class="tab-content">
@@ -318,6 +378,7 @@
             <audio id="audioPlayer" preload="metadata"></audio>
         </div>
 
+
         <!-- 我的区域 -->
         <div class="my-section">
             <h2 class="section-title">
@@ -327,16 +388,16 @@
             <!-- 播放历史 -->
             <div class="saved-playlists-container" style="margin-bottom: 15px;">
                 <div class="saved-playlists-header">
-                    <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="historyHeader">
+                    <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="myHistoryHeader">
                         <i class="fas fa-history"></i>
                         播放历史
-                        <i class="fas fa-chevron-down" id="historyToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
+                        <i class="fas fa-chevron-down" id="myHistoryToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
                     </h4>
-                    <button class="clear-all-btn" id="clearHistoryBtn" title="清空播放历史">
+                    <button class="clear-all-btn" id="myClearHistoryBtn" title="清空播放历史">
                         <i class="fas fa-trash"></i> 清空
                     </button>
                 </div>
-                <div class="saved-playlists-list" id="playHistoryList" style="display: none;">
+                <div class="saved-playlists-list" id="myPlayHistoryList" style="display: none;">
                     <div class="empty-saved-state">
                         <i class="fas fa-history"></i>
                         <div>暂无播放记录</div>
@@ -347,16 +408,16 @@
             <!-- 我的喜欢 -->
             <div class="saved-playlists-container" style="margin-bottom: 15px;">
                 <div class="saved-playlists-header">
-                    <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="favoritesHeader">
+                    <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="myFavoritesHeader">
                         <i class="fas fa-heart"></i>
                         我的喜欢
-                        <i class="fas fa-chevron-down" id="favoritesToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
+                        <i class="fas fa-chevron-down" id="myFavoritesToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
                     </h4>
-                    <button class="clear-all-btn" id="clearFavoritesBtn" title="清空收藏">
+                    <button class="clear-all-btn" id="myClearFavoritesBtn" title="清空收藏">
                         <i class="fas fa-trash"></i> 清空
                     </button>
                 </div>
-                <div class="saved-playlists-list" id="favoritesList" style="display: none;">
+                <div class="saved-playlists-list" id="myFavoritesList" style="display: none;">
                     <div class="empty-saved-state">
                         <i class="fas fa-heart"></i>
                         <div>暂无收藏歌曲</div>
@@ -367,11 +428,10 @@
                 </div>
             </div>
 
-            
-            <div class="search-results" id="savedResults">
+            <div class="search-results" id="myResults">
                 <div class="empty-state">
                     <i class="fas fa-hand-pointer"></i>
-                    <div>点击上方播放历史、收藏或歌单查看详情</div>
+                    <div>点击上方播放历史或收藏查看详情</div>
                 </div>
             </div>
         </div>
@@ -409,6 +469,100 @@
         </div>
     </div>
 
+    <!-- 设置面板弹窗 -->
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-modal-content">
+            <div class="settings-modal-header">
+                <h3><i class="fas fa-cog"></i> 设置</h3>
+                <button class="close-modal-btn" id="closeSettingsModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="settings-modal-body">
+                <!-- API设置 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">
+                        <i class="fas fa-server"></i>
+                        <span>API设置</span>
+                    </div>
+                    <div class="settings-item">
+                        <label for="apiSourceSelect">默认音乐源</label>
+                        <select id="apiSourceSelect" class="settings-select">
+                            <option value="netease">网易云音乐</option>
+                            <option value="tencent">QQ音乐</option>
+                            <option value="kugou">酷狗音乐</option>
+                            <option value="kuwo">酷我音乐</option>
+                            <option value="bilibili">Bilibili音乐</option>
+                        </select>
+                    </div>
+                    <div class="settings-item">
+                        <label>
+                            <input type="checkbox" id="autoRetryCheckbox" checked>
+                            <span>API失败时自动重试</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 缓存管理 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">
+                        <i class="fas fa-database"></i>
+                        <span>缓存管理</span>
+                    </div>
+                    <div class="settings-item">
+                        <div class="cache-info">
+                            <span>缓存大小:</span>
+                            <span id="cacheSize">计算中...</span>
+                        </div>
+                    </div>
+                    <div class="settings-item">
+                        <button class="settings-btn-action" id="clearCacheBtn">
+                            <i class="fas fa-trash-alt"></i>
+                            清理缓存
+                        </button>
+                        <button class="settings-btn-action" id="clearAllDataBtn">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            清空所有数据
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 播放设置 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">
+                        <i class="fas fa-play-circle"></i>
+                        <span>播放设置</span>
+                    </div>
+                    <div class="settings-item">
+                        <label>
+                            <input type="checkbox" id="autoPlayCheckbox">
+                            <span>自动播放下一首</span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <label>
+                            <input type="checkbox" id="showLyricsCheckbox" checked>
+                            <span>显示歌词</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 关于 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">
+                        <i class="fas fa-info-circle"></i>
+                        <span>关于</span>
+                    </div>
+                    <div class="settings-item about-info">
+                        <p><strong>沄听 - 在线音乐播放器</strong></p>
+                        <p>版本: 2.0.0</p>
+                        <p>支持7个音乐平台、智能推荐、批量操作</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-links">
@@ -434,5 +588,19 @@
     </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="module" src="js/main.ts"></script>
+    <script>
+        // 注册 Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker 注册成功:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('❌ Service Worker 注册失败:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

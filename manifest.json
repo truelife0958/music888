@@ -1,0 +1,41 @@
+{
+  "name": "沄听音乐播放器",
+  "short_name": "沄听",
+  "description": "企业级在线音乐播放器 - 支持7个音乐平台、智能推荐、批量操作",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1db954",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/ytmusic.ico",
+      "sizes": "192x192",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/ytmusic.ico",
+      "sizes": "512x512",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["music", "entertainment"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "搜索音乐",
+      "short_name": "搜索",
+      "description": "快速搜索音乐",
+      "url": "/?action=search",
+      "icons": [
+        {
+          "src": "/ytmusic.ico",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}

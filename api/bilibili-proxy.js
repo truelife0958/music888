@@ -43,8 +43,6 @@ export default async function handler(req, res) {
             return;
         }
 
-        console.log(`[Bilibili Proxy] 请求: ${url}`);
-
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -60,10 +58,8 @@ export default async function handler(req, res) {
 
         if (response.ok) {
             const data = await response.json();
-            console.log(`[Bilibili Proxy] ✅ 成功`);
             res.status(200).json(data);
         } else {
-            console.log(`[Bilibili Proxy] ❌ HTTP错误: ${response.status}`);
             res.status(response.status).json({
                 error: `Bilibili API 返回错误: ${response.status}`
             });

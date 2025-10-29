@@ -126,8 +126,7 @@ export function safeJSONParse<T>(jsonString: string, defaultValue: T): T {
     try {
         return JSON.parse(jsonString) as T;
     } catch (error) {
-        console.warn('JSON 解析失败:', error);
-        return defaultValue;
+                return defaultValue;
     }
 }
 
@@ -191,8 +190,7 @@ export const storage = {
             localStorage.clear();
             return true;
         } catch (error) {
-            console.warn('清空 localStorage 失败:', error);
-            return false;
+                        return false;
         }
     }
 };
@@ -304,7 +302,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
             return success;
         }
     } catch (error) {
-        console.warn('复制到剪贴板失败:', error);
-        return false;
+                return false;
     }
 }

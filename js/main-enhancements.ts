@@ -37,8 +37,7 @@ function initDiscoverToggles(): void {
                         toggleIcon?.classList.remove('fa-chevron-down');
                         toggleIcon?.classList.add('fa-chevron-up');
                     } catch (error) {
-                        console.error('加载热门专辑失败:', error);
-                        uiEnhancements.showError('加载热门专辑失败，请稍后重试', 'hotAlbums');
+                                                uiEnhancements.showError('加载热门专辑失败，请稍后重试', 'hotAlbums');
                     }
                 } else {
                     albumsContent!.style.display = 'none';
@@ -65,8 +64,7 @@ function initDiscoverToggles(): void {
                         toggleIcon?.classList.remove('fa-chevron-down');
                         toggleIcon?.classList.add('fa-chevron-up');
                     } catch (error) {
-                        console.error('加载热门歌曲失败:', error);
-                        uiEnhancements.showError('加载热门歌曲失败，请稍后重试', 'hotSongs');
+                                                uiEnhancements.showError('加载热门歌曲失败，请稍后重试', 'hotSongs');
                     }
                 } else {
                     songsContent!.style.display = 'none';
@@ -176,8 +174,7 @@ function initChartToggles(): void {
                     toggleIcon?.classList.remove('fa-chevron-down');
                     toggleIcon?.classList.add('fa-chevron-up');
                 } catch (error) {
-                    console.error(`加载${chartType}榜单失败:`, error);
-                    uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
+                                        uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
                 }
             } else {
                 // 折叠
@@ -315,8 +312,7 @@ async function handleSearchEnhanced(): Promise<void> {
             uiEnhancements.showError('未找到相关歌曲', 'searchResults');
         }
     } catch (error) {
-        console.error('搜索失败:', error);
-        uiEnhancements.showError('搜索失败，请稍后重试', 'searchResults');
+                uiEnhancements.showError('搜索失败，请稍后重试', 'searchResults');
         ui.showNotification('搜索失败', 'error');
     }
 }
@@ -336,8 +332,7 @@ async function handleExploreEnhanced(): Promise<void> {
             uiEnhancements.showError('暂无推荐音乐', 'searchResults');
         }
     } catch (error) {
-        console.error('探索雷达失败:', error);
-        uiEnhancements.showError('探索失败，请稍后重试', 'searchResults');
+                uiEnhancements.showError('探索失败，请稍后重试', 'searchResults');
         ui.showNotification('探索失败', 'error');
     }
 }
@@ -351,15 +346,11 @@ async function requestWakeLock(): Promise<void> {
     try {
         if ('wakeLock' in navigator) {
             wakeLock = await (navigator as any).wakeLock.request('screen');
-            console.log('Wake Lock 已激活');
-
-            wakeLock.addEventListener('release', () => {
-                console.log('Wake Lock 已释放');
-            });
+                        wakeLock.addEventListener('release', () => {
+                            });
         }
     } catch (err) {
-        console.warn('Wake Lock 请求失败:', err);
-    }
+            }
 }
 
 // 释放 Wake Lock
@@ -416,9 +407,7 @@ function initializeEnhancements(): void {
     const discoverSourceSelect = document.getElementById('discoverSourceSelect');
     if (discoverSourceSelect) {
         discoverSourceSelect.addEventListener('change', () => {
-            console.log('🔄 平台切换，刷新已展开的内容');
-
-            // 检查热门专辑是否已展开
+                        // 检查热门专辑是否已展开
             const albumsHeader = document.querySelector('.discover-header[data-section="albums"]');
             if (albumsHeader && albumsHeader.getAttribute('data-expanded') === 'true') {
                 // 先折叠再展开，触发重新加载
@@ -463,8 +452,7 @@ function initializeEnhancements(): void {
         const newExploreBtn = exploreRadarBtn.cloneNode(true);
         exploreRadarBtn.parentNode?.replaceChild(newExploreBtn, exploreRadarBtn);
         newExploreBtn.addEventListener('click', handleExploreEnhanced);
-        console.log('✅ 探索雷达已绑定增强版事件（带多选功能）');
-    }
+            }
 
     // 移除随机播放按钮（如果存在）
     const shufflePlayBtn = document.getElementById('shufflePlayBtn');
@@ -485,8 +473,7 @@ function initializeEnhancements(): void {
         releaseWakeLock();
     });
 
-    console.log('✅ 所有增强功能已初始化');
-}
+    }
 
 // 导出初始化函数
 export { initializeEnhancements };

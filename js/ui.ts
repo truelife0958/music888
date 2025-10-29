@@ -1,12 +1,7 @@
 import { Song } from './api.js';
 import * as player from './player.js';
 import { formatTime } from './utils.js';
-
-// --- Type Definitions ---
-interface LyricLine {
-    time: number;
-    text: string;
-}
+import { LyricLine } from './types.js';
 
 // --- DOM Element Cache ---
 let DOM: { [key: string]: HTMLElement | HTMLImageElement | HTMLButtonElement };
@@ -149,10 +144,14 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
         return;
     }
 
-    let activeIndex = lyrics.findIndex((line, i) => {
-        const nextLine = lyrics[i + 1];
-        return currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
-    });
+    // 优化的查找逻辑
+    let activeIndex = -1;
+    for (let i = lyrics.length - 1; i >= 0; i--) {
+        if (currentTime >= lyrics[i].time) {
+            activeIndex = i;
+            break;
+        }
+    }
 
     const lyricsHTML = lyrics.map((line, index) =>
         `<div class="lyric-line ${index === activeIndex ? 'active' : ''}" data-time="${line.time}">${line.text}</div>`
@@ -164,17 +163,21 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
 
         const activeLine = DOM.lyricsContainer.querySelector('.active');
         if (activeLine) {
-            activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 改进的滚动逻辑，确保歌词始终在视野中
+            activeLine.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
         }
     }
 
-    // 同时更新播放器内部的歌词容器
+    // 同时更新播放器内部的歌词容器（移动端主要使用）
     const inlineContainer = document.getElementById('lyricsContainerInline');
     if (inlineContainer) {
         inlineContainer.innerHTML = lyricsHTML;
         const inlineActiveLine = inlineContainer.querySelector('.active');
         if (inlineActiveLine) {
-            inlineActiveLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 移动端歌词滚动优化
+            requestAnimationFrame(() => {
+                inlineActiveLine.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            });
         }
     }
 }

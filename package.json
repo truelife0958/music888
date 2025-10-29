@@ -22,7 +22,7 @@
   ],
   "author": "truelife0958",
   "license": "MIT",
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
     "@vitest/coverage-v8": "^1.0.0",
     "@vitest/ui": "^1.0.0",

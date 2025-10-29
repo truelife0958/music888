@@ -61,8 +61,6 @@ export default async function handler(req, res) {
                     url += `&id=${id}`;
                 }
 
-                console.log(`[Music Proxy] 尝试 ${api.name}: ${url}`);
-
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -81,13 +79,11 @@ export default async function handler(req, res) {
                     const data = await response.json();
 
                     if (validateResponse(data, types)) {
-                        console.log(`[Music Proxy] ✅ ${api.name} 成功`);
                         res.status(200).json(data);
                         return;
                     }
                 }
             } catch (apiError) {
-                console.log(`[Music Proxy] ❌ ${api.name} 失败`);
                 continue;
             }
         }

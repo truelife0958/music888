@@ -25,37 +25,25 @@ interface ApiSource {
  * @throws {Error} 如果无法解析响应格式
  */
 function parseApiResponse(data: any): any[] {
-    console.log('📥 API 响应类型:', typeof data, '是否为数组:', Array.isArray(data));
-    console.log('📥 API 响应内容:', JSON.stringify(data).substring(0, 500));
-
     let songs: any[] = [];
 
     if (Array.isArray(data)) {
-        console.log('✅ 响应格式: 直接数组');
-        songs = data;
+                songs = data;
     } else if (data && typeof data === 'object') {
         // 尝试多种可能的字段名
         if (Array.isArray(data.data)) {
-            console.log('✅ 响应格式: data 字段');
-            songs = data.data;
+                        songs = data.data;
         } else if (Array.isArray(data.songs)) {
-            console.log('✅ 响应格式: songs 字段');
-            songs = data.songs;
+                        songs = data.songs;
         } else if (Array.isArray(data.result)) {
-            console.log('✅ 响应格式: result 字段');
-            songs = data.result;
+                        songs = data.result;
         } else if (Array.isArray(data.list)) {
-            console.log('✅ 响应格式: list 字段');
-            songs = data.list;
+                        songs = data.list;
         } else {
-            // 打印所有可用的键
-            console.error('❌ 未找到歌曲数组，可用的键:', Object.keys(data));
-            console.error('❌ 完整响应:', data);
-            throw new Error(`API 返回数据格式不正确，可用字段: ${Object.keys(data).join(', ')}`);
+                        throw new Error(`API 返回数据格式不正确，可用字段: ${Object.keys(data).join(', ')}`);
         }
     } else {
-        console.error('❌ API 返回格式错误，既不是数组也不是对象:', data);
-        throw new Error('API 返回数据格式不正确');
+                throw new Error('API 返回数据格式不正确');
     }
 
     return songs;
@@ -101,57 +89,45 @@ async function testAPI(apiUrl: string): Promise<boolean> {
 }
 
 export async function findWorkingAPI(): Promise<{ success: boolean; name?: string }> {
-    console.log('正在检测可用的 API...');
-    for (const api of API_SOURCES) {
-        console.log(`测试 ${api.name}...`);
-        const isWorking = await testAPI(api.url);
+        for (const api of API_SOURCES) {
+                const isWorking = await testAPI(api.url);
         if (isWorking) {
             API_BASE = api.url;
             currentApiIndex = API_SOURCES.findIndex(a => a.url === api.url);
             apiFailureCount = 0; // 重置失败计数
-            console.log(`✅ ${api.name} 可用`);
-            return { success: true, name: api.name };
+                        return { success: true, name: api.name };
         } else {
-            console.log(`❌ ${api.name} 不可用`);
-        }
+                    }
     }
-    console.error('所有 API 均不可用');
-    return { success: false };
+        return { success: false };
 }
 
 // 新增: 自动切换到下一个可用API
 export async function switchToNextAPI(): Promise<{ success: boolean; name?: string }> {
-    console.log('尝试切换到备用 API...');
-    const startIndex = currentApiIndex;
+        const startIndex = currentApiIndex;
 
     for (let i = 1; i < API_SOURCES.length; i++) {
         const nextIndex = (startIndex + i) % API_SOURCES.length;
         const api = API_SOURCES[nextIndex];
 
-        console.log(`测试 ${api.name}...`);
-        const isWorking = await testAPI(api.url);
+                const isWorking = await testAPI(api.url);
 
         if (isWorking) {
             API_BASE = api.url;
             currentApiIndex = nextIndex;
             apiFailureCount = 0;
-            console.log(`✅ 已切换到 ${api.name}`);
-            return { success: true, name: api.name };
+                        return { success: true, name: api.name };
         }
     }
 
-    console.error('所有备用 API 均不可用');
-    return { success: false };
+        return { success: false };
 }
 
 // 新增: 记录API失败并在必要时切换
 export async function handleApiFailure(): Promise<void> {
     apiFailureCount++;
-    console.warn(`API 失败计数: ${apiFailureCount}/${API_FAILURE_THRESHOLD}`);
-
-    if (apiFailureCount >= API_FAILURE_THRESHOLD) {
-        console.log('达到失败阈值,尝试切换 API...');
-        await switchToNextAPI();
+        if (apiFailureCount >= API_FAILURE_THRESHOLD) {
+                await switchToNextAPI();
     }
 }
 
@@ -159,8 +135,7 @@ export async function handleApiFailure(): Promise<void> {
 export function resetApiFailureCount(): void {
     if (apiFailureCount > 0) {
         apiFailureCount = 0;
-        console.log('API 失败计数已重置');
-    }
+            }
 }
 
 export async function fetchWithRetry(url: string, options: RequestInit = {}, retries: number = 2): Promise<Response> {
@@ -183,7 +158,6 @@ export async function fetchWithRetry(url: string, options: RequestInit = {}, ret
             } else if (response.status >= 500 && i < retries) {
                 // 服务器错误时重试
                 const delay = retryDelays[i] || 3000;
-                console.warn(`服务器错误 ${response.status}, ${delay}ms 后重试 (${i + 1}/${retries + 1})`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             } else {
@@ -193,12 +167,9 @@ export async function fetchWithRetry(url: string, options: RequestInit = {}, ret
             const isTimeout = error instanceof Error && error.name === 'AbortError';
             const errorType = isTimeout ? '请求超时' : '请求失败';
 
-            console.error(`${errorType} (尝试 ${i + 1}/${retries + 1}):`, error);
-
             if (i < retries) {
                 const delay = retryDelays[i] || 3000;
-                console.log(`${delay}ms 后重试...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
+                                await new Promise(resolve => setTimeout(resolve, delay));
             } else {
                 throw error;
             }
@@ -221,17 +192,14 @@ export async function getAlbumCoverUrl(song: Song, size: number = 300): Promise<
         // 先尝试本地代理API
         if (API_BASE === '/api/music-proxy') {
             const localUrl = `${API_BASE}?types=pic&source=${song.source}&id=${song.pic_id}&size=${size}`;
-            console.log('尝试本地代理获取图片:', localUrl);
-
-            try {
+                        try {
                 const response = await fetchWithRetry(localUrl);
                 const data = await response.json();
                 if (data && data.url) {
                     return data.url;
                 }
             } catch (localError) {
-                console.warn('本地代理获取图片失败，尝试外部API:', localError);
-                // 继续尝试外部API
+                                // 继续尝试外部API
             }
         }
 
@@ -242,24 +210,20 @@ export async function getAlbumCoverUrl(song: Song, size: number = 300): Promise<
                     ? `${api.url}?server=${song.source}&type=pic&id=${song.pic_id}`
                     : `${api.url}?types=pic&source=${song.source}&id=${song.pic_id}&size=${size}`;
 
-                console.log('尝试外部API获取图片:', url);
-                const response = await fetchWithRetry(url);
+                                const response = await fetchWithRetry(url);
                 const data = await response.json();
                 if (data && data.url) {
                     return data.url;
                 }
             } catch (error) {
-                console.warn(`外部API ${api.name} 获取图片失败:`, error);
-                continue;
+                                continue;
             }
         }
 
         // 所有尝试都失败
-        console.warn('所有API均无法获取图片');
-        return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
+                return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
     } catch (error) {
-        console.warn('获取专辑图失败:', error);
-        return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
+                return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
     }
 }
 
@@ -277,8 +241,7 @@ export async function validateSongUrl(url: string): Promise<boolean> {
 
         return response.ok && (response.headers.get('content-type')?.includes('audio') || false);
     } catch (error) {
-        console.warn('URL验证失败:', error);
-        return false;
+                return false;
     }
 }
 
@@ -292,17 +255,13 @@ async function searchAlternativeVersions(songName: string, source: string): Prom
         .replace(/【.*?】/g, '')  // 移除中文方括号
         .trim();
 
-    console.log(`智能搜索替代版本: "${songName}" → "${cleanName}"`);
-
-    try {
+        try {
         const results = await searchMusicAPI(cleanName, source);
         if (results.length > 0) {
-            console.log(`找到 ${results.length} 个替代版本`);
-            return results;
+                        return results;
         }
     } catch (error) {
-        console.warn('搜索替代版本失败:', error);
-    }
+            }
 
     return [];
 }
@@ -330,19 +289,9 @@ export function getSourceStatistics(): { source: string; name: string; success: 
 
 // 打印音乐源统计报告
 export function printSourceStatistics(): void {
-    console.log('\n📊 ========== 音乐源统计报告 ==========');
-    const stats = getSourceStatistics();
+        const stats = getSourceStatistics();
 
-    stats.forEach(stat => {
-        if (stat.total > 0) {
-            console.log(`${stat.name.padEnd(12)} | 成功率: ${stat.rate}% | 成功/总计: ${stat.success}/${stat.total}`);
-        } else {
-            console.log(`${stat.name.padEnd(12)} | 暂无数据`);
-        }
-    });
-
-    console.log('=======================================\n');
-}
+    }
 
 // 音乐源配置 - 按优先级排序
 const MUSIC_SOURCES = [
@@ -380,11 +329,6 @@ function recordSourceResult(sourceId: string, success: boolean): void {
         stats.total++;
         if (success) stats.success++;
 
-        // 定期输出统计信息
-        if (stats.total % 10 === 0) {
-            const rate = (stats.success / stats.total * 100).toFixed(1);
-            console.log(`📊 ${sourceId} 成功率: ${rate}% (${stats.success}/${stats.total})`);
-        }
     }
 }
 
@@ -414,8 +358,6 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
     if (API_BASE === '/api/music-proxy') {
         for (const source of sourcesToTry) {
             try {
-                console.log(`尝试从本地代理获取: ${song.name} (源: ${source})`);
-
                 // 如果不是原始音乐源,需要先搜索获取该源的歌曲ID
                 let songIdForSource = song.id;
                 if (source !== song.source) {
@@ -424,13 +366,11 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
 
                     // 如果精确搜索失败,尝试智能搜索替代版本
                     if (searchResults.length === 0) {
-                        console.log(`精确搜索失败,尝试智能搜索替代版本...`);
-                        searchResults = await searchAlternativeVersions(song.name, source);
+                                                searchResults = await searchAlternativeVersions(song.name, source);
                     }
 
                     if (searchResults.length === 0) {
-                        console.warn(`${source} 未找到歌曲: ${song.name}`);
-                        recordSourceResult(source, false); // 记录失败
+                                                recordSourceResult(source, false); // 记录失败
                         continue;
                     }
 
@@ -441,22 +381,18 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
                     songIdForSource = matchedSong.id;
 
                     if (matchedSong.name !== song.name) {
-                        console.log(`使用替代版本: "${matchedSong.name}"`);
-                    }
+                                            }
                 }
 
                 const url = `${API_BASE}?types=url&source=${source}&id=${songIdForSource}&br=${quality}`;
-                console.log('本地代理URL请求:', url);
-
-                const response = await fetchWithRetry(url, {}, 1); // 减少重试次数以加快切换
+                                const response = await fetchWithRetry(url, {}, 1); // 减少重试次数以加快切换
                 const data = await response.json();
 
                 if (data && data.url) {
                     // 验证URL有效性
                     const isValid = await validateSongUrl(data.url);
                     if (!isValid) {
-                        console.warn(`${source} 返回的URL无效`);
-                        recordSourceResult(source, false); // 记录失败
+                                                recordSourceResult(source, false); // 记录失败
                         continue;
                     }
 
@@ -465,15 +401,13 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
 
                     if (source !== song.source) {
                         const sourceName = MUSIC_SOURCES.find(s => s.id === source)?.name || source;
-                        console.log(`✅ 成功从本地代理备用音乐源 ${sourceName} 获取`);
-                    }
+                                            }
                     return { ...data, usedSource: source };
                 } else {
                     recordSourceResult(source, false); // 记录失败
                 }
             } catch (error) {
-                console.warn(`${source} 本地代理获取失败:`, error);
-                recordSourceResult(source, false); // 记录失败
+                                recordSourceResult(source, false); // 记录失败
                 continue;
             }
         }
@@ -483,8 +417,6 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
     for (const source of sourcesToTry) {
         for (const api of API_SOURCES.slice(1)) { // 跳过本地代理
             try {
-                console.log(`尝试从外部API ${api.name} 获取: ${song.name} (源: ${source})`);
-
                 // 如果不是原始音乐源,需要先搜索获取该源的歌曲ID
                 let songIdForSource = song.id;
                 if (source !== song.source) {
@@ -493,13 +425,11 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
 
                     // 如果精确搜索失败,尝试智能搜索替代版本
                     if (searchResults.length === 0) {
-                        console.log(`精确搜索失败,尝试智能搜索替代版本...`);
-                        searchResults = await searchAlternativeVersions(song.name, source);
+                                                searchResults = await searchAlternativeVersions(song.name, source);
                     }
 
                     if (searchResults.length === 0) {
-                        console.warn(`${source} 未找到歌曲: ${song.name}`);
-                        recordSourceResult(source, false); // 记录失败
+                                                recordSourceResult(source, false); // 记录失败
                         continue;
                     }
 
@@ -510,8 +440,7 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
                     songIdForSource = matchedSong.id;
 
                     if (matchedSong.name !== song.name) {
-                        console.log(`使用替代版本: "${matchedSong.name}"`);
-                    }
+                                            }
                 }
 
                 const url = api.url.includes('meting')
@@ -525,8 +454,7 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
                     // 验证URL有效性
                     const isValid = await validateSongUrl(data.url);
                     if (!isValid) {
-                        console.warn(`${source} 返回的URL无效`);
-                        recordSourceResult(source, false); // 记录失败
+                                                recordSourceResult(source, false); // 记录失败
                         continue;
                     }
 
@@ -535,23 +463,20 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
 
                     if (source !== song.source) {
                         const sourceName = MUSIC_SOURCES.find(s => s.id === source)?.name || source;
-                        console.log(`✅ 成功从外部API备用音乐源 ${sourceName} 获取`);
-                    }
+                                            }
                     return { ...data, usedSource: `${api.name}:${source}` };
                 } else {
                     recordSourceResult(source, false); // 记录失败
                 }
             } catch (error) {
-                console.warn(`${source} 外部API获取失败:`, error);
-                recordSourceResult(source, false); // 记录失败
+                                recordSourceResult(source, false); // 记录失败
                 continue;
             }
         }
     }
 
     const errorMsg = `所有音乐源均无法获取 - 歌曲: ${song.name}, 品质: ${quality}`;
-    console.error(errorMsg);
-    return { url: '', br: '', error: errorMsg };
+        return { url: '', br: '', error: errorMsg };
 }
 
 export async function getSongUrl(song: Song, quality: string): Promise<{ url: string; br: string; error?: string; usedSource?: string }> {
@@ -564,9 +489,7 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
         // 先尝试本地代理API
         if (API_BASE === '/api/music-proxy') {
             const localUrl = `${API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
-            console.log('尝试本地代理获取音乐URL:', localUrl);
-
-            try {
+                        try {
                 const response = await fetchWithRetry(localUrl);
                 const data = await response.json();
                 if (data && data.url) {
@@ -575,12 +498,10 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
                     if (isValid) {
                         return data;
                     } else {
-                        console.warn('本地代理返回的URL无效，尝试外部API');
-                    }
+                                            }
                 }
             } catch (localError) {
-                console.warn('本地代理获取音乐URL失败，尝试外部API:', localError);
-                // 继续尝试外部API
+                                // 继续尝试外部API
             }
         }
 
@@ -591,8 +512,7 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
                     ? `${api.url}?server=${song.source}&type=url&id=${song.id}&br=${quality}`
                     : `${api.url}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
 
-                console.log('尝试外部API获取音乐URL:', url);
-                const response = await fetchWithRetry(url);
+                                const response = await fetchWithRetry(url);
                 const data = await response.json();
 
                 if (data && data.url) {
@@ -601,23 +521,19 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
                     if (isValid) {
                         return { ...data, usedSource: api.name };
                     } else {
-                        console.warn(`外部API ${api.name} 返回的URL无效`);
-                        continue;
+                                                continue;
                     }
                 }
             } catch (error) {
-                console.warn(`外部API ${api.name} 获取音乐URL失败:`, error);
-                continue;
+                                continue;
             }
         }
 
         const errorMsg = `所有音乐源均无法获取 - 歌曲: ${song.name}, 品质: ${quality}`;
-        console.error(errorMsg);
-        return { url: '', br: '', error: errorMsg };
+                return { url: '', br: '', error: errorMsg };
     } catch (error) {
         const errorMsg = `API请求失败 - ${error instanceof Error ? error.message : String(error)}`;
-        console.error(errorMsg, { song: song.name, quality, source: song.source });
-        return { url: '', br: '', error: errorMsg };
+                return { url: '', br: '', error: errorMsg };
     }
 }
 
@@ -637,16 +553,11 @@ async function getBilibiliMediaUrl(song: Song, quality: string = '320'): Promise
         const bilibiliQuality = qualityMap[quality] || 'standard';
 
         const url = `${BILIBILI_API_BASE}?action=media&bvid=${bvid}&quality=${bilibiliQuality}`;
-        console.log('🔍 Bilibili 媒体源 API 请求:', url);
-
-        const response = await fetchWithRetry(url);
+                const response = await fetchWithRetry(url);
         const result = await response.json();
 
-        console.log('📥 Bilibili 媒体源 API 响应:', result);
-
-        if (result.code !== 200 || !result.data || !result.data.url) {
-            console.error('❌ Bilibili 媒体源 API 返回错误:', result);
-            throw new Error(result.message || 'Bilibili 媒体源获取失败');
+                if (result.code !== 200 || !result.data || !result.data.url) {
+                        throw new Error(result.message || 'Bilibili 媒体源获取失败');
         }
 
         return {
@@ -656,8 +567,7 @@ async function getBilibiliMediaUrl(song: Song, quality: string = '320'): Promise
         };
     } catch (error) {
         const errorMsg = `Bilibili 媒体源获取失败 - ${error instanceof Error ? error.message : String(error)}`;
-        console.error(errorMsg, { song: song.name, quality });
-        return { url: '', br: '', error: errorMsg };
+                return { url: '', br: '', error: errorMsg };
     }
 }
 
@@ -680,8 +590,7 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         try {
             return await searchBilibiliMusic(keyword, 1, limit);
         } catch (error) {
-            console.warn('❌ Bilibili搜索失败，自动切换到网易云音乐', error);
-            source = 'netease'; // 降级到网易云音乐
+                        source = 'netease'; // 降级到网易云音乐
         }
     }
 
@@ -691,15 +600,12 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         ? `${API_BASE}?server=${source}&type=search&name=${encodeURIComponent(keyword)}&count=${limit}`
         : `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
 
-    console.log('🔍 搜索 API 请求:', url);
-    
-    try {
+        try {
         const response = await fetchWithRetry(url);
         
         // 检查响应状态
         if (!response.ok) {
-            console.error('❌ API 响应错误:', response.status, response.statusText);
-            await handleApiFailure();
+                        await handleApiFailure();
             throw new Error(`API 响应错误: ${response.status}`);
         }
         
@@ -707,8 +613,7 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
 
         // 检查API是否返回错误
         if (data && data.error) {
-            console.error('❌ API 返回错误:', data.error);
-            await handleApiFailure();
+                        await handleApiFailure();
             throw new Error(data.error || 'API 返回错误');
         }
 
@@ -717,25 +622,19 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         try {
             songs = parseApiResponse(data);
         } catch (parseError) {
-            console.error('❌ 解析响应失败:', parseError);
-            await handleApiFailure();
+                        await handleApiFailure();
             throw parseError;
         }
 
         if (songs.length === 0) {
-            console.warn('⚠️ API 返回空数组');
-            await handleApiFailure(); // 触发API切换机制
+                        await handleApiFailure(); // 触发API切换机制
             
             // 如果当前不是最后一个API，抛出错误以触发重试
             if (currentApiIndex < API_SOURCES.length - 1) {
                 throw new Error('API返回空数据，尝试切换API源');
             }
             
-            console.warn('所有API源均返回空数据，可能原因：');
-            console.warn('1. 关键词无匹配结果');
-            console.warn('2. 音乐源限制或版权问题');
-            console.warn('3. 所有API服务异常');
-            return [];
+                                                            return [];
         }
 
         // 过滤掉无效数据（酷狗的id可能为null，使用url_id作为备用）
@@ -748,13 +647,11 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
             id: song.id || song.url_id || song.lyric_id || `${source}_${Date.now()}_${Math.random()}`
         }));
 
-        console.log(`✅ 成功解析 ${songs.length} 首有效歌曲`);
-        resetApiFailureCount(); // 成功时重置失败计数
+                resetApiFailureCount(); // 成功时重置失败计数
         
         return songs.map((song: any) => ({ ...song, source: source }));
     } catch (error) {
-        console.error('❌ 搜索失败:', error);
-        await handleApiFailure();
+                await handleApiFailure();
         throw error;
     }
 }
@@ -763,16 +660,11 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
 async function searchBilibiliMusic(keyword: string, page: number = 1, limit: number = 100): Promise<Song[]> {
     try {
         const url = `${BILIBILI_API_BASE}?action=search&query=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`;
-        console.log('🔍 Bilibili 搜索 API 请求:', url);
-
-        const response = await fetchWithRetry(url);
+                const response = await fetchWithRetry(url);
         const result = await response.json();
 
-        console.log('📥 Bilibili API 响应:', result);
-
-        if (result.code !== 200 || !result.data || !Array.isArray(result.data)) {
-            console.error('❌ Bilibili API 返回错误:', result);
-            throw new Error(result.message || 'Bilibili API 返回数据格式不正确');
+                if (result.code !== 200 || !result.data || !Array.isArray(result.data)) {
+                        throw new Error(result.message || 'Bilibili API 返回数据格式不正确');
         }
 
         // 转换 Bilibili 数据格式为统一格式（兼容cenguigui API格式）
@@ -794,11 +686,9 @@ async function searchBilibiliMusic(keyword: string, page: number = 1, limit: num
             }
         }));
 
-        console.log(`✅ 成功解析 ${songs.length} 首 Bilibili 音乐`);
-        return songs;
+                return songs;
     } catch (error) {
-        console.error('❌ Bilibili 搜索失败:', error);
-        throw error;
+                throw error;
     }
 }
 
@@ -814,16 +704,12 @@ export async function exploreRadarAPI(limit: number = 50): Promise<Song[]> {
         ? `${API_BASE}?server=${randomSource}&type=search&name=${encodeURIComponent(randomKeyword)}&count=${limit}`
         : `${API_BASE}?types=search&source=${randomSource}&name=${encodeURIComponent(randomKeyword)}&count=${limit}`;
 
-    console.log('🔍 探索雷达 API 请求:', url);
-    console.log('🎲 随机音乐源:', randomSource, '| 随机关键词:', randomKeyword);
-    
-    try {
+            try {
         const response = await fetchWithRetry(url);
         
         // 检查响应状态
         if (!response.ok) {
-            console.error('❌ API 响应错误:', response.status, response.statusText);
-            await handleApiFailure();
+                        await handleApiFailure();
             throw new Error(`API 响应错误: ${response.status}`);
         }
         
@@ -831,8 +717,7 @@ export async function exploreRadarAPI(limit: number = 50): Promise<Song[]> {
 
         // 检查API是否返回错误
         if (data && data.error) {
-            console.error('❌ API 返回错误:', data.error);
-            await handleApiFailure();
+                        await handleApiFailure();
             throw new Error(data.error || 'API 返回错误');
         }
 
@@ -841,18 +726,15 @@ export async function exploreRadarAPI(limit: number = 50): Promise<Song[]> {
         try {
             songs = parseApiResponse(data);
         } catch (parseError) {
-            console.error('❌ 解析响应失败:', parseError);
-            await handleApiFailure();
+                        await handleApiFailure();
             throw parseError;
         }
 
         if (songs.length === 0) {
-            console.warn('⚠️ API 返回空数组');
-            await handleApiFailure(); // 触发API切换机制
+                        await handleApiFailure(); // 触发API切换机制
             
             // 重试其他音乐源
-            console.warn('重试其他音乐源...');
-            return await exploreRadarAPI(limit);
+                        return await exploreRadarAPI(limit);
         }
 
         // 过滤掉无效数据（酷狗的id可能为null，使用url_id作为备用）
@@ -865,13 +747,11 @@ export async function exploreRadarAPI(limit: number = 50): Promise<Song[]> {
             id: song.id || song.url_id || song.lyric_id || `${randomSource}_${Date.now()}_${Math.random()}`
         }));
 
-        console.log(`✅ 成功解析 ${songs.length} 首有效歌曲`);
-        resetApiFailureCount(); // 成功时重置失败计数
+                resetApiFailureCount(); // 成功时重置失败计数
         
         return songs.map((song: any) => ({ ...song, source: randomSource }));
     } catch (error) {
-        console.error('❌ 探索雷达失败:', error);
-        await handleApiFailure();
+                await handleApiFailure();
         throw error;
     }
 }
@@ -907,9 +787,7 @@ export async function getChartList(
     source: 'netease' | 'tencent' | 'kugou' | 'bilibili' = 'netease'
 ): Promise<Song[]> {
     try {
-        console.log(`🔍 获取 ${source} 平台的 ${chartType} 榜单数据...`);
-
-        // Bilibili特殊处理
+                // Bilibili特殊处理
         if (source === 'bilibili') {
             const bilibiliTypeMap: { [key: string]: 'hot' | 'new' | 'rank' } = {
                 'hot': 'hot',
@@ -924,8 +802,7 @@ export async function getChartList(
         // 检查平台是否支持该榜单
         const chartIds = CHART_IDS[source as 'netease' | 'tencent' | 'kugou'];
         if (!chartIds || !chartIds[chartType]) {
-            console.warn(`${source} 平台不支持 ${chartType} 榜单，使用热歌榜代替`);
-            const fallbackId = chartIds?.hot || CHART_IDS.netease.hot;
+                        const fallbackId = chartIds?.hot || CHART_IDS.netease.hot;
             const playlist = await parsePlaylistAPI(fallbackId, source);
             return playlist.songs.slice(0, 50);
         }
@@ -934,20 +811,16 @@ export async function getChartList(
         const playlist = await parsePlaylistAPI(playlistId, source);
         const songs = playlist.songs.slice(0, 50); // 限制50首
 
-        console.log(`✅ 成功获取 ${source} ${chartType} 榜单，共 ${songs.length} 首歌曲`);
-        return songs;
+                return songs;
     } catch (error) {
-        console.error(`❌ 获取 ${source} ${chartType} 榜单失败:`, error);
-        throw error;
+                throw error;
     }
 }
 
 export async function parsePlaylistAPI(playlistUrlOrId: string, source: string = 'netease'): Promise<{ songs: Song[]; name?: string; count?: number }> {
     let playlistId = playlistUrlOrId.trim();
 
-    console.log(`开始解析${source === 'netease' ? '网易云音乐' : 'QQ音乐'}歌单:`, playlistUrlOrId);
-
-    // 支持多种URL格式
+        // 支持多种URL格式
     if (source === 'netease') {
         if (playlistId.includes('music.163.com') || playlistId.includes('163cn.tv')) {
             // 尝试多种ID提取模式
@@ -964,8 +837,7 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
                 if (idMatch && idMatch[1]) {
                     playlistId = idMatch[1];
                     matched = true;
-                    console.log('从URL提取歌单ID:', playlistId);
-                    break;
+                                        break;
                 }
             }
 
@@ -991,8 +863,7 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
                 if (idMatch && idMatch[1]) {
                     playlistId = idMatch[1];
                     matched = true;
-                    console.log('从QQ音乐URL提取歌单ID:', playlistId);
-                    break;
+                                        break;
                 }
             }
 
@@ -1004,39 +875,29 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
         }
     }
 
-    console.log('请求歌单ID:', playlistId);
-    const apiUrl = API_BASE.includes('meting')
+        const apiUrl = API_BASE.includes('meting')
         ? `${API_BASE}?server=${source}&type=playlist&id=${playlistId}`
         : `${API_BASE}?types=playlist&source=${source}&id=${playlistId}`;
-    console.log('API请求地址:', apiUrl);
-
-    try {
+        try {
         const response = await fetchWithRetry(apiUrl);
         
         // 检查响应状态
         if (!response.ok) {
-            console.error('❌ API 响应错误:', response.status, response.statusText);
-            await handleApiFailure();
+                        await handleApiFailure();
             throw new Error(`API 响应错误: ${response.status}`);
         }
         
         const playlistData = await response.json();
 
-        console.log('API响应数据:', playlistData);
-        console.log('数据类型:', typeof playlistData);
-        console.log('是否为数组:', Array.isArray(playlistData));
-
         // 检查返回数据的有效性
         if (!playlistData) {
-            console.error('❌ API返回空数据');
-            await handleApiFailure();
+                        await handleApiFailure();
             throw new Error('API返回空数据，请检查歌单ID是否正确');
         }
 
         // 处理API返回错误对象的情况
         if (playlistData.error || playlistData.msg) {
-            console.error('❌ API返回错误:', playlistData.error || playlistData.msg);
-            await handleApiFailure();
+                        await handleApiFailure();
             throw new Error(playlistData.error || playlistData.msg || '未知API错误');
         }
 
@@ -1047,37 +908,25 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
         if (Array.isArray(playlistData)) {
             // 格式1: 直接返回歌曲数组
             songs = playlistData;
-            console.log('✅ 检测到格式: 歌曲数组');
-        } else if (playlistData.songs && Array.isArray(playlistData.songs)) {
+                    } else if (playlistData.songs && Array.isArray(playlistData.songs)) {
             // 格式2: { songs: [...], name: '...', ... }
             songs = playlistData.songs;
             playlistName = playlistData.name || playlistName;
-            console.log('✅ 检测到格式: 带有songs字段的对象');
-        } else if (playlistData.data && Array.isArray(playlistData.data)) {
+                    } else if (playlistData.data && Array.isArray(playlistData.data)) {
             // 格式3: { data: [...] }
             songs = playlistData.data;
             playlistName = playlistData.name || '未命名歌单';
-            console.log('✅ 检测到格式: 带有data字段的对象');
-        } else if (playlistData.playlist && playlistData.playlist.tracks) {
+                    } else if (playlistData.playlist && playlistData.playlist.tracks) {
             // 格式4: 网易云音乐API原始格式
             songs = playlistData.playlist.tracks;
             playlistName = playlistData.playlist.name || playlistName;
-            console.log('✅ 检测到格式: 网易云音乐原始API格式');
-        } else {
-            // 无法识别的格式，输出完整数据结构供调试
-            console.error('❌ 无法识别的数据格式，完整数据:', JSON.stringify(playlistData, null, 2));
+                    } else {
             await handleApiFailure();
             throw new Error(`歌单数据格式不支持。请在控制台查看完整数据结构`);
         }
 
         if (!songs || songs.length === 0) {
-            console.warn('⚠️ API返回空歌单，可能的原因:');
-            console.warn('1. 歌单ID不存在或已被删除');
-            console.warn('2. 歌单设置了隐私权限');
-            console.warn('3. API服务限制或版权保护');
-            console.warn('4. 网络问题导致数据获取不完整');
-            console.warn('建议: 尝试使用其他公开歌单ID');
-            throw new Error('歌单为空。建议尝试其他歌单ID');
+                                                                                    throw new Error('歌单为空。建议尝试其他歌单ID');
         }
 
         // 过滤并确保每首歌曲都有必要的字段
@@ -1091,8 +940,7 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
                 album: song.album || '未知专辑'
             }));
 
-        console.log(`✅ 成功解析歌单《${playlistName}》，共 ${songs.length} 首有效歌曲`);
-        resetApiFailureCount(); // 成功时重置失败计数
+                resetApiFailureCount(); // 成功时重置失败计数
 
         return {
             songs: songs,
@@ -1100,8 +948,7 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
             count: songs.length
         };
     } catch (error) {
-        console.error('❌ 歌单解析失败:', error);
-        await handleApiFailure();
+                await handleApiFailure();
         throw error;
     }
 }
@@ -1119,16 +966,11 @@ export async function getBilibiliChartList(chartType: 'hot' | 'new' | 'rank' = '
         const type = chartTypeMap[chartType] || 'hot';
         const url = `${BILIBILI_API_BASE}?action=chart&type=${type}&limit=50`;
         
-        console.log(`🔍 获取 Bilibili ${chartType} 榜单 API 请求:`, url);
-        
-        const response = await fetchWithRetry(url);
+                const response = await fetchWithRetry(url);
         const result = await response.json();
         
-        console.log('📥 Bilibili 榜单 API 响应:', result);
-        
-        if (result.code !== 200 || !result.data || !Array.isArray(result.data)) {
-            console.error('❌ Bilibili 榜单 API 返回错误:', result);
-            throw new Error(result.message || 'Bilibili 榜单 API 返回数据格式不正确');
+                if (result.code !== 200 || !result.data || !Array.isArray(result.data)) {
+                        throw new Error(result.message || 'Bilibili 榜单 API 返回数据格式不正确');
         }
         
         // 转换 Bilibili 数据格式为统一格式
@@ -1151,11 +993,9 @@ export async function getBilibiliChartList(chartType: 'hot' | 'new' | 'rank' = '
             }
         }));
         
-        console.log(`✅ 成功解析 Bilibili ${chartType} 榜单，共 ${songs.length} 首歌曲`);
-        return songs;
+                return songs;
     } catch (error) {
-        console.error(`❌ 获取 Bilibili ${chartType} 榜单失败:`, error);
-        throw error;
+                throw error;
     }
 }
 
@@ -1175,14 +1015,11 @@ export async function getChartListExtended(chartType: 'soar' | 'new' | 'hot' | '
     };
 
     try {
-        console.log(`🔍 获取${chartType}榜单数据...`);
-        const playlist = await parsePlaylistAPI(chartIds[chartType as 'soar' | 'new' | 'hot'], 'netease');
+                const playlist = await parsePlaylistAPI(chartIds[chartType as 'soar' | 'new' | 'hot'], 'netease');
         const songs = playlist.songs.slice(0, 50); // 限制50首
-        console.log(`✅ 成功获取${chartType}榜单，共 ${songs.length} 首歌曲`);
-        return songs;
+                return songs;
     } catch (error) {
-        console.error(`❌ 获取${chartType}榜单失败:`, error);
-        throw error;
+                throw error;
     }
 }
 
@@ -1191,9 +1028,7 @@ export async function getChartListExtended(chartType: 'soar' | 'new' | 'hot' | '
 // 智能推荐：根据歌曲推荐相似歌曲
 export async function getRecommendations(song: Song, limit: number = 20): Promise<Song[]> {
     try {
-        console.log(`🎵 获取相似推荐: ${song.name}`);
-        
-        // 提取歌曲的关键信息用于搜索
+                // 提取歌曲的关键信息用于搜索
         const artistName = Array.isArray(song.artist) ? song.artist[0] : song.artist;
         const searchKeywords = [
             artistName, // 同一歌手的其他歌曲
@@ -1214,8 +1049,7 @@ export async function getRecommendations(song: Song, limit: number = 20): Promis
                 
                 if (allRecommendations.length >= limit) break;
             } catch (error) {
-                console.warn(`推荐搜索失败: ${keyword}`, error);
-                continue;
+                                continue;
             }
         }
         
@@ -1224,11 +1058,9 @@ export async function getRecommendations(song: Song, limit: number = 20): Promis
             new Map(allRecommendations.map(s => [`${s.id}_${s.source}`, s])).values()
         ).slice(0, limit);
         
-        console.log(`✅ 获取推荐成功: ${uniqueRecommendations.length} 首`);
-        return uniqueRecommendations;
+                return uniqueRecommendations;
     } catch (error) {
-        console.error('❌ 获取推荐失败:', error);
-        return [];
+                return [];
     }
 }
 
@@ -1246,16 +1078,14 @@ export async function getBatchSongDetails(songs: Song[]): Promise<Song[]> {
                     const coverUrl = await getAlbumCoverUrl(song);
                     return { ...song, coverUrl };
                 } catch (error) {
-                    console.warn(`获取歌曲详情失败: ${song.name}`, error);
-                    return song;
+                                        return song;
                 }
             })
         );
         results.push(...batchResults);
         
         // 显示进度
-        console.log(`批量处理进度: ${results.length}/${songs.length}`);
-    }
+            }
     
     return results;
 }
@@ -1279,8 +1109,7 @@ export async function getSearchSuggestions(keyword: string, source: string = 'ne
         
         return Array.from(suggestions).slice(0, 10);
     } catch (error) {
-        console.warn('获取搜索建议失败:', error);
-        return [];
+                return [];
     }
 }
 
@@ -1295,9 +1124,7 @@ export function getHotSearchKeywords(): string[] {
 
 // 音乐源健康检查
 export async function checkSourcesHealth(): Promise<{ source: string; name: string; available: boolean; responseTime: number }[]> {
-    console.log('🔍 开始检测所有音乐源健康状态...');
-    
-    const results = await Promise.all(
+        const results = await Promise.all(
         MUSIC_SOURCES.map(async (musicSource) => {
             const startTime = Date.now();
             try {
@@ -1330,12 +1157,6 @@ export async function checkSourcesHealth(): Promise<{ source: string; name: stri
             }
         })
     );
-    
-    console.log('✅ 音乐源健康检查完成');
-    results.forEach(r => {
-        const status = r.available ? '✅ 可用' : '❌ 不可用';
-        console.log(`${r.name}: ${status} (${r.responseTime}ms)`);
-    });
     
     return results;
 }
@@ -1411,8 +1232,7 @@ export async function importPlaylistFromText(text: string, source: string = 'net
                 }
             }
         } catch (error) {
-            console.warn(`导入失败: ${line}`, error);
-        }
+                    }
     }
 
     return songs;
@@ -1430,8 +1250,6 @@ export async function searchAlbumAPI(keyword: string, source: string = 'netease'
     // 注意：Meting API不直接支持专辑搜索，我们通过歌单搜索模拟
     // 实际项目中可以直接调用网易云API的专辑搜索接口
     try {
-        console.log(`🔍 搜索专辑: "${keyword}" (${source})`);
-
         // 使用search type=10 搜索专辑（网易云API参数）
         const url = API_BASE.includes('meting')
             ? `${API_BASE}?server=${source}&type=search&name=${encodeURIComponent(keyword)}&count=${limit}&search_type=10`
@@ -1450,11 +1268,9 @@ export async function searchAlbumAPI(keyword: string, source: string = 'netease'
             albums = data.result.albums;
         }
 
-        console.log(`✅ 找到 ${albums.length} 个专辑`);
-        return albums;
+                return albums;
     } catch (error) {
-        console.error('❌ 搜索专辑失败:', error);
-        return [];
+                return [];
     }
 }
 
@@ -1466,8 +1282,6 @@ export async function searchAlbumAPI(keyword: string, source: string = 'netease'
  */
 export async function searchPlaylistAPI(keyword: string, source: string = 'netease', limit: number = 30): Promise<any[]> {
     try {
-        console.log(`🔍 搜索歌单: "${keyword}" (${source})`);
-
         // 使用search type=1000 搜索歌单（网易云API参数）
         const url = API_BASE.includes('meting')
             ? `${API_BASE}?server=${source}&type=search&name=${encodeURIComponent(keyword)}&count=${limit}&search_type=1000`
@@ -1486,11 +1300,9 @@ export async function searchPlaylistAPI(keyword: string, source: string = 'netea
             playlists = data.result.playlists;
         }
 
-        console.log(`✅ 找到 ${playlists.length} 个歌单`);
-        return playlists;
+                return playlists;
     } catch (error) {
-        console.error('❌ 搜索歌单失败:', error);
-        return [];
+                return [];
     }
 }
 
@@ -1503,16 +1315,13 @@ export async function searchPlaylistAPI(keyword: string, source: string = 'netea
  */
 export async function getHotAlbums(source: string = 'netease', limit: number = 20): Promise<any[]> {
     try {
-        console.log(`🔥 获取热门专辑 (${source})`);
-
         // 通过热门关键词搜索专辑
         const hotKeywords = ['华语', '流行', '热门', '经典', '排行榜'];
         const randomKeyword = hotKeywords[Math.floor(Math.random() * hotKeywords.length)];
 
         return await searchAlbumAPI(randomKeyword, source, limit);
     } catch (error) {
-        console.error('❌ 获取热门专辑失败:', error);
-        return [];
+                return [];
     }
 }
 
@@ -1523,20 +1332,16 @@ export async function getHotAlbums(source: string = 'netease', limit: number = 2
  */
 export async function getHotSongs(source: 'netease' | 'tencent' | 'kugou' | 'bilibili' = 'netease', limit: number = 50): Promise<Song[]> {
     try {
-        console.log(`🔥 获取热门歌曲 (${source})`);
-
         // 直接使用热门榜单
         const songs = await getChartList('hot', source);
         return songs.slice(0, limit);
     } catch (error) {
-        console.error('❌ 获取热门歌曲失败:', error);
-        // 降级：通过关键词搜索
+                // 降级：通过关键词搜索
         try {
             const fallbackSongs = await searchMusicAPI('热门', source, limit);
             return fallbackSongs;
         } catch (fallbackError) {
-            console.error('❌ 降级搜索也失败:', fallbackError);
-            return [];
+                        return [];
         }
     }
 }
@@ -1548,16 +1353,13 @@ export async function getHotSongs(source: 'netease' | 'tencent' | 'kugou' | 'bil
  */
 export async function getRecommendPlaylists(source: string = 'netease', limit: number = 20): Promise<any[]> {
     try {
-        console.log(`💡 获取推荐歌单 (${source})`);
-
         // 通过热门关键词搜索歌单
         const hotKeywords = ['热门', '精选', '经典', '必听', '流行'];
         const randomKeyword = hotKeywords[Math.floor(Math.random() * hotKeywords.length)];
 
         return await searchPlaylistAPI(randomKeyword, source, limit);
     } catch (error) {
-        console.error('❌ 获取推荐歌单失败:', error);
-        return [];
+                return [];
     }
 }
 

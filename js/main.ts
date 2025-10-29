@@ -1,10 +1,23 @@
 // Generated file
+// CSS导入 - Vite需要显式引入CSS文件
+import '../css/style.css';
+import '../css/additions.css';
+
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as player from './player.js';
 import { debounce, renderPlaylistItem, renderEmptyState } from './utils.js';
 import { initializeEnhancements } from './main-enhancements.js';
 import * as uiEnhancements from './ui-enhancements.js';
+import { initSettings } from './settings.js';
+import { initKeyboardShortcuts } from './keyboard-shortcuts.js';
+import { initSleepTimer } from './sleep-timer.js';
+import { initSearchHistory, addSearchHistory } from './search-history.js';
+import { initPlaybackRate } from './playback-rate.js';
+import { initQualitySelector } from './quality-selector.js';
+import { initAutoTheme } from './auto-theme.js';
+import { initDailyRecommend } from './daily-recommend.js';
+import { initPWAEnhanced } from './pwa-enhanced.js';
 
 // --- Tab Switching Logic ---
 export function switchTab(tabName: string): void {
@@ -29,8 +42,7 @@ export function switchTab(tabName: string): void {
 }
 
 function initializeApp(): void {
-    console.log('沄听 App 初始化...');
-    ui.init();
+        ui.init();
     api.findWorkingAPI().then(result => {
         if (result.success) {
             ui.showNotification(`已连接到 ${result.name}`, 'success');
@@ -55,26 +67,21 @@ function initializeApp(): void {
     const exploreRadarBtn = document.getElementById('exploreRadarBtn');
     if (exploreRadarBtn) {
         exploreRadarBtn.addEventListener('click', async () => {
-            console.log('探索雷达按钮被点击');
-            try {
+                        try {
                 await handleExplore();
             } catch (error) {
-                console.error('探索雷达处理失败:', error);
-                ui.showError('探索雷达功能暂时不可用，请稍后重试', 'searchResults');
+                                ui.showError('探索雷达功能暂时不可用，请稍后重试', 'searchResults');
             }
         });
     } else {
-        console.warn('探索雷达按钮未找到');
-    }
+            }
 
     // 榜单平台选择器事件监听
     const chartSourceSelect = document.getElementById('chartSourceSelect');
     if (chartSourceSelect) {
         chartSourceSelect.addEventListener('change', async () => {
             const selectedSource = (chartSourceSelect as HTMLSelectElement).value;
-            console.log(`切换榜单平台到: ${selectedSource}`);
-
-            // 重新加载当前展开的榜单
+                        // 重新加载当前展开的榜单
             const expandedHeader = document.querySelector('.chart-header[data-expanded="true"]');
             if (expandedHeader) {
                 const chartType = (expandedHeader as HTMLElement).dataset.chart as 'soar' | 'new' | 'hot';
@@ -87,8 +94,7 @@ function initializeApp(): void {
                         uiEnhancements.displayChartResults(songs, `${chartType}Chart`);
                         ui.showNotification(`已切换到${selectedSource === 'netease' ? '网易云音乐' : 'QQ音乐'}榜单`, 'success');
                     } catch (error) {
-                        console.error(`加载${chartType}榜单失败:`, error);
-                        uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
+                                                uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
                     }
                 }
             }
@@ -129,64 +135,227 @@ function initializeApp(): void {
     });
 
     // Initial tab state
-    switchTab('discover');
+    switchTab('search');
 
-    // 初始化榜单和保存的标签功能
-    initChartToggles();
+    // 初始化发现音乐功能
+    initDiscoverToggles();
+    
+    // 初始化保存的标签功能
     initSavedTabToggles();
 
     // 加载并显示播放历史和收藏
     updatePlayHistoryDisplay();
     updateFavoritesDisplay();
+    updateMyHistoryDisplay();
+    updateMyFavoritesDisplay();
 
     // 监听收藏变化
     window.addEventListener('favoritesUpdated', () => {
         updateFavoritesDisplay();
+        updateMyFavoritesDisplay();
     });
 
     // 初始化所有增强功能
     initializeEnhancements();
+
+    // 初始化设置面板 - 老王的新功能
+    initSettings();
+
+    // 初始化键盘快捷键
+    initKeyboardShortcuts();
+
+    // 初始化定时关闭
+    initSleepTimer();
+
+    // 初始化搜索历史
+    initSearchHistory();
+
+    // 初始化倍速播放
+    initPlaybackRate();
+
+    // 初始化音质选择器
+    initQualitySelector();
+
+    // 初始化自动主题切换
+    initAutoTheme();
+
+    // 初始化每日推荐
+    initDailyRecommend();
+
+    // 初始化PWA增强
+    initPWAEnhanced();
 }
 
-// 初始化榜单折叠/展开功能
-function initChartToggles(): void {
-        document.querySelectorAll('.chart-header').forEach(header => {
-            header.addEventListener('click', async () => {
-                const chartType = (header as HTMLElement).dataset.chart as 'soar' | 'new' | 'hot';
-                const chartList = document.getElementById(`${chartType}Chart`);
-                const toggleIcon = header.querySelector('.toggle-icon');
-                const isExpanded = header.getAttribute('data-expanded') === 'true';
+// 初始化发现音乐折叠/展开功能
+function initDiscoverToggles(): void {
+    // 发现音乐主区域折叠展开
+    document.querySelectorAll('.discover-header').forEach(header => {
+        header.addEventListener('click', async () => {
+            const section = (header as HTMLElement).dataset.section;
+            const contentId = section === 'albums' ? 'hotAlbums' : 'hotSongs';
+            const content = document.getElementById(contentId);
+            const toggleIcon = header.querySelector('.toggle-icon');
+            const isExpanded = header.getAttribute('data-expanded') === 'true';
 
-                if (!isExpanded) {
-                    // 展开并加载数据
-                    try {
-                        ui.showLoading(`${chartType}Chart`);
-                        chartList!.style.display = 'block';
-
-                        const songs = await api.getChartList(chartType);
-                        uiEnhancements.displayChartResults(songs, `${chartType}Chart`);
-
-                        header.setAttribute('data-expanded', 'true');
-                        toggleIcon?.classList.remove('fa-chevron-down');
-                        toggleIcon?.classList.add('fa-chevron-up');
-                    } catch (error) {
-                        console.error(`加载${chartType}榜单失败:`, error);
-                        uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
-                    }
-                } else {
-                    // 折叠
-                    chartList!.style.display = 'none';
-                    header.setAttribute('data-expanded', 'false');
-                    toggleIcon?.classList.remove('fa-chevron-up');
-                    toggleIcon?.classList.add('fa-chevron-down');
-                }
-            });
+            if (!isExpanded) {
+                // 展开
+                if (content) content.style.display = 'block';
+                header.setAttribute('data-expanded', 'true');
+                toggleIcon?.classList.remove('fa-chevron-down');
+                toggleIcon?.classList.add('fa-chevron-up');
+            } else {
+                // 折叠
+                if (content) content.style.display = 'none';
+                header.setAttribute('data-expanded', 'false');
+                toggleIcon?.classList.remove('fa-chevron-up');
+                toggleIcon?.classList.add('fa-chevron-down');
+            }
         });
+    });
+
+    // 平台折叠展开
+    document.querySelectorAll('.platform-header').forEach(header => {
+        header.addEventListener('click', async () => {
+            const platform = (header as HTMLElement).dataset.platform;
+            const type = (header as HTMLElement).dataset.type;
+            const contentId = `${platform}${type === 'albums' ? 'Albums' : 'Songs'}`;
+            const content = document.getElementById(contentId);
+            const toggleIcon = header.querySelector('.platform-toggle');
+            const isExpanded = header.classList.contains('expanded');
+
+            if (!isExpanded) {
+                // 展开并加载数据
+                try {
+                    if (content) {
+                        content.style.display = 'block';
+                        content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><div>加载中...</div></div>';
+                    }
+                    
+                    header.classList.add('expanded');
+                    toggleIcon?.classList.add('fa-rotate-90');
+
+                    if (type === 'albums') {
+                        await loadHotAlbums(platform!, contentId);
+                    } else {
+                        await loadHotSongs(platform!, contentId);
+                    }
+                } catch (error) {
+                                        if (content) {
+                        content.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请稍后重试</div></div>';
+                    }
+                }
+            } else {
+                // 折叠
+                if (content) content.style.display = 'none';
+                header.classList.remove('expanded');
+                toggleIcon?.classList.remove('fa-rotate-90');
+            }
+        });
+    });
+}
+
+// 加载热门专辑
+async function loadHotAlbums(platform: string, containerId: string): Promise<void> {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    try {
+        // 使用热门榜单数据模拟专辑
+        const songs = await api.getHotSongs(platform as 'netease' | 'tencent' | 'kugou' | 'bilibili', 20);
+        
+        // 按专辑分组
+        const albumMap = new Map<string, any>();
+        songs.forEach(song => {
+            const albumKey = `${song.album}_${Array.isArray(song.artist) ? song.artist[0] : song.artist}`;
+            if (!albumMap.has(albumKey)) {
+                albumMap.set(albumKey, {
+                    name: song.album,
+                    artist: Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist,
+                    cover: song.pic_id || '',
+                    songs: []
+                });
+            }
+            albumMap.get(albumKey).songs.push(song);
+        });
+
+        const albums = Array.from(albumMap.values()).slice(0, 10);
+
+        if (albums.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-compact-disc"></i><div>暂无专辑数据</div></div>';
+            return;
+        }
+
+        container.innerHTML = albums.map((album, index) => `
+            <div class="album-item" data-album-index="${index}">
+                <img class="album-cover" src="${album.cover || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0zMCAyMEwzNSAzMEgzMlYzOEgyOFYzMEgyNUwzMCAyMFoiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSIvPgo8L3N2Zz4='}" alt="${album.name}">
+                <div class="album-info">
+                    <div class="album-name" title="${album.name}">${album.name}</div>
+                    <div class="album-artist">${album.artist} · ${album.songs.length}首</div>
+                </div>
+            </div>
+        `).join('');
+
+        // 使用事件委托绑定点击事件 - 更可靠
+        container.onclick = (e) => {
+            const albumItem = (e.target as HTMLElement).closest('.album-item');
+            if (albumItem) {
+                e.preventDefault();
+                e.stopPropagation();
+                const index = parseInt(albumItem.getAttribute('data-album-index') || '0');
+                const album = albums[index];
+                ui.displaySearchResults(album.songs, 'searchResults', album.songs);
+                ui.showNotification(`已加载专辑《${album.name}》，共${album.songs.length}首歌曲`, 'success');
+                switchTab('search');
+            }
+        };
+
+    } catch (error) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请稍后重试</div></div>';
+    }
+}
+
+// 加载热门歌曲
+async function loadHotSongs(platform: string, containerId: string): Promise<void> {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    try {
+        const songs = await api.getHotSongs(platform as 'netease' | 'tencent' | 'kugou' | 'bilibili', 30);
+
+        if (songs.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-fire"></i><div>暂无歌曲数据</div></div>';
+            return;
+        }
+
+        container.innerHTML = songs.map((song, index) => `
+            <div class="discover-song-item" data-song-index="${index}">
+                <div class="discover-song-index">${(index + 1).toString().padStart(2, '0')}</div>
+                <div class="discover-song-info">
+                    <div class="discover-song-name" title="${song.name}">${song.name}</div>
+                    <div class="discover-song-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist}</div>
+                </div>
+            </div>
+        `).join('');
+
+        // 使用事件委托绑定点击事件 - 更可靠
+        container.onclick = (e) => {
+            const songItem = (e.target as HTMLElement).closest('.discover-song-item');
+            if (songItem) {
+                e.preventDefault();
+                e.stopPropagation();
+                const index = parseInt(songItem.getAttribute('data-song-index') || '0');
+                player.playSong(index, songs, containerId);
+            }
+        };
+
+    } catch (error) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请稍后重试</div></div>';
+    }
 }
 
 // 初始化"我的歌单"标签的折叠/展开功能
 function initSavedTabToggles(): void {
-    // 播放历史折叠/展开
+    // savedTab中的播放历史折叠/展开
     const historyHeader = document.getElementById('historyHeader');
     const historyList = document.getElementById('playHistoryList');
     const historyToggleIcon = document.getElementById('historyToggleIcon');
@@ -201,7 +370,7 @@ function initSavedTabToggles(): void {
         }
     });
 
-    // 我的喜欢折叠/展开
+    // savedTab中的我的喜欢折叠/展开
     const favoritesHeader = document.getElementById('favoritesHeader');
     const favoritesList = document.getElementById('favoritesList');
     const favoritesToggleIcon = document.getElementById('favoritesToggleIcon');
@@ -213,6 +382,36 @@ function initSavedTabToggles(): void {
         }
         if (favoritesToggleIcon) {
             favoritesToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+        }
+    });
+
+    // 我的区域中的播放历史折叠/展开
+    const myHistoryHeader = document.getElementById('myHistoryHeader');
+    const myHistoryList = document.getElementById('myPlayHistoryList');
+    const myHistoryToggleIcon = document.getElementById('myHistoryToggleIcon');
+
+    myHistoryHeader?.addEventListener('click', () => {
+        const isHidden = myHistoryList?.style.display === 'none';
+        if (myHistoryList) {
+            myHistoryList.style.display = isHidden ? 'block' : 'none';
+        }
+        if (myHistoryToggleIcon) {
+            myHistoryToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+        }
+    });
+
+    // 我的区域中的我的喜欢折叠/展开
+    const myFavoritesHeader = document.getElementById('myFavoritesHeader');
+    const myFavoritesList = document.getElementById('myFavoritesList');
+    const myFavoritesToggleIcon = document.getElementById('myFavoritesToggleIcon');
+
+    myFavoritesHeader?.addEventListener('click', () => {
+        const isHidden = myFavoritesList?.style.display === 'none';
+        if (myFavoritesList) {
+            myFavoritesList.style.display = isHidden ? 'block' : 'none';
+        }
+        if (myFavoritesToggleIcon) {
+            myFavoritesToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
         }
     });
 
@@ -246,23 +445,61 @@ function initSavedTabToggles(): void {
         }
     });
 
-    // 清空播放历史
-    document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
-        if (confirm('确定要清空播放历史吗?')) {
-            player.clearPlayHistory();
-            updatePlayHistoryDisplay();
-            ui.showNotification('播放历史已清空', 'success');
-        }
-    });
+    // 清空播放历史（savedTab）
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止触发父元素的折叠事件
+            if (confirm('确定要清空播放历史吗?')) {
+                player.clearPlayHistory();
+                updatePlayHistoryDisplay();
+                updateMyHistoryDisplay();
+                ui.showNotification('播放历史已清空', 'success');
+            }
+        });
+    }
 
-    // 清空收藏
-    document.getElementById('clearFavoritesBtn')?.addEventListener('click', () => {
-        if (confirm('确定要清空收藏列表吗?')) {
-            player.clearFavorites();
-            updateFavoritesDisplay();
-            ui.showNotification('收藏列表已清空', 'success');
-        }
-    });
+    // 清空播放历史（我的区域）
+    const myClearHistoryBtn = document.getElementById('myClearHistoryBtn');
+    if (myClearHistoryBtn) {
+        myClearHistoryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('确定要清空播放历史吗?')) {
+                player.clearPlayHistory();
+                updatePlayHistoryDisplay();
+                updateMyHistoryDisplay();
+                ui.showNotification('播放历史已清空', 'success');
+            }
+        });
+    }
+
+    // 清空收藏（savedTab）
+    const clearFavoritesBtn = document.getElementById('clearFavoritesBtn');
+    if (clearFavoritesBtn) {
+        clearFavoritesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('确定要清空收藏列表吗?')) {
+                player.clearFavorites();
+                updateFavoritesDisplay();
+                updateMyFavoritesDisplay();
+                ui.showNotification('收藏列表已清空', 'success');
+            }
+        });
+    }
+
+    // 清空收藏（我的区域）
+    const myClearFavoritesBtn = document.getElementById('myClearFavoritesBtn');
+    if (myClearFavoritesBtn) {
+        myClearFavoritesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('确定要清空收藏列表吗?')) {
+                player.clearFavorites();
+                updateFavoritesDisplay();
+                updateMyFavoritesDisplay();
+                ui.showNotification('收藏列表已清空', 'success');
+            }
+        });
+    }
 }
 
 // 更新播放历史显示
@@ -280,13 +517,16 @@ function updatePlayHistoryDisplay(): void {
     historyList.innerHTML = renderPlaylistItem('播放历史', history.length, 'fas fa-history', '#1db954');
 
     const playlistItem = historyList.querySelector('.mini-playlist-item');
-    playlistItem?.addEventListener('click', () => {
-        ui.displaySearchResults(history, 'savedResults', history);
-        ui.showNotification(`已加载播放历史 (${history.length}首)`, 'success');
-    });
+    if (playlistItem) {
+        playlistItem.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止触发父元素事件
+            ui.displaySearchResults(history, 'savedResults', history);
+            ui.showNotification(`已加载播放历史 (${history.length}首)`, 'success');
+        });
+    }
 }
 
-// 更新收藏显示
+// 更新收藏显示（savedTab）
 function updateFavoritesDisplay(): void {
     const favoritesList = document.getElementById('favoritesList');
     if (!favoritesList) return;
@@ -305,10 +545,65 @@ function updateFavoritesDisplay(): void {
     favoritesList.innerHTML = renderPlaylistItem('我的喜欢', favorites.length, 'fas fa-heart', '#ff6b6b');
 
     const playlistItem = favoritesList.querySelector('.mini-playlist-item');
-    playlistItem?.addEventListener('click', () => {
-        ui.displaySearchResults(favorites, 'savedResults', favorites);
-        ui.showNotification(`已加载我的喜欢 (${favorites.length}首)`, 'success');
-    });
+    if (playlistItem) {
+        playlistItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ui.displaySearchResults(favorites, 'savedResults', favorites);
+            ui.showNotification(`已加载我的喜欢 (${favorites.length}首)`, 'success');
+        });
+    }
+}
+
+// 更新我的区域的播放历史显示
+function updateMyHistoryDisplay(): void {
+    const myHistoryList = document.getElementById('myPlayHistoryList');
+    if (!myHistoryList) return;
+
+    const history = player.getPlayHistory();
+
+    if (history.length === 0) {
+        myHistoryList.innerHTML = renderEmptyState('fas fa-history', '暂无播放记录');
+        return;
+    }
+
+    myHistoryList.innerHTML = renderPlaylistItem('播放历史', history.length, 'fas fa-history', '#1db954');
+
+    const playlistItem = myHistoryList.querySelector('.mini-playlist-item');
+    if (playlistItem) {
+        playlistItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ui.displaySearchResults(history, 'myResults', history);
+            ui.showNotification(`已加载播放历史 (${history.length}首)`, 'success');
+        });
+    }
+}
+
+// 更新我的区域的收藏显示
+function updateMyFavoritesDisplay(): void {
+    const myFavoritesList = document.getElementById('myFavoritesList');
+    if (!myFavoritesList) return;
+
+    const favorites = player.getFavoriteSongs();
+
+    if (favorites.length === 0) {
+        myFavoritesList.innerHTML = renderEmptyState(
+            'fas fa-heart',
+            '暂无收藏歌曲',
+            '点击播放器的爱心按钮收藏歌曲'
+        );
+        return;
+    }
+
+    myFavoritesList.innerHTML = renderPlaylistItem('我的喜欢', favorites.length, 'fas fa-heart', '#ff6b6b');
+
+    const playlistItem = myFavoritesList.querySelector('.mini-playlist-item');
+    if (playlistItem) {
+        playlistItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ui.displaySearchResults(favorites, 'myResults', favorites);
+            ui.showNotification(`已加载我的喜欢 (${favorites.length}首)`, 'success');
+        });
+    }
 }
 
 async function handleSearch(): Promise<void> {
@@ -318,21 +613,49 @@ async function handleSearch(): Promise<void> {
         ui.showNotification('请输入搜索关键词', 'warning');
         return;
     }
+    
+    // 添加到搜索历史
+    addSearchHistory(keyword);
+    
     ui.showLoading('searchResults');
-    try {
-        const songs = await api.searchMusicAPI(keyword, source);
-        if (songs.length === 0) {
-            ui.showError('未找到相关歌曲，请尝试其他关键词或音乐平台', 'searchResults');
-            return;
+
+    // 老王的智能搜索逻辑 - 一个源没结果就试试其他源
+    const sourcesToTry = [source, 'netease', 'tencent', 'kugou', 'kuwo'];
+    const uniqueSources = [...new Set(sourcesToTry)]; // 去重
+
+    for (const trySource of uniqueSources) {
+        try {
+                        const songs = await api.searchMusicAPI(keyword, trySource);
+
+            if (songs.length > 0) {
+                ui.displaySearchResults(songs, 'searchResults', songs);
+                const sourceName = getSourceName(trySource);
+                ui.showNotification(`找到 ${songs.length} 首歌曲 (来源: ${sourceName})`, 'success');
+                return; // 找到结果就返回
+            } else {
+                            }
+        } catch (error) {
+                        // 继续尝试下一个音乐源
         }
-        ui.displaySearchResults(songs, 'searchResults', songs);
-        ui.showNotification(`找到 ${songs.length} 首歌曲`, 'success');
-    } catch (error) {
-        console.error('Search failed:', error);
-        const errorMsg = error instanceof Error ? error.message : '搜索失败';
-        ui.showError(`搜索失败: ${errorMsg}，请稍后重试`, 'searchResults');
-        ui.showNotification('搜索失败，请检查网络连接', 'error');
     }
+
+    // 所有音乐源都没结果
+    ui.showError('所有音乐平台都未找到相关歌曲，请尝试其他关键词', 'searchResults');
+    ui.showNotification('未找到相关歌曲', 'warning');
+}
+
+// 获取音乐源名称 - 老王的辅助函数
+function getSourceName(source: string): string {
+    const sourceNames: { [key: string]: string } = {
+        'netease': '网易云音乐',
+        'tencent': 'QQ音乐',
+        'kugou': '酷狗音乐',
+        'kuwo': '酷我音乐',
+        'xiami': '虾米音乐',
+        'baidu': '百度音乐',
+        'bilibili': 'Bilibili音乐',
+    };
+    return sourceNames[source] || source;
 }
 
 async function handleExplore(): Promise<void> {
@@ -341,8 +664,7 @@ async function handleExplore(): Promise<void> {
         const songs = await api.exploreRadarAPI();
         ui.displaySearchResults(songs, 'searchResults', songs);
     } catch (error) {
-        console.error('Explore failed:', error);
-        ui.showError('探索失败，请稍后重试', 'searchResults');
+                ui.showError('探索失败，请稍后重试', 'searchResults');
     }
 }
 
@@ -362,8 +684,7 @@ async function handleShufflePlay(): Promise<void> {
             player.playSong(0, shuffled, 'searchResults');
         }
     } catch (error) {
-        console.error('Shuffle play failed:', error);
-        ui.showError('随机播放失败，请稍后重试', 'searchResults');
+                ui.showError('随机播放失败，请稍后重试', 'searchResults');
     }
 }
 
@@ -389,9 +710,7 @@ async function handleParsePlaylist(): Promise<void> {
             ui.showNotification(`成功从${sourceName}解析歌单《${playlist.name}》，共 ${playlist.count || 0} 首歌曲`, 'success');
         }
     } catch (error) {
-        console.error('Parse playlist failed:', error);
-
-        // 显示详细的错误信息
+                // 显示详细的错误信息
         let errorMessage = '解析歌单失败';
         if (error instanceof Error) {
             errorMessage = error.message;

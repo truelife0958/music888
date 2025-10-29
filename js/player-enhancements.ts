@@ -139,8 +139,7 @@ export async function downloadMultipleSongs(songs: Song[]): Promise<void> {
                     window.URL.revokeObjectURL(url);
                 }
             } catch (error) {
-                console.error(`下载失败: ${song.name}`, error);
-            }
+                            }
         }));
 
         // 显示进度

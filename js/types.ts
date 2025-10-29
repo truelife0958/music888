@@ -67,3 +67,11 @@ export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
  * 通知类型
  */
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
+
+/**
+ * 歌词行接口
+ */
+export interface LyricLine {
+    time: number;
+    text: string;
+}

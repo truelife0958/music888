@@ -5,6 +5,18 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/ncm-proxy.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/bilibili-proxy.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/music-proxy.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
@@ -14,8 +26,16 @@
   ],
   "routes": [
     {
+      "src": "/api/ncm-proxy",
+      "dest": "/api/ncm-proxy.js"
+    },
+    {
       "src": "/api/music-proxy",
-      "dest": "/api/proxy.js"
+      "dest": "/api/music-proxy.js"
+    },
+    {
+      "src": "/api/bilibili-proxy",
+      "dest": "/api/bilibili-proxy.js"
     },
     {
       "src": "/api/proxy",
@@ -25,5 +45,14 @@
       "src": "/(.*)",
       "dest": "/dist/$1"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "api/*.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
 }
