@@ -57,7 +57,7 @@ export interface RadioProgram {
  */
 export async function getRadioCategories(): Promise<RadioCategory[]> {
   try {
-    const response = await fetch(`${getApiBase()}/dj/catelist`);
+    const response = await fetch(`${getApiBase()}/dj_catelist`);
     const data = await response.json();
     
     if (data.code === 200 && data.categories) {
@@ -80,7 +80,7 @@ export async function getRadioCategories(): Promise<RadioCategory[]> {
  */
 export async function getRecommendRadios(): Promise<Radio[]> {
   try {
-    const response = await fetch(`${getApiBase()}/dj/recommend`);
+    const response = await fetch(`${getApiBase()}/dj_recommend`);
     const data = await response.json();
     
     if (data.code === 200 && data.djRadios) {
@@ -111,7 +111,7 @@ export async function getRecommendRadios(): Promise<Radio[]> {
  */
 export async function getRadiosByType(type: number): Promise<Radio[]> {
   try {
-    const response = await fetch(`${getApiBase()}/dj/recommend/type?type=${type}`);
+    const response = await fetch(`${getApiBase()}/dj_recommend_type?type=${type}`);
     const data = await response.json();
     
     if (data.code === 200 && data.djRadios) {
@@ -144,7 +144,7 @@ export async function getRadiosByType(type: number): Promise<Radio[]> {
  */
 export async function getHotRadios(cateId: number, limit: number = 30, offset: number = 0): Promise<Radio[]> {
   try {
-    const response = await fetch(`${getApiBase()}/dj/radio/hot?cateId=${cateId}&limit=${limit}&offset=${offset}`);
+    const response = await fetch(`${getApiBase()}/dj_radio_hot?cateId=${cateId}&limit=${limit}&offset=${offset}`);
     const data = await response.json();
     
     if (data.code === 200 && data.djRadios) {
@@ -176,7 +176,7 @@ export async function getHotRadios(cateId: number, limit: number = 30, offset: n
  */
 export async function getRadioPrograms(rid: number, limit: number = 30, offset: number = 0): Promise<RadioProgram[]> {
   try {
-    const response = await fetch(`${getApiBase()}/dj/program?rid=${rid}&limit=${limit}&offset=${offset}`);
+    const response = await fetch(`${getApiBase()}/dj_program?rid=${rid}&limit=${limit}&offset=${offset}`);
     const data = await response.json();
     
     if (data.code === 200 && data.programs) {
@@ -209,7 +209,7 @@ export async function getRadioPrograms(rid: number, limit: number = 30, offset: 
  */
 export async function getRadioDetail(rid: number): Promise<Radio | null> {
   try {
-    const response = await fetch(`${getApiBase()}/dj/detail?rid=${rid}`);
+    const response = await fetch(`${getApiBase()}/dj_detail?rid=${rid}`);
     const data = await response.json();
     
     if (data.code === 200 && data.data) {
@@ -240,7 +240,7 @@ export async function getRadioDetail(rid: number): Promise<Radio | null> {
  */
 export async function getProgramToplist(limit: number = 100, offset: number = 0): Promise<RadioProgram[]> {
   try {
-    const response = await fetch(`${getApiBase()}/dj/program/toplist?limit=${limit}&offset=${offset}`);
+    const response = await fetch(`${getApiBase()}/dj_program_toplist?limit=${limit}&offset=${offset}`);
     const data = await response.json();
     
     if (data.code === 200 && data.toplist) {

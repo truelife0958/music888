@@ -10,15 +10,14 @@
   "icons": [
     {
       "src": "/ytmusic.ico",
-      "sizes": "192x192",
-      "type": "image/x-icon",
-      "purpose": "any maskable"
+      "sizes": "48x48",
+      "type": "image/x-icon"
     },
     {
       "src": "/ytmusic.ico",
-      "sizes": "512x512",
+      "sizes": "96x96",
       "type": "image/x-icon",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["music", "entertainment"],

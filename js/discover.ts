@@ -3,12 +3,17 @@
  * 提供推荐歌单、新歌速递、排行榜等功能
  */
 
-// API基础地址
+import { renderSongListWithBatchOps } from './ui-enhancements.js';
+
+// API基础地址配置
 function getApiBase(): string {
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3000';
-  }
+  // 生产环境使用 Vercel 部署的网易云API
   return 'https://music888-4swa.vercel.app';
+}
+
+// 本地开发环境使用 Meting API 模拟推荐功能
+function isLocalDev(): boolean {
+  return typeof window !== 'undefined' && window.location.hostname === 'localhost';
 }
 
 // 歌单接口
@@ -53,8 +58,36 @@ export interface TopList {
  * 获取推荐歌单
  * @param limit 数量限制，默认30
  */
-export async function getRecommendPlaylists(limit: number = 30): Promise<Playlist[]> {
+export async function getRecommendPlaylists(limit: number = 50): Promise<Playlist[]> {
   try {
+    // 本地开发环境：使用搜索API模拟推荐（降级方案）
+    if (isLocalDev()) {
+      const keywords = ['热门歌单', '精选歌单', '流行音乐', '网络热歌'];
+      const keyword = keywords[Math.floor(Math.random() * keywords.length)];
+      
+      // 使用Meting API搜索
+      const response = await fetch(`/api/meting?types=search&source=netease&name=${encodeURIComponent(keyword)}&count=${Math.min(limit, 30)}`);
+      const songs = await response.json();
+      
+      if (Array.isArray(songs) && songs.length > 0) {
+        // 将歌曲结果转换为"歌单"格式
+        return songs.slice(0, 12).map((song: any, index: number) => ({
+          id: parseInt(song.id) || index,
+          name: song.name || '未知歌曲',
+          coverImgUrl: song.pic || song.cover || (song.pic_id ? `https://music-api.gdstudio.xyz/api.php?types=pic&source=netease&id=${song.pic_id}` : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+5peg5Zu+54mHPC90ZXh0Pjwvc3ZnPg=='),
+          playCount: Math.floor(Math.random() * 1000000),
+          trackCount: 1,
+          creator: {
+            nickname: Array.isArray(song.artist) ? song.artist[0] : '未知',
+            avatarUrl: ''
+          },
+          description: `${Array.isArray(song.artist) ? song.artist.join('/') : ''}`
+        }));
+      }
+      return [];
+    }
+    
+    // 生产环境：使用网易云API
     const response = await fetch(`${getApiBase()}/personalized?limit=${limit}`);
     const data = await response.json();
     
@@ -117,7 +150,7 @@ export async function getHighQualityPlaylists(cat: string = '全部', limit: num
  */
 export async function getNewSongs(type: number = 0): Promise<Song[]> {
   try {
-    const response = await fetch(`${getApiBase()}/top/song?type=${type}`);
+    const response = await fetch(`${getApiBase()}/top_song?type=${type}`);
     const data = await response.json();
     
     if (data.code === 200 && data.data) {
@@ -167,7 +200,7 @@ export async function getAllTopLists(): Promise<TopList[]> {
  */
 export async function getPlaylistDetail(id: number): Promise<{ playlist: Playlist; songs: Song[] } | null> {
   try {
-    const response = await fetch(`${getApiBase()}/playlist/detail?id=${id}`);
+    const response = await fetch(`${getApiBase()}/playlist_detail?id=${id}`);
     const data = await response.json();
     
     if (data.code === 200 && data.playlist) {
@@ -215,7 +248,7 @@ export function formatPlayCount(count: number): string {
 }
 
 /**
- * 渲染推荐歌单
+ * 渲染推荐音乐（改为歌曲列表样式，带批量操作）
  */
 export async function renderRecommendPlaylists(containerId: string, limit: number = 30): Promise<void> {
   const container = document.getElementById(containerId);
@@ -226,57 +259,34 @@ export async function renderRecommendPlaylists(containerId: string, limit: numbe
   const playlists = await getRecommendPlaylists(limit);
   
   if (playlists.length === 0) {
-    container.innerHTML = '<div class="empty">暂无推荐歌单</div>';
+    container.innerHTML = '<div class="empty">暂无推荐音乐</div>';
     return;
   }
   
-  const html = `
-    <div class="playlist-grid">
-      ${playlists.map(playlist => `
-        <div class="playlist-card" data-id="${playlist.id}">
-          <div class="playlist-cover">
-            <img src="${playlist.coverImgUrl}" alt="${playlist.name}" loading="lazy">
-            <div class="playlist-overlay">
-              <div class="play-count">▶ ${formatPlayCount(playlist.playCount)}</div>
-              <button class="play-btn" data-id="${playlist.id}">播放</button>
-            </div>
-          </div>
-          <div class="playlist-info">
-            <h3 class="playlist-name" title="${playlist.name}">${playlist.name}</h3>
-            <p class="playlist-desc" title="${playlist.description || ''}">${playlist.description || ''}</p>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
+  // 将歌单数据转换为歌曲格式显示
+  const songs = playlists.map(playlist => ({
+    id: String(playlist.id),
+    name: playlist.name,
+    title: playlist.name,
+    artist: [playlist.creator.nickname],
+    album: playlist.description || '',
+    pic: playlist.coverImgUrl,
+    pic_id: '',
+    lyric_id: '',
+    duration: 0,
+    source: 'netease'
+  })) as any[];
   
-  container.innerHTML = html;
-  
-  // 绑定事件
-  container.querySelectorAll('.play-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const id = parseInt((e.target as HTMLElement).dataset.id || '0');
-      const detail = await getPlaylistDetail(id);
-      if (detail) {
-        document.dispatchEvent(new CustomEvent('playPlaylist', { detail }));
-      }
-    });
-  });
-  
-  container.querySelectorAll('.playlist-card').forEach(card => {
-    card.addEventListener('click', async (e) => {
-      const id = parseInt((e.currentTarget as HTMLElement).dataset.id || '0');
-      const detail = await getPlaylistDetail(id);
-      if (detail) {
-        document.dispatchEvent(new CustomEvent('showPlaylistDetail', { detail }));
-      }
-    });
+  // 使用带批量操作的渲染函数
+  renderSongListWithBatchOps(songs, containerId, {
+    showCover: true,
+    showAlbum: true,
+    playlistForPlayback: songs
   });
 }
 
 /**
- * 渲染新歌速递
+ * 渲染新歌速递（带批量操作）
  */
 export async function renderNewSongs(containerId: string, type: number = 0): Promise<void> {
   const container = document.getElementById(containerId);
@@ -284,42 +294,32 @@ export async function renderNewSongs(containerId: string, type: number = 0): Pro
   
   container.innerHTML = '<div class="loading">加载中...</div>';
   
-  const songs = await getNewSongs(type);
+  const songsData = await getNewSongs(type);
   
-  if (songs.length === 0) {
+  if (songsData.length === 0) {
     container.innerHTML = '<div class="empty">暂无新歌</div>';
     return;
   }
   
-  const html = `
-    <div class="song-list">
-      ${songs.slice(0, 100).map((song, index) => `
-        <div class="song-item" data-id="${song.id}">
-          <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
-          <img src="${song.album.picUrl}" alt="${song.name}" class="song-cover">
-          <div class="song-info">
-            <div class="song-name">${song.name}</div>
-            <div class="song-artist">${song.artists.map(a => a.name).join(' / ')}</div>
-          </div>
-          <div class="song-album">${song.album.name}</div>
-          <button class="song-play-btn" data-id="${song.id}">播放</button>
-        </div>
-      `).join('')}
-    </div>
-  `;
+  // 转换为标准格式
+  const songs = songsData.slice(0, 150).map(song => ({
+    id: String(song.id),
+    name: song.name,
+    title: song.name,
+    artist: song.artists.map((a: any) => a.name),
+    album: song.album.name,
+    pic: song.album.picUrl,
+    pic_id: '',
+    lyric_id: '',
+    duration: song.duration,
+    source: 'netease'
+  })) as any[];
   
-  container.innerHTML = html;
-  
-  // 绑定播放事件
-  container.querySelectorAll('.song-play-btn, .song-item').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = parseInt((e.currentTarget as HTMLElement).dataset.id || '0');
-      const song = songs.find(s => s.id === id);
-      if (song) {
-        document.dispatchEvent(new CustomEvent('playSong', { detail: { song } }));
-      }
-    });
+  // 使用带批量操作的渲染函数
+  renderSongListWithBatchOps(songs, containerId, {
+    showCover: true,
+    showAlbum: true,
+    playlistForPlayback: songs
   });
 }
 
@@ -377,13 +377,13 @@ export async function renderTopLists(containerId: string): Promise<void> {
   }
   
   const html = `
-    <div class="toplist-grid">
+    <div class="toplist-grid" id="toplistGrid">
       ${topLists.map(list => `
-        <div class="toplist-card" data-id="${list.id}">
+        <div class="toplist-card" data-id="${list.id}" data-name="${list.name}">
           <div class="toplist-cover">
             <img src="${list.coverImgUrl}" alt="${list.name}" loading="lazy">
             <div class="toplist-overlay">
-              <button class="play-btn" data-id="${list.id}">播放全部</button>
+              <button class="play-btn" data-id="${list.id}" data-name="${list.name}">全部</button>
             </div>
           </div>
           <div class="toplist-info">
@@ -393,7 +393,7 @@ export async function renderTopLists(containerId: string): Promise<void> {
               <div class="toplist-track">
                 <span class="track-index">${i + 1}</span>
                 <span class="track-name">${track.name}</span>
-                <span class="track-artist">${track.artists.map(a => a.name).join('/')}</span>
+                <span class="track-artist">${Array.isArray(track.artists) ? track.artists.map((a: any) => a.name || '未知歌手').join('/') : '未知歌手'}</span>
               </div>
             `).join('')}
           </div>
@@ -404,25 +404,156 @@ export async function renderTopLists(containerId: string): Promise<void> {
   
   container.innerHTML = html;
   
-  // 绑定事件
+  // 绑定播放全部事件 - 显示歌曲列表
   container.querySelectorAll('.play-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = parseInt((e.target as HTMLElement).dataset.id || '0');
-      const detail = await getPlaylistDetail(id);
-      if (detail) {
-        document.dispatchEvent(new CustomEvent('playPlaylist', { detail }));
-      }
+      const name = (e.target as HTMLElement).dataset.name || '排行榜';
+      await renderTopListDetail(containerId, id, name);
     });
   });
   
+  // 绑定卡片点击事件 - 也显示歌曲列表
   container.querySelectorAll('.toplist-card').forEach(card => {
     card.addEventListener('click', async (e) => {
+      // 如果点击的是播放按钮，不处理
+      if ((e.target as HTMLElement).classList.contains('play-btn')) return;
+      
       const id = parseInt((e.currentTarget as HTMLElement).dataset.id || '0');
-      const detail = await getPlaylistDetail(id);
-      if (detail) {
-        document.dispatchEvent(new CustomEvent('showPlaylistDetail', { detail }));
-      }
+      const name = (e.currentTarget as HTMLElement).dataset.name || '排行榜';
+      await renderTopListDetail(containerId, id, name);
     });
   });
+}
+
+/**
+ * 渲染排行榜详情（歌曲列表）
+ */
+export async function renderTopListDetail(containerId: string, id: number, name: string): Promise<void> {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  container.innerHTML = '<div class="loading">加载中...</div>';
+  
+  const detail = await getPlaylistDetail(id);
+  
+  if (!detail || !detail.songs || detail.songs.length === 0) {
+    container.innerHTML = '<div class="empty">暂无歌曲</div>';
+    return;
+  }
+  
+  const songs = detail.songs;
+  
+  // 转换为标准格式
+  const songList = songs.map(song => ({
+    id: String(song.id),
+    name: song.name,
+    title: song.name,
+    artist: song.artists.map((a: any) => a.name),
+    album: song.album.name,
+    pic: song.album.picUrl,
+    pic_id: '',
+    lyric_id: '',
+    duration: song.duration,
+    source: 'netease'
+  })) as any[];
+  
+  // 创建返回按钮HTML
+  const headerHTML = `
+    <div style="margin-bottom: 15px; padding: 0 20px;">
+      <button class="filter-btn" id="backToTopLists" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; cursor: pointer;">
+        <i class="fas fa-arrow-left"></i> 返回排行榜
+      </button>
+      <span style="margin-left: 15px; font-size: 18px; font-weight: 600; color: #fff;">${name}</span>
+    </div>
+  `;
+  
+  container.innerHTML = headerHTML;
+  
+  // 创建歌曲列表容器
+  const listContainer = document.createElement('div');
+  listContainer.id = containerId + '_list';
+  container.appendChild(listContainer);
+  
+  // 使用带批量操作的渲染函数
+  renderSongListWithBatchOps(songList, containerId + '_list', {
+    showCover: true,
+    showAlbum: true,
+    playlistForPlayback: songList
+  });
+  
+  // 绑定返回按钮
+  const backBtn = document.getElementById('backToTopLists');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      renderTopLists(containerId);
+    });
+  }
+}
+
+/**
+ * 渲染雷达歌单
+ */
+export async function renderRadarSongs(containerId: string, limit: number = 100): Promise<Song[]> {
+  const container = document.getElementById(containerId);
+  if (!container) return [];
+
+  container.innerHTML = '<div class="loading">正在探索音乐雷达...</div>';
+
+  try {
+    // 使用搜索API随机获取热门歌曲
+    const keywords = ['热门', '流行', '新歌', '抖音', '网络热歌'];
+    const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+
+    const response = await fetch(`${getApiBase()}/search?keywords=${encodeURIComponent(randomKeyword)}&limit=${limit}`);
+    const data = await response.json();
+
+    let songs: Song[] = [];
+
+    if (data.code === 200 && data.result?.songs) {
+      songs = data.result.songs.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        artists: item.artists || item.ar || [],
+        album: item.album || item.al || { id: 0, name: '', picUrl: '' },
+        duration: item.duration || item.dt || 0
+      }));
+    }
+
+    if (songs.length === 0) {
+      container.innerHTML = '<div class="empty">暂无歌曲</div>';
+      return [];
+    }
+
+    // 随机打乱歌曲顺序
+    songs = songs.sort(() => Math.random() - 0.5);
+
+    // 转换为标准格式
+    const songList = songs.slice(0, limit).map(song => ({
+      id: String(song.id),
+      name: song.name,
+      title: song.name,
+      artist: song.artists.map((a: any) => a.name),
+      album: song.album.name,
+      pic: song.album.picUrl,
+      pic_id: '',
+      lyric_id: '',
+      duration: song.duration,
+      source: 'netease'
+    })) as any[];
+
+    // 使用带批量操作的渲染函数
+    renderSongListWithBatchOps(songList, containerId, {
+      showCover: true,
+      showAlbum: true,
+      playlistForPlayback: songList
+    });
+
+    return songs;
+  } catch (error) {
+    console.error('获取雷达歌单失败:', error);
+    container.innerHTML = '<div class="empty">获取失败，请稍后重试</div>';
+    return [];
+  }
 }

@@ -3,8 +3,11 @@
 import '../css/style.css';
 import '../css/additions.css';
 import '../css/discover.css';
+import '../css/features.css';
 
 import * as api from './api.js';
+
+// 防止重复初始化的标志 - 移除，改用更精细的控制
 import * as ui from './ui.js';
 import * as player from './player.js';
 import { debounce, renderPlaylistItem, renderEmptyState } from './utils.js';
@@ -17,11 +20,11 @@ import { initSearchHistory, addSearchHistory } from './search-history.js';
 import { initPlaybackRate } from './playback-rate.js';
 import { initQualitySelector } from './quality-selector.js';
 import { initAutoTheme } from './auto-theme.js';
-import { initDailyRecommend } from './daily-recommend.js';
 import { initPWAEnhanced } from './pwa-enhanced.js';
 import * as discover from './discover.js';
 import * as recommend from './recommend.js';
 import * as podcast from './podcast.js';
+import * as artists from './artists.js';
 
 // --- Tab Switching Logic ---
 export function switchTab(tabName: string): void {
@@ -46,7 +49,9 @@ export function switchTab(tabName: string): void {
 }
 
 function initializeApp(): void {
-        ui.init();
+    ui.init();
+    // 老王修复：先初始化播放器，确保audio元素正确连接
+    player.init();
     api.findWorkingAPI().then(result => {
         if (result.success) {
             ui.showNotification(`已连接到 ${result.name}`, 'success');
@@ -57,28 +62,8 @@ function initializeApp(): void {
     player.loadSavedPlaylists();
 
     // --- Event Listeners ---
-    const debouncedSearch = debounce(handleSearch, 300);
-    document.querySelector('.search-btn')!.addEventListener('click', handleSearch);
-    document.getElementById('searchInput')!.addEventListener('keyup', (e) => {
-        if ((e as KeyboardEvent).key === 'Enter') {
-            handleSearch();
-        } else {
-            debouncedSearch();
-        }
-    });
-
-    // 探索雷达按钮事件监听 - 增强错误处理
-    const exploreRadarBtn = document.getElementById('exploreRadarBtn');
-    if (exploreRadarBtn) {
-        exploreRadarBtn.addEventListener('click', async () => {
-                        try {
-                await handleExplore();
-            } catch (error) {
-                                ui.showError('探索雷达功能暂时不可用，请稍后重试', 'searchResults');
-            }
-        });
-    } else {
-            }
+    // 注意：搜索按钮和输入框的事件绑定由 initializeEnhancements() 处理
+    // 这样可以避免事件被覆盖的问题
 
     // 榜单平台选择器事件监听
     const chartSourceSelect = document.getElementById('chartSourceSelect');
@@ -144,15 +129,12 @@ function initializeApp(): void {
     // 初始化保存的标签功能
     initSavedTabToggles();
 
-    // 加载并显示播放历史和收藏
-    updatePlayHistoryDisplay();
-    updateFavoritesDisplay();
+    // 加载并显示播放历史和收藏（只在"我的"区域）
     updateMyHistoryDisplay();
     updateMyFavoritesDisplay();
 
     // 监听收藏变化
     window.addEventListener('favoritesUpdated', () => {
-        updateFavoritesDisplay();
         updateMyFavoritesDisplay();
     });
 
@@ -180,14 +162,14 @@ function initializeApp(): void {
     // 初始化自动主题切换
     initAutoTheme();
 
-    // 初始化每日推荐
-    initDailyRecommend();
-
     // 初始化PWA增强
     initPWAEnhanced();
 
     // 初始化新增模块
     initNewFeatures();
+    
+    // 初始化优化功能模块
+    initOptimizationFeatures();
 }
 
 // 初始化新增的三大功能模块
@@ -246,155 +228,315 @@ function initNewFeatures(): void {
         ui.showNotification(`正在加载节目...`, 'info');
     }) as EventListener);
 
+    // 监听artists模块的事件
+    document.addEventListener('openArtist', ((e: CustomEvent) => {
+        const artistId = e.detail.id;
+        ui.showNotification(`正在加载歌手详情...`, 'info');
+        // 这里可以打开歌手详情弹窗或跳转到详情页
+    }) as EventListener);
+
     // 初始化导航按钮的切换逻辑
     initDiscoverNavigation();
 }
 
-// 初始化发现音乐的导航切换
-function initDiscoverNavigation(): void {
-    const navButtons = document.querySelectorAll('.discover-nav-btn');
-    const featureAreas = document.querySelectorAll('.discover-feature-area');
-    
-    // 记录每个功能区域是否已初始化
-    const initialized: { [key: string]: boolean } = {};
-
-    navButtons.forEach(button => {
-        button.addEventListener('click', async () => {
-            const feature = (button as HTMLElement).dataset.feature;
-            if (!feature) return;
-
-            // 切换导航按钮的激活状态
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-
-            // 切换功能区域的显示状态
-            featureAreas.forEach(area => {
-                const areaFeature = (area as HTMLElement).dataset.feature;
-                if (areaFeature === feature) {
-                    (area as HTMLElement).style.display = 'block';
-                } else {
-                    (area as HTMLElement).style.display = 'none';
-                }
-            });
-
-            // 首次加载时初始化内容
-            if (!initialized[feature]) {
-                initialized[feature] = true;
-                
-                try {
-                    switch (feature) {
-                        case 'playlists':
-                            // 加载推荐歌单
-                            await discover.renderRecommendPlaylists('recommendPlaylistsGrid', 12);
-                            break;
-                            
-                        case 'newsongs':
-                            // 创建新歌速递筛选器并加载默认内容
-                            discover.createNewSongFilter('newSongsFilter', async (type: number) => {
-                                await discover.renderNewSongs('newSongsGrid', type);
-                            });
-                            await discover.renderNewSongs('newSongsGrid', 0);
-                            break;
-                            
-                        case 'toplists':
-                            // 加载排行榜
-                            await discover.renderTopLists('toplistsGrid');
-                            break;
-                            
-                        case 'daily':
-                            // 加载每日推荐
-                            await recommend.renderDailyRecommend('dailyRecommendContent');
-                            break;
-                            
-                        case 'podcast':
-                            // 加载播客电台
-                            await podcast.renderRadioCategories('podcastCategories', async (id: number, name: string) => {
-                                if (id === 0) {
-                                    // 推荐
-                                    await podcast.renderRecommendRadios('podcastRecommend');
-                                } else {
-                                    // 按分类加载热门电台
-                                    await podcast.renderHotRadios('podcastRecommend', id);
-                                }
-                            });
-                            await podcast.renderRecommendRadios('podcastRecommend');
-                            break;
-                    }
-                } catch (error) {
-                    console.error(`加载${feature}失败:`, error);
-                    ui.showNotification('加载失败，请稍后重试', 'error');
-                }
+// 初始化优化功能模块（歌词、均衡器、可视化器）
+async function initOptimizationFeatures(): Promise<void> {
+    // 歌词按钮事件
+    const lyricsBtn = document.getElementById('lyricsBtn');
+    if (lyricsBtn) {
+        lyricsBtn.addEventListener('click', () => {
+            const lyricsPanel = document.getElementById('lyricsPanel');
+            if (lyricsPanel) {
+                lyricsPanel.classList.toggle('hidden');
             }
         });
-    });
-
-    // 默认激活第一个按钮（推荐歌单）
-    if (navButtons.length > 0) {
-        (navButtons[0] as HTMLElement).click();
+    }
+    
+    // 歌词关闭按钮
+    const lyricsCloseBtn = document.getElementById('lyricsCloseBtn');
+    if (lyricsCloseBtn) {
+        lyricsCloseBtn.addEventListener('click', () => {
+            const lyricsPanel = document.getElementById('lyricsPanel');
+            if (lyricsPanel) {
+                lyricsPanel.classList.add('hidden');
+            }
+        });
+    }
+    
+    // 均衡器按钮事件 (功能开发中)
+    const equalizerBtn = document.getElementById('equalizerBtn');
+    if (equalizerBtn) {
+        equalizerBtn.addEventListener('click', async () => {
+            ui.showNotification('均衡器功能开发中，敬请期待', 'info');
+            /* 功能开发中 - 待实现
+            const equalizerPanel = document.getElementById('equalizerPanel');
+            if (equalizerPanel) {
+                equalizerPanel.classList.toggle('hidden');
+                
+                // 首次打开时初始化均衡器
+                if (!equalizerPanel.classList.contains('hidden') &&
+                    !equalizerPanel.dataset.initialized) {
+                    try {
+                        const { Equalizer } = await import('./equalizer.js');
+                        const audioElement = document.getElementById('audioPlayer') as HTMLAudioElement;
+                        const equalizer = new Equalizer(audioElement);
+                        equalizer.initialize();
+                        
+                        // 创建均衡器频段UI
+                        createEqualizerBands(equalizer);
+                        
+                        // 绑定预设选择器
+                        const presetSelect = document.getElementById('equalizerPresetSelect') as HTMLSelectElement;
+                        if (presetSelect) {
+                            presetSelect.addEventListener('change', () => {
+                                equalizer.applyPreset(presetSelect.value);
+                            });
+                        }
+                        
+                        // 绑定主增益滑块
+                        const masterGainSlider = document.getElementById('masterGainSlider') as HTMLInputElement;
+                        const masterGainValue = document.getElementById('masterGainValue');
+                        if (masterGainSlider) {
+                            masterGainSlider.addEventListener('input', () => {
+                                const gain = parseFloat(masterGainSlider.value);
+                                equalizer.setMasterGain(gain);
+                                if (masterGainValue) {
+                                    masterGainValue.textContent = `${gain.toFixed(1)} dB`;
+                                }
+                            });
+                        }
+                        
+                        // 绑定启用/禁用开关
+                        const equalizerEnabled = document.getElementById('equalizerEnabled') as HTMLInputElement;
+                        if (equalizerEnabled) {
+                            equalizerEnabled.addEventListener('change', () => {
+                                equalizer.setEnabled(equalizerEnabled.checked);
+                            });
+                        }
+                        
+                        equalizerPanel.dataset.initialized = 'true';
+                        ui.showNotification('均衡器已启动', 'success');
+                    } catch (error) {
+                        console.error('初始化均衡器失败:', error);
+                        ui.showNotification('均衡器启动失败', 'error');
+                    }
+                }
+            }
+            */
+        });
+    }
+    
+    // 均衡器关闭按钮
+    const equalizerCloseBtn = document.getElementById('equalizerCloseBtn');
+    if (equalizerCloseBtn) {
+        equalizerCloseBtn.addEventListener('click', () => {
+            const equalizerPanel = document.getElementById('equalizerPanel');
+            if (equalizerPanel) {
+                equalizerPanel.classList.add('hidden');
+            }
+        });
+    }
+    
+    // 可视化器按钮事件 (功能开发中)
+    const visualizerBtn = document.getElementById('visualizerBtn');
+    if (visualizerBtn) {
+        visualizerBtn.addEventListener('click', async () => {
+            ui.showNotification('可视化器功能开发中，敬请期待', 'info');
+            /* 功能开发中 - 待实现
+            const visualizerCanvas = document.getElementById('visualizerCanvas') as HTMLCanvasElement;
+            const visualizerControls = document.getElementById('visualizerControls');
+            
+            if (visualizerCanvas && visualizerControls) {
+                const isHidden = visualizerCanvas.classList.contains('hidden');
+                
+                if (isHidden) {
+                    visualizerCanvas.classList.remove('hidden');
+                    visualizerControls.classList.remove('hidden');
+                    
+                    // 首次打开时初始化可视化器
+                    if (!visualizerCanvas.dataset.initialized) {
+                        try {
+                            const { AudioVisualizer } = await import('./visualizer.js');
+                            const audioElement = document.getElementById('audioPlayer') as HTMLAudioElement;
+                            const visualizer = new AudioVisualizer(audioElement, 'visualizerCanvas');
+                            visualizer.start();
+                            
+                            // 绑定类型选择器
+                            const typeSelect = document.getElementById('visualizerTypeSelect') as HTMLSelectElement;
+                            if (typeSelect) {
+                                typeSelect.addEventListener('change', () => {
+                                    visualizer.setType(typeSelect.value as any);
+                                });
+                            }
+                            
+                            // 保存实例以便后续使用
+                            (window as any).audioVisualizer = visualizer;
+                            
+                            visualizerCanvas.dataset.initialized = 'true';
+                            ui.showNotification('音频可视化已启动', 'success');
+                        } catch (error) {
+                            console.error('初始化可视化器失败:', error);
+                            ui.showNotification('可视化器启动失败', 'error');
+                        }
+                    } else {
+                        // 如果已初始化，恢复播放
+                        const visualizer = (window as any).audioVisualizer;
+                        if (visualizer) {
+                            visualizer.start();
+                        }
+                    }
+                } else {
+                    visualizerCanvas.classList.add('hidden');
+                    visualizerControls.classList.add('hidden');
+                    
+                    // 停止可视化
+                    const visualizer = (window as any).audioVisualizer;
+                    if (visualizer) {
+                        visualizer.stop();
+                    }
+                }
+            }
+            */
+        });
+    }
+    
+    // 可视化器关闭按钮
+    const visualizerCloseBtn = document.getElementById('visualizerCloseBtn');
+    if (visualizerCloseBtn) {
+        visualizerCloseBtn.addEventListener('click', () => {
+            const visualizerCanvas = document.getElementById('visualizerCanvas');
+            const visualizerControls = document.getElementById('visualizerControls');
+            
+            if (visualizerCanvas) visualizerCanvas.classList.add('hidden');
+            if (visualizerControls) visualizerControls.classList.add('hidden');
+            
+            const visualizer = (window as any).audioVisualizer;
+            if (visualizer) {
+                visualizer.stop();
+            }
+        });
     }
 }
 
-// 初始化"我的歌单"标签的折叠/展开功能
+// 创建均衡器频段UI
+function createEqualizerBands(equalizer: any): void {
+    const container = document.getElementById('equalizerBands');
+    if (!container) return;
+    
+    const frequencies = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+    container.innerHTML = '';
+    
+    frequencies.forEach((freq, index) => {
+        const band = document.createElement('div');
+        band.className = 'equalizer-band';
+        
+        const label = document.createElement('label');
+        label.textContent = freq >= 1000 ? `${freq/1000}k` : `${freq}`;
+        
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = '-12';
+        slider.max = '12';
+        slider.step = '0.1';
+        slider.value = '0';
+        
+        const value = document.createElement('span');
+        value.className = 'band-value';
+        value.textContent = '0';
+        
+        slider.addEventListener('input', () => {
+            const gain = parseFloat(slider.value);
+            equalizer.setBand(index, gain);
+            value.textContent = gain.toFixed(1);
+        });
+        
+        band.appendChild(label);
+        band.appendChild(slider);
+        band.appendChild(value);
+        container.appendChild(band);
+    });
+}
+
+// 初始化发现音乐 - 现在只有排行榜
+function initDiscoverNavigation(): void {
+    // 发现音乐标签页现在只显示排行榜，直接加载
+    const discoverTab = document.getElementById('discoverTab');
+    if (discoverTab) {
+        // 监听标签切换，当切换到发现音乐时加载排行榜
+        let toplistsLoaded = false;
+        
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const tab = (btn as HTMLElement).dataset.tab;
+                if (tab === 'discover' && !toplistsLoaded) {
+                    toplistsLoaded = true;
+                    try {
+                        await discover.renderTopLists('toplistsGrid');
+                    } catch (error) {
+                        console.error('加载排行榜失败:', error);
+                        ui.showNotification('加载失败，请稍后重试', 'error');
+                    }
+                }
+            });
+        });
+    }
+    
+    // 在搜索结果标签页添加推荐音乐和探索雷达按钮
+    const recommendMusicBtn = document.getElementById('recommendMusicBtn');
+    if (recommendMusicBtn) {
+        recommendMusicBtn.addEventListener('click', async () => {
+            try {
+                ui.showLoading('searchResults');
+                const playlists = await discover.getRecommendPlaylists(50);
+                
+                // 将推荐歌单转换为歌曲格式（符合Song接口）
+                const songs = playlists.map(playlist => ({
+                    id: String(playlist.id),
+                    name: playlist.name,
+                    title: playlist.name,
+                    artist: [playlist.creator.nickname],
+                    album: playlist.description || '',
+                    pic: playlist.coverImgUrl,
+                    pic_id: '',
+                    lyric_id: '',
+                    duration: 0,
+                    source: 'netease'
+                })) as any[];
+                
+                // 使用带批量操作的渲染函数
+                uiEnhancements.renderSongListWithBatchOps(songs, 'searchResults', {
+                    showCover: true,
+                    showAlbum: true,
+                    playlistForPlayback: songs
+                });
+                ui.showNotification(`已加载推荐音乐，共 ${songs.length} 首`, 'success');
+            } catch (error) {
+                console.error('加载推荐音乐失败:', error);
+                ui.showError('加载推荐音乐失败，请稍后重试', 'searchResults');
+            }
+        });
+    }
+    
+    const exploreRadarBtn = document.getElementById('exploreRadarBtn');
+    if (exploreRadarBtn) {
+        exploreRadarBtn.addEventListener('click', async () => {
+            try {
+                ui.showLoading('searchResults');
+                const songs = await discover.renderRadarSongs('searchResults', 100);
+                if (songs.length > 0) {
+                    ui.showNotification(`已加载探索雷达，共 ${songs.length} 首热门歌曲`, 'success');
+                }
+            } catch (error) {
+                console.error('加载探索雷达失败:', error);
+                ui.showError('加载探索雷达失败，请稍后重试', 'searchResults');
+            }
+        });
+    }
+}
+
+// 初始化"我的"区域的折叠/展开功能
 function initSavedTabToggles(): void {
-    // savedTab中的播放历史折叠/展开
-    const historyHeader = document.getElementById('historyHeader');
-    const historyList = document.getElementById('playHistoryList');
-    const historyToggleIcon = document.getElementById('historyToggleIcon');
-
-    historyHeader?.addEventListener('click', () => {
-        const isHidden = historyList?.style.display === 'none';
-        if (historyList) {
-            historyList.style.display = isHidden ? 'block' : 'none';
-        }
-        if (historyToggleIcon) {
-            historyToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-        }
-    });
-
-    // savedTab中的我的喜欢折叠/展开
-    const favoritesHeader = document.getElementById('favoritesHeader');
-    const favoritesList = document.getElementById('favoritesList');
-    const favoritesToggleIcon = document.getElementById('favoritesToggleIcon');
-
-    favoritesHeader?.addEventListener('click', () => {
-        const isHidden = favoritesList?.style.display === 'none';
-        if (favoritesList) {
-            favoritesList.style.display = isHidden ? 'block' : 'none';
-        }
-        if (favoritesToggleIcon) {
-            favoritesToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-        }
-    });
-
-    // 我的区域中的播放历史折叠/展开
-    const myHistoryHeader = document.getElementById('myHistoryHeader');
-    const myHistoryList = document.getElementById('myPlayHistoryList');
-    const myHistoryToggleIcon = document.getElementById('myHistoryToggleIcon');
-
-    myHistoryHeader?.addEventListener('click', () => {
-        const isHidden = myHistoryList?.style.display === 'none';
-        if (myHistoryList) {
-            myHistoryList.style.display = isHidden ? 'block' : 'none';
-        }
-        if (myHistoryToggleIcon) {
-            myHistoryToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-        }
-    });
-
-    // 我的区域中的我的喜欢折叠/展开
-    const myFavoritesHeader = document.getElementById('myFavoritesHeader');
-    const myFavoritesList = document.getElementById('myFavoritesList');
-    const myFavoritesToggleIcon = document.getElementById('myFavoritesToggleIcon');
-
-    myFavoritesHeader?.addEventListener('click', () => {
-        const isHidden = myFavoritesList?.style.display === 'none';
-        if (myFavoritesList) {
-            myFavoritesList.style.display = isHidden ? 'block' : 'none';
-        }
-        if (myFavoritesToggleIcon) {
-            myFavoritesToggleIcon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-        }
-    });
+    // "我的"区域的播放历史和我的喜欢已移除折叠功能，只保留标题和清空按钮
 
     // 我保存的歌单折叠/展开（在"我的"标签页中）
     const playlistsHeader = document.getElementById('playlistsHeader');
@@ -426,20 +568,6 @@ function initSavedTabToggles(): void {
         }
     });
 
-    // 清空播放历史（savedTab）
-    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    if (clearHistoryBtn) {
-        clearHistoryBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // 防止触发父元素的折叠事件
-            if (confirm('确定要清空播放历史吗?')) {
-                player.clearPlayHistory();
-                updatePlayHistoryDisplay();
-                updateMyHistoryDisplay();
-                ui.showNotification('播放历史已清空', 'success');
-            }
-        });
-    }
-
     // 清空播放历史（我的区域）
     const myClearHistoryBtn = document.getElementById('myClearHistoryBtn');
     if (myClearHistoryBtn) {
@@ -447,7 +575,6 @@ function initSavedTabToggles(): void {
             e.stopPropagation();
             if (confirm('确定要清空播放历史吗?')) {
                 player.clearPlayHistory();
-                updatePlayHistoryDisplay();
                 updateMyHistoryDisplay();
                 ui.showNotification('播放历史已清空', 'success');
             }
@@ -461,7 +588,6 @@ function initSavedTabToggles(): void {
             e.stopPropagation();
             if (confirm('确定要清空收藏列表吗?')) {
                 player.clearFavorites();
-                updateFavoritesDisplay();
                 updateMyFavoritesDisplay();
                 ui.showNotification('收藏列表已清空', 'success');
             }
@@ -475,62 +601,9 @@ function initSavedTabToggles(): void {
             e.stopPropagation();
             if (confirm('确定要清空收藏列表吗?')) {
                 player.clearFavorites();
-                updateFavoritesDisplay();
                 updateMyFavoritesDisplay();
                 ui.showNotification('收藏列表已清空', 'success');
             }
-        });
-    }
-}
-
-// 更新播放历史显示
-function updatePlayHistoryDisplay(): void {
-    const historyList = document.getElementById('playHistoryList');
-    if (!historyList) return;
-
-    const history = player.getPlayHistory();
-
-    if (history.length === 0) {
-        historyList.innerHTML = renderEmptyState('fas fa-history', '暂无播放记录');
-        return;
-    }
-
-    historyList.innerHTML = renderPlaylistItem('播放历史', history.length, 'fas fa-history', '#1db954');
-
-    const playlistItem = historyList.querySelector('.mini-playlist-item');
-    if (playlistItem) {
-        playlistItem.addEventListener('click', (e) => {
-            e.stopPropagation(); // 防止触发父元素事件
-            ui.displaySearchResults(history, 'savedResults', history);
-            ui.showNotification(`已加载播放历史 (${history.length}首)`, 'success');
-        });
-    }
-}
-
-// 更新收藏显示（savedTab）
-function updateFavoritesDisplay(): void {
-    const favoritesList = document.getElementById('favoritesList');
-    if (!favoritesList) return;
-
-    const favorites = player.getFavoriteSongs();
-
-    if (favorites.length === 0) {
-        favoritesList.innerHTML = renderEmptyState(
-            'fas fa-heart',
-            '暂无收藏歌曲',
-            '点击播放器的爱心按钮收藏歌曲'
-        );
-        return;
-    }
-
-    favoritesList.innerHTML = renderPlaylistItem('我的喜欢', favorites.length, 'fas fa-heart', '#ff6b6b');
-
-    const playlistItem = favoritesList.querySelector('.mini-playlist-item');
-    if (playlistItem) {
-        playlistItem.addEventListener('click', (e) => {
-            e.stopPropagation();
-            ui.displaySearchResults(favorites, 'savedResults', favorites);
-            ui.showNotification(`已加载我的喜欢 (${favorites.length}首)`, 'success');
         });
     }
 }
@@ -553,7 +626,12 @@ function updateMyHistoryDisplay(): void {
     if (playlistItem) {
         playlistItem.addEventListener('click', (e) => {
             e.stopPropagation();
-            ui.displaySearchResults(history, 'myResults', history);
+            // 使用带批量操作的渲染函数
+            uiEnhancements.renderSongListWithBatchOps(history, 'myResults', {
+                showCover: true,
+                showAlbum: true,
+                playlistForPlayback: history
+            });
             ui.showNotification(`已加载播放历史 (${history.length}首)`, 'success');
         });
     }
@@ -581,7 +659,12 @@ function updateMyFavoritesDisplay(): void {
     if (playlistItem) {
         playlistItem.addEventListener('click', (e) => {
             e.stopPropagation();
-            ui.displaySearchResults(favorites, 'myResults', favorites);
+            // 使用带批量操作的渲染函数
+            uiEnhancements.renderSongListWithBatchOps(favorites, 'myResults', {
+                showCover: true,
+                showAlbum: true,
+                playlistForPlayback: favorites
+            });
             ui.showNotification(`已加载我的喜欢 (${favorites.length}首)`, 'success');
         });
     }
@@ -702,12 +785,12 @@ async function handleParsePlaylist(): Promise<void> {
     }
 }
 
-// 移动端页面切换功能
+// 移动端页面切换功能 - 支持三屏左右滑动（内容区、播放器、我的）
 (window as any).switchMobilePage = function(pageIndex: number): void {
     const sections = [
         document.querySelector('.content-section'),
         document.querySelector('.player-section'),
-        document.querySelector('.lyrics-section')
+        document.querySelector('.my-section')
     ];
 
     const indicators = document.querySelectorAll('.page-indicator');
@@ -729,38 +812,84 @@ async function handleParsePlaylist(): Promise<void> {
 if (window.innerWidth <= 768) {
     (window as any).switchMobilePage(0);
 
-    // 添加触摸滑动支持
+    // 添加触摸滑动支持 - 三屏左右滑动（内容区、播放器、我的）
     let touchStartX = 0;
+    let touchStartY = 0; // 老王注释：记录Y轴起始位置
     let touchEndX = 0;
+    let touchEndY = 0; // 老王注释：记录Y轴结束位置
     let currentPage = 0;
+    let isSwipping = false; // 防抖标志
     const mainContainer = document.querySelector('.main-container');
 
-    mainContainer?.addEventListener('touchstart', (e) => {
-        touchStartX = (e as TouchEvent).changedTouches[0].screenX;
-    }, { passive: true });
+    const handleTouchStart = (e: Event) => {
+        if (!isSwipping) {
+            touchStartX = (e as TouchEvent).changedTouches[0].screenX;
+            touchStartY = (e as TouchEvent).changedTouches[0].screenY; // 老王注释：记录Y轴
+        }
+    };
 
-    mainContainer?.addEventListener('touchend', (e) => {
-        touchEndX = (e as TouchEvent).changedTouches[0].screenX;
-        handleSwipe();
-    }, { passive: true });
+    const handleTouchEnd = (e: Event) => {
+        if (!isSwipping) {
+            touchEndX = (e as TouchEvent).changedTouches[0].screenX;
+            touchEndY = (e as TouchEvent).changedTouches[0].screenY; // 老王注释：记录Y轴
+            handleSwipe();
+        }
+    };
 
     function handleSwipe() {
-        const swipeThreshold = 50; // 最小滑动距离
-        const diff = touchStartX - touchEndX;
+        if (isSwipping) return;
 
-        if (Math.abs(diff) > swipeThreshold) {
-            if (diff > 0 && currentPage < 2) {
-                // 向左滑动 - 下一页
+        const swipeThreshold = 50; // 最小滑动距离
+        const diffX = touchStartX - touchEndX;
+        const diffY = touchStartY - touchEndY; // 老王注释：计算Y轴滑动距离
+
+        // 老王注释：只有当X轴滑动距离大于Y轴，且超过阈值时，才触发页面切换
+        // 这样上下滚动时就不会误触发左右切换了
+        if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY)) {
+            isSwipping = true;
+
+            if (diffX > 0 && currentPage < 2) {
+                // 向左滑动 - 下一页（最多到第3页）
                 currentPage++;
                 (window as any).switchMobilePage(currentPage);
-            } else if (diff < 0 && currentPage > 0) {
-                // 向右滑动 - 上一页
+            } else if (diffX < 0 && currentPage > 0) {
+                // 向右滑动 - 上一页（最少到第1页）
                 currentPage--;
                 (window as any).switchMobilePage(currentPage);
             }
+
+            // 300ms后重置防抖标志
+            setTimeout(() => {
+                isSwipping = false;
+            }, 300);
         }
+    }
+
+    if (mainContainer) {
+        // 老王修复：使用passive选项优化滚动性能
+        mainContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+        mainContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+        // 老王修复：页面可见性变化时重置状态，避免切换标签页后状态错乱
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                isSwipping = false;
+            }
+        });
+
+        // 页面卸载时清理事件监听器，防止内存泄漏
+        window.addEventListener('beforeunload', () => {
+            mainContainer.removeEventListener('touchstart', handleTouchStart);
+            mainContainer.removeEventListener('touchend', handleTouchEnd);
+        });
     }
 }
 
-// 启动应用
-initializeApp();
+// 确保DOM完全加载后再启动应用
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeApp();
+    });
+} else {
+    initializeApp();
+}

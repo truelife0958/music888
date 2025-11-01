@@ -45,21 +45,30 @@ export default async function handler(req, res) {
             }
         ];
 
+        const errors = [];
+
         for (const api of apiSources) {
             try {
-                let url = `${api.url}?types=${types}&source=${source}`;
+                // 构建查询参数
+                const params = new URLSearchParams({
+                    types,
+                    source
+                });
 
                 if (types === 'search') {
-                    url += `&name=${encodeURIComponent(name)}&count=${count}`;
+                    params.append('name', name);
+                    params.append('count', count);
                 } else if (types === 'url') {
-                    url += `&id=${id}&br=${br || 320}`;
+                    params.append('id', id);
+                    params.append('br', br || '320');
                 } else if (types === 'pic') {
-                    url += `&id=${id}&size=${size || 300}`;
-                } else if (types === 'lyric') {
-                    url += `&id=${id}`;
-                } else if (types === 'playlist') {
-                    url += `&id=${id}`;
+                    params.append('id', id);
+                    params.append('size', size || '300');
+                } else if (types === 'lyric' || types === 'playlist') {
+                    params.append('id', id);
                 }
+
+                const url = `${api.url}?${params.toString()}`;
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -79,17 +88,29 @@ export default async function handler(req, res) {
                     const data = await response.json();
 
                     if (validateResponse(data, types)) {
+                        console.log(`[Music Proxy] 成功: ${api.name}`);
                         res.status(200).json(data);
                         return;
+                    } else {
+                        errors.push(`${api.name}: 响应数据验证失败`);
+                        console.warn(`[Music Proxy] ${api.name} 验证失败:`, data);
                     }
+                } else {
+                    errors.push(`${api.name}: HTTP ${response.status}`);
+                    console.warn(`[Music Proxy] ${api.name} 失败: ${response.status}`);
                 }
             } catch (apiError) {
+                const errorMsg = apiError.name === 'AbortError' ? '请求超时' : apiError.message;
+                errors.push(`${api.name}: ${errorMsg}`);
+                console.error(`[Music Proxy] ${api.name} 错误:`, errorMsg);
                 continue;
             }
         }
 
+        console.error('[Music Proxy] 所有API失败:', errors);
         res.status(503).json({
-            error: '所有音乐源均不可用'
+            error: '所有音乐源均不可用',
+            details: errors
         });
 
     } catch (error) {

@@ -29,7 +29,7 @@ const shortcuts: ShortcutConfig[] = [
         key: 'ArrowRight',
         description: '快进 5 秒',
         handler: () => {
-            const audio = (player as any).audioPlayer || document.querySelector('audio');
+            const audio = document.getElementById('audioPlayer') as HTMLAudioElement;
             if (audio && audio.duration) {
                 audio.currentTime = Math.min(audio.currentTime + 5, audio.duration);
                 ui.showNotification('快进 5 秒', 'info');
@@ -40,7 +40,7 @@ const shortcuts: ShortcutConfig[] = [
         key: 'ArrowLeft',
         description: '快退 5 秒',
         handler: () => {
-            const audio = (player as any).audioPlayer || document.querySelector('audio');
+            const audio = document.getElementById('audioPlayer') as HTMLAudioElement;
             if (audio && audio.duration) {
                 audio.currentTime = Math.max(audio.currentTime - 5, 0);
                 ui.showNotification('快退 5 秒', 'info');
@@ -104,7 +104,7 @@ const shortcuts: ShortcutConfig[] = [
         description: '静音/取消静音',
         handler: () => {
             const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
-            const audio = (player as any).audioPlayer || document.querySelector('audio');
+            const audio = document.getElementById('audioPlayer') as HTMLAudioElement;
             if (audio && volumeSlider) {
                 if (audio.volume > 0) {
                     // 保存当前音量并静音

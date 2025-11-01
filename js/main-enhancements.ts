@@ -6,6 +6,7 @@ import * as ui from './ui.js';
 import * as uiEnhancements from './ui-enhancements.js';
 import * as player from './player.js';
 import { switchTab } from './main.js';
+import { formatArtist } from './utils.js';
 
 // ========== 发现音乐功能 ==========
 
@@ -24,11 +25,9 @@ function initDiscoverToggles(): void {
                         uiEnhancements.showLoading('hotAlbums');
                         albumsContent!.style.display = 'block';
 
-                        // 获取选中的平台
                         const sourceSelect = document.getElementById('discoverSourceSelect') as HTMLSelectElement;
                         const source = sourceSelect ? sourceSelect.value as 'netease' | 'tencent' | 'kugou' | 'bilibili' : 'netease';
 
-                        // 加载热门歌曲（用于提取专辑）
                         const songs = await api.getHotSongs(source, 50);
                         const albums = getUniqueAlbums(songs.slice(0, 30));
                         displayAlbums(albums, 'hotAlbums');
@@ -37,7 +36,7 @@ function initDiscoverToggles(): void {
                         toggleIcon?.classList.remove('fa-chevron-down');
                         toggleIcon?.classList.add('fa-chevron-up');
                     } catch (error) {
-                                                uiEnhancements.showError('加载热门专辑失败，请稍后重试', 'hotAlbums');
+                        uiEnhancements.showError('加载热门专辑失败，请稍后重试', 'hotAlbums');
                     }
                 } else {
                     albumsContent!.style.display = 'none';
@@ -52,11 +51,9 @@ function initDiscoverToggles(): void {
                         uiEnhancements.showLoading('hotSongs');
                         songsContent!.style.display = 'block';
 
-                        // 获取选中的平台
                         const sourceSelect = document.getElementById('discoverSourceSelect') as HTMLSelectElement;
                         const source = sourceSelect ? sourceSelect.value as 'netease' | 'tencent' | 'kugou' | 'bilibili' : 'netease';
 
-                        // 加载热门歌曲（使用新的getHotSongs API）
                         const songs = await api.getHotSongs(source, 50);
                         uiEnhancements.displaySearchResultsWithSelection(songs.slice(0, 30), 'hotSongs', songs);
 
@@ -64,7 +61,7 @@ function initDiscoverToggles(): void {
                         toggleIcon?.classList.remove('fa-chevron-down');
                         toggleIcon?.classList.add('fa-chevron-up');
                     } catch (error) {
-                                                uiEnhancements.showError('加载热门歌曲失败，请稍后重试', 'hotSongs');
+                        uiEnhancements.showError('加载热门歌曲失败，请稍后重试', 'hotSongs');
                     }
                 } else {
                     songsContent!.style.display = 'none';
@@ -77,14 +74,13 @@ function initDiscoverToggles(): void {
     });
 }
 
-// 提取唯一专辑
 function getUniqueAlbums(songs: any[]): any[] {
     const albumMap = new Map();
     songs.forEach(song => {
         if (song.album && !albumMap.has(song.album)) {
             albumMap.set(song.album, {
                 name: song.album,
-                artist: Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist,
+                artist: formatArtist(song.artist),
                 pic_id: song.pic_id,
                 source: song.source,
                 songs: [song]
@@ -96,7 +92,6 @@ function getUniqueAlbums(songs: any[]): any[] {
     return Array.from(albumMap.values());
 }
 
-// 显示专辑列表
 function displayAlbums(albums: any[], containerId: string): void {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -126,18 +121,15 @@ function displayAlbums(albums: any[], containerId: string): void {
         </div>
     `;
     
-    // 绑定专辑点击事件
     container.querySelectorAll('.album-card').forEach((card, index) => {
         card.addEventListener('click', () => {
             const album = albums[index];
-            // 切换到搜索结果标签并显示专辑歌曲
             switchTab('search');
             uiEnhancements.displaySearchResultsWithSelection(album.songs, 'searchResults', album.songs);
             ui.showNotification(`已加载专辑《${album.name}》，共 ${album.songs.length} 首歌曲`, 'success');
         });
     });
     
-    // 异步加载专辑封面
     albums.forEach((album, index) => {
         if (album.pic_id && album.songs[0]) {
             api.getAlbumCoverUrl(album.songs[0], 200).then(coverUrl => {
@@ -152,7 +144,6 @@ function displayAlbums(albums: any[], containerId: string): void {
 
 // ========== 榜单功能 ==========
 
-// 初始化榜单折叠/展开功能
 function initChartToggles(): void {
     document.querySelectorAll('.chart-header').forEach(header => {
         header.addEventListener('click', async () => {
@@ -162,7 +153,6 @@ function initChartToggles(): void {
             const isExpanded = header.getAttribute('data-expanded') === 'true';
 
             if (!isExpanded) {
-                // 展开并加载数据
                 try {
                     uiEnhancements.showLoading(`${chartType}Chart`);
                     chartList!.style.display = 'block';
@@ -174,10 +164,9 @@ function initChartToggles(): void {
                     toggleIcon?.classList.remove('fa-chevron-down');
                     toggleIcon?.classList.add('fa-chevron-up');
                 } catch (error) {
-                                        uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
+                    uiEnhancements.showError('加载榜单失败，请稍后重试', `${chartType}Chart`);
                 }
             } else {
-                // 折叠
                 chartList!.style.display = 'none';
                 header.setAttribute('data-expanded', 'false');
                 toggleIcon?.classList.remove('fa-chevron-up');
@@ -189,7 +178,6 @@ function initChartToggles(): void {
 
 // ========== 播放列表弹窗 ==========
 
-// 显示播放列表弹窗
 function showPlaylistModal(): void {
     const modal = document.getElementById('playlistModal');
     const modalBody = document.getElementById('playlistModalBody');
@@ -211,7 +199,7 @@ function showPlaylistModal(): void {
                 <div class="playlist-modal-index">${index + 1}</div>
                 <div class="playlist-modal-info">
                     <div class="playlist-modal-name">${song.name}</div>
-                    <div class="playlist-modal-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist}</div>
+                    <div class="playlist-modal-artist">${formatArtist(song.artist)}</div>
                 </div>
                 ${index === currentIndex ? '<i class="fas fa-volume-up playing-icon"></i>' : ''}
                 <button class="playlist-modal-remove" data-index="${index}">
@@ -220,7 +208,6 @@ function showPlaylistModal(): void {
             </div>
         `).join('');
 
-        // 绑定点击播放事件
         modalBody.querySelectorAll('.playlist-modal-item').forEach((item, index) => {
             item.addEventListener('click', (e) => {
                 if (!(e.target as HTMLElement).closest('.playlist-modal-remove')) {
@@ -230,13 +217,12 @@ function showPlaylistModal(): void {
             });
         });
 
-        // 绑定删除事件
         modalBody.querySelectorAll('.playlist-modal-remove').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const index = parseInt((btn as HTMLElement).dataset.index || '0');
                 player.removeFromPlaylist(index);
-                showPlaylistModal(); // 刷新显示
+                showPlaylistModal();
             });
         });
     }
@@ -244,7 +230,6 @@ function showPlaylistModal(): void {
     modal.classList.add('show');
 }
 
-// 初始化播放列表弹窗事件
 function initPlaylistModal(): void {
     const playlistBtn = document.getElementById('playlistBtn');
     const closeModalBtn = document.getElementById('closePlaylistModal');
@@ -252,22 +237,18 @@ function initPlaylistModal(): void {
     const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
     const savePlaylistBtn = document.getElementById('savePlaylistBtn');
 
-    // 打开弹窗
     playlistBtn?.addEventListener('click', showPlaylistModal);
 
-    // 关闭弹窗
     closeModalBtn?.addEventListener('click', () => {
         modal?.classList.remove('show');
     });
 
-    // 点击背景关闭
     modal?.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.classList.remove('show');
         }
     });
 
-    // 清空播放列表
     clearPlaylistBtn?.addEventListener('click', () => {
         if (confirm('确定要清空播放列表吗？')) {
             player.clearPlaylist();
@@ -275,7 +256,6 @@ function initPlaylistModal(): void {
         }
     });
 
-    // 保存为歌单
     savePlaylistBtn?.addEventListener('click', () => {
         const playlistName = prompt('请输入歌单名称：');
         if (playlistName) {
@@ -287,7 +267,6 @@ function initPlaylistModal(): void {
 
 // ========== 搜索结果增强 ==========
 
-// 修改搜索处理函数，使用增强版UI
 async function handleSearchEnhanced(): Promise<void> {
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
     const sourceSelect = document.getElementById('sourceSelect') as HTMLSelectElement;
@@ -305,19 +284,17 @@ async function handleSearchEnhanced(): Promise<void> {
     try {
         const songs = await api.searchMusicAPI(keyword, source);
         if (songs.length > 0) {
-            // 使用增强版显示函数（带多选功能）
             uiEnhancements.displaySearchResultsWithSelection(songs, 'searchResults', songs);
             ui.showNotification(`找到 ${songs.length} 首歌曲`, 'success');
         } else {
             uiEnhancements.showError('未找到相关歌曲', 'searchResults');
         }
     } catch (error) {
-                uiEnhancements.showError('搜索失败，请稍后重试', 'searchResults');
+        uiEnhancements.showError('搜索失败，请稍后重试', 'searchResults');
         ui.showNotification('搜索失败', 'error');
     }
 }
 
-// 探索雷达增强处理函数（带多选功能）
 async function handleExploreEnhanced(): Promise<void> {
     ui.showLoading('searchResults');
     switchTab('search');
@@ -325,14 +302,13 @@ async function handleExploreEnhanced(): Promise<void> {
     try {
         const songs = await api.exploreRadarAPI();
         if (songs.length > 0) {
-            // 使用增强版显示函数（带多选功能）
             uiEnhancements.displaySearchResultsWithSelection(songs, 'searchResults', songs);
             ui.showNotification(`探索发现 ${songs.length} 首热门音乐`, 'success');
         } else {
             uiEnhancements.showError('暂无推荐音乐', 'searchResults');
         }
     } catch (error) {
-                uiEnhancements.showError('探索失败，请稍后重试', 'searchResults');
+        uiEnhancements.showError('探索失败，请稍后重试', 'searchResults');
         ui.showNotification('探索失败', 'error');
     }
 }
@@ -341,19 +317,16 @@ async function handleExploreEnhanced(): Promise<void> {
 
 let wakeLock: any = null;
 
-// 请求 Wake Lock
 async function requestWakeLock(): Promise<void> {
     try {
         if ('wakeLock' in navigator) {
             wakeLock = await (navigator as any).wakeLock.request('screen');
-                        wakeLock.addEventListener('release', () => {
-                            });
         }
     } catch (err) {
-            }
+        // Wake Lock请求失败（静默处理）
+    }
 }
 
-// 释放 Wake Lock
 function releaseWakeLock(): void {
     if (wakeLock) {
         wakeLock.release();
@@ -361,12 +334,11 @@ function releaseWakeLock(): void {
     }
 }
 
-// 更新 Media Session
 function updateMediaSession(song: any, coverUrl: string): void {
     if ('mediaSession' in navigator) {
         (navigator as any).mediaSession.metadata = new (window as any).MediaMetadata({
             title: song.name,
-            artist: Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist,
+            artist: formatArtist(song.artist),
             album: song.album,
             artwork: [
                 { src: coverUrl, sizes: '512x512', type: 'image/jpeg' }
@@ -394,73 +366,54 @@ function updateMediaSession(song: any, coverUrl: string): void {
 // ========== 初始化所有新功能 ==========
 
 function initializeEnhancements(): void {
-    // 初始化发现音乐折叠功能
     initDiscoverToggles();
-
-    // 初始化榜单功能
     initChartToggles();
-
-    // 初始化播放列表弹窗
     initPlaylistModal();
 
-    // 监听平台切换事件 - 自动刷新已展开的内容
     const discoverSourceSelect = document.getElementById('discoverSourceSelect');
     if (discoverSourceSelect) {
         discoverSourceSelect.addEventListener('change', () => {
-                        // 检查热门专辑是否已展开
             const albumsHeader = document.querySelector('.discover-header[data-section="albums"]');
             if (albumsHeader && albumsHeader.getAttribute('data-expanded') === 'true') {
-                // 先折叠再展开，触发重新加载
                 albumsHeader.setAttribute('data-expanded', 'false');
                 (albumsHeader as HTMLElement).click();
             }
 
-            // 检查热门歌曲是否已展开
             const songsHeader = document.querySelector('.discover-header[data-section="songs"]');
             if (songsHeader && songsHeader.getAttribute('data-expanded') === 'true') {
-                // 先折叠再展开，触发重新加载
                 songsHeader.setAttribute('data-expanded', 'false');
                 (songsHeader as HTMLElement).click();
             }
         });
     }
 
-    // 替换搜索按钮事件（使用增强版）
     const searchBtn = document.querySelector('.search-btn');
     if (searchBtn) {
-        // 移除旧事件监听器（通过克隆节点）
-        const newSearchBtn = searchBtn.cloneNode(true);
-        searchBtn.parentNode?.replaceChild(newSearchBtn, searchBtn);
-        newSearchBtn.addEventListener('click', handleSearchEnhanced);
+        searchBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleSearchEnhanced();
+        });
     }
 
-    // 搜索输入框回车事件
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
-        const newSearchInput = searchInput.cloneNode(true) as HTMLInputElement;
-        searchInput.parentNode?.replaceChild(newSearchInput, searchInput);
-        newSearchInput.addEventListener('keyup', (e) => {
+        searchInput.addEventListener('keyup', (e) => {
             if ((e as KeyboardEvent).key === 'Enter') {
                 handleSearchEnhanced();
             }
         });
     }
 
-    // 替换探索雷达按钮事件（使用增强版带多选功能）
     const exploreRadarBtn = document.getElementById('exploreRadarBtn');
     if (exploreRadarBtn) {
-        const newExploreBtn = exploreRadarBtn.cloneNode(true);
-        exploreRadarBtn.parentNode?.replaceChild(newExploreBtn, exploreRadarBtn);
-        newExploreBtn.addEventListener('click', handleExploreEnhanced);
-            }
+        exploreRadarBtn.addEventListener('click', handleExploreEnhanced);
+    }
 
-    // 移除随机播放按钮（如果存在）
     const shufflePlayBtn = document.getElementById('shufflePlayBtn');
     if (shufflePlayBtn) {
         shufflePlayBtn.remove();
     }
 
-    // 监听播放事件，启用 Wake Lock 和 Media Session
     window.addEventListener('songPlaying', (e: any) => {
         requestWakeLock();
         if (e.detail && e.detail.song && e.detail.coverUrl) {
@@ -468,16 +421,9 @@ function initializeEnhancements(): void {
         }
     });
 
-    // 监听暂停事件，释放 Wake Lock
     window.addEventListener('songPaused', () => {
         releaseWakeLock();
     });
+}
 
-    }
-
-// 导出初始化函数
 export { initializeEnhancements };
-
-// ========== 使用说明 ==========
-// 在 main.ts 的 initializeApp() 函数末尾添加：
-// initializeEnhancements();

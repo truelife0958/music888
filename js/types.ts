@@ -74,4 +74,21 @@ export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 export interface LyricLine {
     time: number;
     text: string;
+    translation?: string; // 翻译文本（可选）
+}
+
+/**
+ * 歌曲接口
+ */
+export interface Song {
+  id: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  duration?: number;
+  url?: string;
+  pic?: string;
+  lrc?: string;
+  source?: string;
+  [key: string]: any; // 允许其他动态属性
 }

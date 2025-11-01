@@ -6,6 +6,34 @@ import { LyricLine } from './types.js';
 // --- DOM Element Cache ---
 let DOM: { [key: string]: HTMLElement | HTMLImageElement | HTMLButtonElement };
 
+// --- 辅助函数：格式化艺术家信息 ---
+function formatArtist(artist: any): string {
+    if (!artist) return '未知歌手';
+    
+    // 如果是数组
+    if (Array.isArray(artist)) {
+        if (artist.length === 0) return '未知歌手';
+        // 检查数组元素是否是对象
+        if (typeof artist[0] === 'object' && artist[0]?.name) {
+            return artist.map((a: any) => a.name || '未知歌手').join(' / ');
+        }
+        // 字符串数组
+        return artist.join(' / ');
+    }
+    
+    // 如果是对象
+    if (typeof artist === 'object' && artist.name) {
+        return artist.name;
+    }
+    
+    // 如果是字符串
+    if (typeof artist === 'string') {
+        return artist;
+    }
+    
+    return '未知歌手';
+}
+
 // --- 多选状态管理 ---
 let selectedSongs = new Set<number>();
 let currentSongList: Song[] = [];
@@ -72,7 +100,7 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
             <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
             <div class="song-info">
                 <div class="song-name">${song.name}</div>
-                <div class="song-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : (song.artist || '未知歌手')} · ${song.album || '未知专辑'}</div>
+                <div class="song-artist">${formatArtist(song.artist)} · ${song.album || '未知专辑'}</div>
             </div>
             <div class="song-actions">
                 <button class="action-btn favorite-btn" title="添加到我的喜欢">
@@ -117,7 +145,7 @@ export function updatePlayButton(isPlaying: boolean): void {
 
 export function updateCurrentSongInfo(song: Song, coverUrl: string): void {
     DOM.currentTitle.textContent = song.name;
-    DOM.currentArtist.textContent = `${Array.isArray(song.artist) ? song.artist.join(' / ') : (song.artist || '未知歌手')} · ${song.album || '未知专辑'}`;
+    DOM.currentArtist.textContent = `${formatArtist(song.artist)} · ${song.album || '未知专辑'}`;
     (DOM.currentCover as HTMLImageElement).src = coverUrl;
     (DOM.downloadSongBtn as HTMLButtonElement).disabled = false;
     (DOM.downloadLyricBtn as HTMLButtonElement).disabled = false;

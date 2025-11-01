@@ -21,27 +21,32 @@ export default async function handler(req, res) {
     }
 
     try {
-        let url = 'https://api.cenguigui.cn/api/bilibili/bilibili.php';
+        const baseUrl = 'https://api.cenguigui.cn/api/bilibili/bilibili.php';
+        const params = new URLSearchParams({ action });
 
         if (action === 'search') {
             if (!query) {
                 res.status(400).json({ error: '搜索请求缺少 query 参数' });
                 return;
             }
-            url += `?action=search&query=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
+            params.append('query', query);
+            params.append('page', page.toString());
+            params.append('limit', limit.toString());
         } else if (action === 'media') {
             if (!bvid) {
                 res.status(400).json({ error: '媒体请求缺少 bvid 参数' });
                 return;
             }
-            url += `?action=media&bvid=${bvid}`;
+            params.append('bvid', bvid);
             if (quality) {
-                url += `&quality=${quality}`;
+                params.append('quality', quality);
             }
         } else {
             res.status(400).json({ error: '不支持的 action 类型' });
             return;
         }
+
+        const url = `${baseUrl}?${params.toString()}`;
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -58,18 +63,22 @@ export default async function handler(req, res) {
 
         if (response.ok) {
             const data = await response.json();
+            console.log(`[Bilibili Proxy] 成功: action=${action}`);
             res.status(200).json(data);
         } else {
+            const errorMsg = `Bilibili API 返回错误: ${response.status}`;
+            console.error(`[Bilibili Proxy] ${errorMsg}`);
             res.status(response.status).json({
-                error: `Bilibili API 返回错误: ${response.status}`
+                error: errorMsg
             });
         }
 
     } catch (error) {
-        console.error('[Bilibili Proxy] 错误:', error);
+        const errorMsg = error.name === 'AbortError' ? '请求超时' : error.message;
+        console.error('[Bilibili Proxy] 错误:', errorMsg, error);
         res.status(500).json({
             error: '服务器内部错误',
-            message: error.message
+            message: errorMsg
         });
     }
 }

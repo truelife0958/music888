@@ -18,7 +18,6 @@ export function initPWAEnhanced(): void {
     checkOnlineStatus();
     
     isInitialized = true;
-    console.log('PWA增强功能已初始化');
 }
 
 /**
@@ -55,8 +54,6 @@ function setupInstallPrompt(): void {
         if (installBtn) {
             installBtn.style.display = 'flex';
         }
-        
-        console.log('PWA安装提示已准备');
     });
     
     // 监听安装完成

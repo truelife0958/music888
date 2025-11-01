@@ -269,13 +269,45 @@ export function isMobile(): boolean {
 }
 
 /**
+ * 格式化艺术家信息 - 统一处理各种格式
+ * @param artist 艺术家信息（可能是字符串、数组、对象或对象数组）
+ * @returns 格式化后的艺术家字符串
+ */
+export function formatArtist(artist: any): string {
+    if (!artist) return '未知歌手';
+    
+    // 如果是数组
+    if (Array.isArray(artist)) {
+        if (artist.length === 0) return '未知歌手';
+        // 检查数组元素是否是对象
+        if (typeof artist[0] === 'object' && artist[0]?.name) {
+            return artist.map((a: any) => a.name || '未知歌手').join(' / ');
+        }
+        // 字符串数组
+        return artist.join(' / ');
+    }
+    
+    // 如果是对象
+    if (typeof artist === 'object' && artist.name) {
+        return artist.name;
+    }
+    
+    // 如果是字符串
+    if (typeof artist === 'string') {
+        return artist;
+    }
+    
+    return '未知歌手';
+}
+
+/**
  * 生成歌曲文件名
  * @param song 歌曲对象
  * @param extension 文件扩展名（默认为.mp3）
  * @returns 文件名字符串
  */
-export function generateSongFileName(song: { name: string; artist: string | string[] }, extension: string = '.mp3'): string {
-    const artistStr = Array.isArray(song.artist) ? song.artist.join(',') : song.artist;
+export function generateSongFileName(song: { name: string; artist: string | string[] | any }, extension: string = '.mp3'): string {
+    const artistStr = formatArtist(song.artist);
     return `${song.name} - ${artistStr}${extension}`;
 }
 

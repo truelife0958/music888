@@ -5,8 +5,9 @@
 
 // API基础地址
 function getApiBase(): string {
+  // 开发环境使用 Vite 代理，避免硬编码端口
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3000';
+    return '/api/music-proxy';
   }
   return 'https://music888-4swa.vercel.app';
 }
@@ -244,7 +245,7 @@ export async function renderDailyRecommend(containerId: string): Promise<void> {
         ${songs.map((song, index) => `
           <div class="song-item" data-id="${song.id}">
             <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
-            <img src="${song.album.picUrl}?param=60x60" alt="${song.name}" class="song-cover">
+            <img src="${song.album.picUrl}" alt="${song.name}" class="song-cover">
             <div class="song-info">
               <div class="song-name">${song.name}</div>
               <div class="song-artist">${song.artists.map(a => a.name).join(' / ')}</div>

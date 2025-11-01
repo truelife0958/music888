@@ -28,13 +28,13 @@
                 <div class="search-wrapper">
                     <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput">
                     <select class="source-select" id="sourceSelect">
-                        <option value="netease">网易云音乐</option>
+                        <option value="netease">网易云</option>
                         <option value="tencent">QQ音乐</option>
-                        <option value="kugou">酷狗音乐</option>
-                        <option value="kuwo">酷我音乐</option>
-                        <option value="xiami">虾米音乐</option>
-                        <option value="baidu">百度音乐</option>
-                        <option value="bilibili">Bilibili音乐</option>
+                        <option value="kugou">酷狗</option>
+                        <option value="kuwo">酷我</option>
+                        <option value="xiami">虾米</option>
+                        <option value="baidu">百度</option>
+                        <option value="bilibili">B站</option>
                     </select>
                     <button class="search-btn">
                         <i class="fas fa-search"></i>
@@ -57,68 +57,12 @@
                 </button>
             </div>
 
-            <!-- 发现音乐标签 -->
+            <!-- 发现音乐标签 - 只保留排行榜 -->
             <div id="discoverTab" class="tab-content">
-                <!-- 新功能导航 -->
-                <div class="discover-nav" style="margin-bottom: 20px;">
-                    <button class="discover-nav-btn active" data-feature="playlists">
-                        <i class="fas fa-star"></i> 推荐歌单
-                    </button>
-                    <button class="discover-nav-btn" data-feature="newsongs">
-                        <i class="fas fa-compact-disc"></i> 新歌速递
-                    </button>
-                    <button class="discover-nav-btn" data-feature="toplists">
-                        <i class="fas fa-trophy"></i> 排行榜
-                    </button>
-                    <button class="discover-nav-btn" data-feature="daily">
-                        <i class="fas fa-calendar-day"></i> 每日推荐
-                    </button>
-                    <button class="discover-nav-btn" data-feature="podcast">
-                        <i class="fas fa-podcast"></i> 播客电台
-                    </button>
+                <div class="section-header">
+                    <h3><i class="fas fa-trophy"></i> 排行榜</h3>
                 </div>
-
-                <!-- 推荐歌单区域 -->
-                <div class="discover-feature-area" data-feature="playlists">
-                    <div class="section-header">
-                        <h3><i class="fas fa-star"></i> 推荐歌单</h3>
-                    </div>
-                    <div id="recommendPlaylistsGrid"></div>
-                </div>
-
-                <!-- 新歌速递区域 -->
-                <div class="discover-feature-area" data-feature="newsongs" style="display: none;">
-                    <div class="section-header">
-                        <h3><i class="fas fa-compact-disc"></i> 新歌速递</h3>
-                    </div>
-                    <div id="newSongsFilter" style="margin-bottom: 15px;"></div>
-                    <div id="newSongsGrid"></div>
-                </div>
-
-                <!-- 排行榜区域 -->
-                <div class="discover-feature-area" data-feature="toplists" style="display: none;">
-                    <div class="section-header">
-                        <h3><i class="fas fa-trophy"></i> 排行榜</h3>
-                    </div>
-                    <div id="toplistsGrid"></div>
-                </div>
-
-                <!-- 每日推荐区域 -->
-                <div class="discover-feature-area" data-feature="daily" style="display: none;">
-                    <div class="section-header">
-                        <h3><i class="fas fa-calendar-day"></i> 每日推荐</h3>
-                    </div>
-                    <div id="dailyRecommendContent"></div>
-                </div>
-
-                <!-- 播客电台区域 -->
-                <div class="discover-feature-area" data-feature="podcast" style="display: none;">
-                    <div class="section-header">
-                        <h3><i class="fas fa-podcast"></i> 播客电台</h3>
-                    </div>
-                    <div id="podcastCategories" style="margin-bottom: 15px;"></div>
-                    <div id="podcastRecommend"></div>
-                </div>
+                <div id="toplistsGrid"></div>
             </div>
             <div id="parseTab" class="tab-content">
                 <!-- 我保存的歌单 -->
@@ -146,12 +90,12 @@
 
                 <div class="playlist-input-container">
                     <select class="playlist-source-select" id="playlistSourceSelect" style="margin-bottom: 10px;">
-                        <option value="netease">网易云音乐</option>
+                        <option value="netease">网易云</option>
                         <option value="tencent">QQ音乐</option>
                     </select>
                     <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入歌单ID (如: 60198, 3778678) 或链接...">
                     <button class="playlist-btn">
-                        <i class="fas fa-download"></i> 解析歌单
+                        <i class="fas fa-download"></i> 解析
                     </button>
                 </div>
                 <div id="currentParsedPlaylist" style="display: none;">
@@ -185,96 +129,25 @@
                     </div>
                 </div>
             </div>
-            <div id="savedTab" class="tab-content active">
-                <!-- 播放历史 -->
-                <div class="saved-playlists-container" style="margin-bottom: 15px;">
-                    <div class="saved-playlists-header">
-                        <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="historyHeader">
-                            <i class="fas fa-history"></i>
-                            播放历史
-                            <i class="fas fa-chevron-down" id="historyToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
-                        </h4>
-                        <button class="clear-all-btn" id="clearHistoryBtn" title="清空播放历史">
-                            <i class="fas fa-trash"></i> 清空
-                        </button>
-                    </div>
-                    <div class="saved-playlists-list" id="playHistoryList" style="display: none;">
-                        <div class="empty-saved-state">
-                            <i class="fas fa-history"></i>
-                            <div>暂无播放记录</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 我的喜欢 -->
-                <div class="saved-playlists-container" style="margin-bottom: 15px;">
-                    <div class="saved-playlists-header">
-                        <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="favoritesHeader">
-                            <i class="fas fa-heart"></i>
-                            我的喜欢
-                            <i class="fas fa-chevron-down" id="favoritesToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
-                        </h4>
-                        <button class="clear-all-btn" id="clearFavoritesBtn" title="清空收藏">
-                            <i class="fas fa-trash"></i> 清空
-                        </button>
-                    </div>
-                    <div class="saved-playlists-list" id="favoritesList" style="display: none;">
-                        <div class="empty-saved-state">
-                            <i class="fas fa-heart"></i>
-                            <div>暂无收藏歌曲</div>
-                            <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
-                                点击播放器的爱心按钮收藏歌曲
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 我保存的歌单 -->
-                <div class="saved-playlists-container" style="margin-bottom: 15px;">
-                    <div class="saved-playlists-header">
-                        <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="playlistsHeader">
-                            <i class="fas fa-bookmark"></i>
-                            我保存的歌单
-                            <i class="fas fa-chevron-down" id="playlistsToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
-                        </h4>
-                        <button class="clear-all-btn" title="清空所有歌单">
-                            <i class="fas fa-trash"></i> 清空
-                        </button>
-                    </div>
-                    <div class="saved-playlists-list" id="savedPlaylistsList" style="display: none;">
-                        <div class="empty-saved-state">
-                            <i class="fas fa-music"></i>
-                            <div>暂无保存的歌单</div>
-                            <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
-                                在"解析网易云歌单"页面解析后保存
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="search-results" id="savedResults">
-                    <div class="empty-state">
-                        <i class="fas fa-hand-pointer"></i>
-                        <div>点击上方播放历史、收藏或歌单查看详情</div>
-                    </div>
-                </div>
-            </div>
-            <div id="searchTab" class="tab-content active">
-                <!-- 探索雷达 -->
-                <div class="discover-section">
-                    <button class="explore-radar-btn" id="exploreRadarBtn">
-                        <i class="fas fa-satellite-dish"></i>
-                        <span>探索雷达 - 发现热门音乐</span>
+            <div id="searchTab" class="tab-content">
+                <!-- 推荐音乐和探索雷达按钮 -->
+                <div class="discover-section" style="display: flex; gap: 10px; margin-bottom: 20px; padding: 0 20px;">
+                    <button class="explore-radar-btn" id="recommendMusicBtn" style="flex: 1;">
+                        <i class="fas fa-star"></i>
+                        <span>推荐音乐</span>
+                    </button>
+                    <button class="explore-radar-btn" id="exploreRadarBtn" style="flex: 1;">
+                        <i class="fas fa-radar"></i>
+                        <span>探索雷达</span>
                     </button>
                 </div>
                 <div class="search-results" id="searchResults">
                     <div class="empty-state">
                         <i class="fas fa-search"></i>
-                        <div>在上方搜索框输入关键词开始搜索音乐，或点击探索雷达发现热门音乐</div>
+                        <div>在上方搜索框输入关键词开始搜索音乐，或点击下方按钮发现更多音乐</div>
                     </div>
                 </div>
             </div>
-            <audio id="audioPlayer" preload="metadata"></audio>
         </div>
 
         <!-- 播放器区域 -->
@@ -296,13 +169,13 @@
                     <button class="control-btn small" id="playerFavoriteBtn" title="添加到我的喜欢">
                         <i class="far fa-heart"></i>
                     </button>
-                    <button class="control-btn small">
+                    <button class="control-btn small" id="prevBtn" title="上一首">
                         <i class="fas fa-step-backward"></i>
                     </button>
                     <button class="control-btn play-btn" id="playBtn">
                         <i class="fas fa-play"></i>
                     </button>
-                    <button class="control-btn small">
+                    <button class="control-btn small" id="nextBtn" title="下一首">
                         <i class="fas fa-step-forward"></i>
                     </button>
                     <button class="control-btn small" id="playModeBtn" title="列表循环">
@@ -357,16 +230,15 @@
             <!-- 播放历史 -->
             <div class="saved-playlists-container" style="margin-bottom: 15px;">
                 <div class="saved-playlists-header">
-                    <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="myHistoryHeader">
+                    <h4 style="display: flex; align-items: center; gap: 8px; margin: 0;">
                         <i class="fas fa-history"></i>
                         播放历史
-                        <i class="fas fa-chevron-down" id="myHistoryToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
                     </h4>
                     <button class="clear-all-btn" id="myClearHistoryBtn" title="清空播放历史">
                         <i class="fas fa-trash"></i> 清空
                     </button>
                 </div>
-                <div class="saved-playlists-list" id="myPlayHistoryList" style="display: none;">
+                <div class="saved-playlists-list" id="myPlayHistoryList" style="display: block;">
                     <div class="empty-saved-state">
                         <i class="fas fa-history"></i>
                         <div>暂无播放记录</div>
@@ -377,16 +249,15 @@
             <!-- 我的喜欢 -->
             <div class="saved-playlists-container" style="margin-bottom: 15px;">
                 <div class="saved-playlists-header">
-                    <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="myFavoritesHeader">
+                    <h4 style="display: flex; align-items: center; gap: 8px; margin: 0;">
                         <i class="fas fa-heart"></i>
                         我的喜欢
-                        <i class="fas fa-chevron-down" id="myFavoritesToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
                     </h4>
                     <button class="clear-all-btn" id="myClearFavoritesBtn" title="清空收藏">
                         <i class="fas fa-trash"></i> 清空
                     </button>
                 </div>
-                <div class="saved-playlists-list" id="myFavoritesList" style="display: none;">
+                <div class="saved-playlists-list" id="myFavoritesList" style="display: block;">
                     <div class="empty-saved-state">
                         <i class="fas fa-heart"></i>
                         <div>暂无收藏歌曲</div>

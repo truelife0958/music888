@@ -8,21 +8,34 @@ export default defineConfig({
     open: false, // 不自动打开浏览器
     // 本地开发时的API代理配置
     proxy: {
-      // 将 /api/music-proxy 代理到外部API
+      // 网易云音乐API代理 - 用于discover.ts和recommend.ts
       '/api/music-proxy': {
-        target: 'https://music-api.gdstudio.xyz',
+        target: 'https://music888-4swa.vercel.app',
         changeOrigin: true,
         rewrite: (path) => {
-          // 将 /api/music-proxy 替换为 /api.php
-          const newPath = path.replace(/^\/api\/music-proxy/, '/api.php');
-          console.log(`🔄 代理重写: ${path} -> ${newPath}`);
+          // 老王修复：保持完整路径，因为Vercel端需要完整的/api/music-proxy路径
+          console.log(`🎵 网易云API代理: ${path} (保持不变)`);
+          return path;
+        },
+        configure: (proxy, options) => {
+          console.log('🔧 网易云音乐API代理已配置: /api/music-proxy -> https://music888-4swa.vercel.app');
+        }
+      },
+      // Meting API代理 - 用于搜索和播放功能
+      '/api/meting': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        rewrite: (path) => {
+          // 将 /api/meting 替换为 /api.php
+          const newPath = path.replace(/^\/api\/meting/, '/api.php');
+          console.log(`🔄 Meting API代理: ${path} -> ${newPath}`);
           return newPath;
         },
         configure: (proxy, options) => {
-          console.log('🔧 本地开发代理已配置: /api/music-proxy -> https://music-api.gdstudio.xyz/api.php');
+          console.log('🔧 Meting API代理已配置: /api/meting -> http://localhost:3000/api.php');
         }
       },
-      // Bilibili音���代理 - 用于绕过CORS限制
+      // Bilibili音频代理 - 用于绕过CORS限制
       '/api/bilibili-proxy': {
         target: 'https://upos-sz-mirror08h.bilivideo.com', // 必须设置默认target
         changeOrigin: true,

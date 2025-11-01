@@ -52,22 +52,25 @@ function parseApiResponse(data: any): any[] {
 // 1. Multiple API sources for improved reliability
 const API_SOURCES: ApiSource[] = [
     {
-        name: 'Vite 代理 API',
-        url: '/api/music-proxy',
-        type: 'proxy'
+        name: 'Vite Meting 代理 API',
+        url: '/api/meting',
+        type: 'meting'
     },
     {
         name: '主 API',
         url: 'https://music-api.gdstudio.xyz/api.php'
     }
     // 注意：本地开发使用Vite代理避免CORS问题
-    // 生产环境需要配置Vercel函数或Cloudflare Worker代理
+    // /api/meting 用于搜索和播放功能 (Meting API格式)
+    // /api/music-proxy 用于发现音乐功能 (网易云API格式)
 ];
 
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
 let apiFailureCount = 0;
 const API_FAILURE_THRESHOLD = 3; // 连续失败3次后切换API
+let totalApiSwitchCount = 0; // 总切换次数
+const MAX_API_SWITCH_COUNT = 10; // 最大切换次数，防止无限循环
 
 async function testAPI(apiUrl: string): Promise<boolean> {
     try {
@@ -104,23 +107,32 @@ export async function findWorkingAPI(): Promise<{ success: boolean; name?: strin
 
 // 新增: 自动切换到下一个可用API
 export async function switchToNextAPI(): Promise<{ success: boolean; name?: string }> {
-        const startIndex = currentApiIndex;
+    // 检查是否超过最大切换次数
+    if (totalApiSwitchCount >= MAX_API_SWITCH_COUNT) {
+        console.error('已达到最大API切换次数，停止切换');
+        return { success: false };
+    }
+
+    const startIndex = currentApiIndex;
 
     for (let i = 1; i < API_SOURCES.length; i++) {
         const nextIndex = (startIndex + i) % API_SOURCES.length;
         const api = API_SOURCES[nextIndex];
 
-                const isWorking = await testAPI(api.url);
+        const isWorking = await testAPI(api.url);
 
         if (isWorking) {
             API_BASE = api.url;
             currentApiIndex = nextIndex;
             apiFailureCount = 0;
-                        return { success: true, name: api.name };
+            totalApiSwitchCount++;
+            console.log(`切换到API: ${api.name} (切换次数: ${totalApiSwitchCount}/${MAX_API_SWITCH_COUNT})`);
+            return { success: true, name: api.name };
         }
     }
 
-        return { success: false };
+    totalApiSwitchCount++;
+    return { success: false };
 }
 
 // 新增: 记录API失败并在必要时切换
@@ -135,7 +147,11 @@ export async function handleApiFailure(): Promise<void> {
 export function resetApiFailureCount(): void {
     if (apiFailureCount > 0) {
         apiFailureCount = 0;
-            }
+    }
+    // 成功时也重置总切换计数，允许后续重试
+    if (totalApiSwitchCount > 0) {
+        totalApiSwitchCount = Math.max(0, totalApiSwitchCount - 1);
+    }
 }
 
 export async function fetchWithRetry(url: string, options: RequestInit = {}, retries: number = 2): Promise<Response> {
@@ -584,7 +600,7 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
     return await response.json();
 }
 
-export async function searchMusicAPI(keyword: string, source: string, limit: number = 50): Promise<Song[]> {
+export async function searchMusicAPI(keyword: string, source: string, limit: number = 100): Promise<Song[]> {
     // Bilibili 音乐源使用独立API，失败时自动降级
     if (source === 'bilibili') {
         try {
@@ -601,30 +617,30 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         : `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
 
         try {
-        const response = await fetchWithRetry(url);
-        
-        // 检查响应状态
-        if (!response.ok) {
-                        await handleApiFailure();
-            throw new Error(`API 响应错误: ${response.status}`);
-        }
-        
-        const data = await response.json();
-
-        // 检查API是否返回错误
-        if (data && data.error) {
-                        await handleApiFailure();
-            throw new Error(data.error || 'API 返回错误');
-        }
-
-        // 使用公共函数解析响应
-        let songs: any[];
-        try {
-            songs = parseApiResponse(data);
-        } catch (parseError) {
-                        await handleApiFailure();
-            throw parseError;
-        }
+            const response = await fetchWithRetry(url);
+            
+            // 检查响应状态
+            if (!response.ok) {
+                await handleApiFailure();
+                throw new Error(`API 响应错误: ${response.status}`);
+            }
+            
+            const data = await response.json();
+    
+            // 检查API是否返回错误
+            if (data && data.error) {
+                await handleApiFailure();
+                throw new Error(data.error || 'API 返回错误');
+            }
+    
+            // 使用公共函数解析响应
+            let songs: any[];
+            try {
+                songs = parseApiResponse(data);
+            } catch (parseError) {
+                await handleApiFailure();
+                throw parseError;
+            }
 
         if (songs.length === 0) {
                         await handleApiFailure(); // 触发API切换机制
@@ -692,7 +708,7 @@ async function searchBilibiliMusic(keyword: string, page: number = 1, limit: num
     }
 }
 
-export async function exploreRadarAPI(limit: number = 50): Promise<Song[]> {
+export async function exploreRadarAPI(limit: number = 100): Promise<Song[]> {
     const keywords = ['热门', '流行', '新歌榜', '热门榜', '抖音热歌', '网络热歌'];
     const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
     const sources = ['netease', 'tencent', 'kugou'];
@@ -809,7 +825,7 @@ export async function getChartList(
 
         const playlistId = chartIds[chartType];
         const playlist = await parsePlaylistAPI(playlistId, source);
-        const songs = playlist.songs.slice(0, 50); // 限制50首
+        const songs = playlist.songs.slice(0, 100); // 限制100首
 
                 return songs;
     } catch (error) {
@@ -964,7 +980,7 @@ export async function getBilibiliChartList(chartType: 'hot' | 'new' | 'rank' = '
         };
         
         const type = chartTypeMap[chartType] || 'hot';
-        const url = `${BILIBILI_API_BASE}?action=chart&type=${type}&limit=50`;
+        const url = `${BILIBILI_API_BASE}?action=chart&type=${type}&limit=100`;
         
                 const response = await fetchWithRetry(url);
         const result = await response.json();
@@ -1016,7 +1032,7 @@ export async function getChartListExtended(chartType: 'soar' | 'new' | 'hot' | '
 
     try {
                 const playlist = await parsePlaylistAPI(chartIds[chartType as 'soar' | 'new' | 'hot'], 'netease');
-        const songs = playlist.songs.slice(0, 50); // 限制50首
+        const songs = playlist.songs.slice(0, 100); // 限制100首
                 return songs;
     } catch (error) {
                 throw error;

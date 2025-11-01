@@ -1,6 +1,7 @@
 // UI增强功能模块
 import { Song } from './api.js';
 import * as player from './player.js';
+import { formatArtist } from './utils.js';
 
 // 多选状态管理
 let selectedSongs = new Set<number>();
@@ -30,18 +31,37 @@ export function displayChartResults(songs: Song[], containerId: string): void {
         return;
     }
 
-    container.innerHTML = songs.map((song, index) => `
-        <div class="chart-item" data-index="${index}">
-            <div class="chart-rank">${index + 1}</div>
-            <div class="chart-info">
-                <div class="chart-name">${song.name}</div>
-                <div class="chart-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist} · ${song.album || '未知专辑'}</div>
+    container.innerHTML = songs.map((song, index) => {
+        // 安全处理artist字段：可能是字符串数组、对象数组或字符串
+        let artistText = '未知歌手';
+        const artistData = song.artist as any;
+        
+        if (Array.isArray(artistData)) {
+            if (artistData.length > 0) {
+                // 检查是对象数组还是字符串数组
+                if (typeof artistData[0] === 'object' && artistData[0]?.name) {
+                    artistText = artistData.map((a: any) => a.name || '未知歌手').join(' / ');
+                } else {
+                    artistText = artistData.join(' / ');
+                }
+            }
+        } else if (typeof artistData === 'string') {
+            artistText = artistData;
+        }
+        
+        return `
+            <div class="chart-item" data-index="${index}">
+                <div class="chart-rank">${index + 1}</div>
+                <div class="chart-info">
+                    <div class="chart-name">${song.name}</div>
+                    <div class="chart-artist">${artistText} · ${song.album || '未知专辑'}</div>
+                </div>
+                <button class="chart-play-btn">
+                    <i class="fas fa-play"></i>
+                </button>
             </div>
-            <button class="chart-play-btn">
-                <i class="fas fa-play"></i>
-            </button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     // 绑定点击事件
     container.querySelectorAll('.chart-item').forEach((item, index) => {
@@ -100,7 +120,7 @@ export function displaySearchResultsWithSelection(songs: Song[], containerId: st
             <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
             <div class="song-info">
                 <div class="song-name">${song.name}</div>
-                <div class="song-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist} · ${song.album}</div>
+                <div class="song-artist">${formatArtist(song.artist)} · ${song.album}</div>
             </div>
             <div class="song-actions">
                 <button class="action-btn favorite-btn" title="添加到我的喜欢">
@@ -297,4 +317,145 @@ export function showError(message: string, containerId: string): void {
             <div>${message}</div>
         </div>
     `;
+}
+
+
+// 通用的带批量操作的歌曲列表渲染函数
+export function renderSongListWithBatchOps(songs: Song[], containerId: string, options?: {
+    showCover?: boolean;
+    showAlbum?: boolean;
+    playlistForPlayback?: Song[];
+}): void {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const {
+        showCover = true,
+        showAlbum = true,
+        playlistForPlayback = songs
+    } = options || {};
+
+    currentSongList = songs;
+    selectedSongs.clear();
+
+    if (songs.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-music"></i><div>暂无歌曲</div></div>';
+        return;
+    }
+
+    // 创建工具栏
+    const toolbar = document.createElement('div');
+    toolbar.className = 'search-toolbar';
+    toolbar.innerHTML = `
+        <button class="toolbar-btn" id="selectAllBtn">
+            <i class="fas fa-check-square"></i> 全选
+        </button>
+        <button class="toolbar-btn" id="addToFavoritesBtn" disabled>
+            <i class="fas fa-heart"></i> 添加到收藏
+        </button>
+        <button class="toolbar-btn" id="addToPlaylistBtn" disabled>
+            <i class="fas fa-list"></i> 添加到播放列表
+        </button>
+        <button class="toolbar-btn" id="downloadSelectedBtn" disabled>
+            <i class="fas fa-download"></i> 下载选中
+        </button>
+    `;
+
+    // 创建歌曲列表容器
+    const resultsList = document.createElement('div');
+    resultsList.className = 'search-results-list';
+
+    songs.forEach((song, index) => {
+        const isFavorite = player.isSongInFavorites(song);
+        const favoriteIconClass = isFavorite ? 'fas fa-heart' : 'far fa-heart';
+        const favoriteIconColor = isFavorite ? 'style="color: #ff6b6b;"' : '';
+
+        const songItem = document.createElement('div');
+        songItem.className = 'song-item';
+        
+        let itemHTML = `
+            <div class="song-checkbox">
+                <input type="checkbox" data-index="${index}">
+            </div>
+            <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
+        `;
+        
+        if (showCover) {
+            const coverUrl = (song as any).album?.picUrl || (song as any).pic || '';
+            itemHTML += `<img src="${coverUrl}" alt="${song.name}" class="song-cover" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjZTBlMGUwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZpbGw9IiM5OTkiIGZvbnQtc2l6ZT0iMTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7pn7PkuZQ8L3RleHQ+PC9zdmc+'">`;
+        }
+        
+        const albumText = showAlbum ? ((song as any).album?.name || song.album || '未知专辑') : '';
+        itemHTML += `
+            <div class="song-info">
+                <div class="song-name">${song.name}</div>
+                <div class="song-artist">${formatArtist(song.artist)}${albumText ? ' · ' + albumText : ''}</div>
+            </div>
+            <div class="song-actions">
+                <button class="action-btn favorite-btn" title="添加到我的喜欢">
+                    <i class="${favoriteIconClass}" ${favoriteIconColor}></i>
+                </button>
+                <button class="action-btn download-btn" title="下载音乐">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        `;
+
+        songItem.innerHTML = itemHTML;
+
+        // 复选框事件
+        const checkbox = songItem.querySelector('input[type="checkbox"]') as HTMLInputElement;
+        checkbox.addEventListener('change', (e) => {
+            e.stopPropagation();
+            const checked = checkbox.checked;
+            if (checked) {
+                selectedSongs.add(index);
+                songItem.classList.add('selected');
+            } else {
+                selectedSongs.delete(index);
+                songItem.classList.remove('selected');
+            }
+            updateToolbarButtons();
+        });
+
+        // 点击歌曲项播放（但不包括复选框和按钮）
+        songItem.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('.song-checkbox') && !target.closest('.song-actions')) {
+                player.playSong(index, playlistForPlayback, containerId);
+            }
+        });
+
+        // 收藏按钮
+        const favoriteBtn = songItem.querySelector('.favorite-btn');
+        favoriteBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            player.toggleFavoriteButton(song);
+            const icon = favoriteBtn.querySelector('i');
+            if (icon) {
+                if (player.isSongInFavorites(song)) {
+                    icon.className = 'fas fa-heart';
+                    icon.style.color = '#ff6b6b';
+                } else {
+                    icon.className = 'far fa-heart';
+                    icon.style.color = '';
+                }
+            }
+        });
+
+        // 下载按钮
+        const downloadBtn = songItem.querySelector('.download-btn');
+        downloadBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            player.downloadSongByData(song);
+        });
+
+        resultsList.appendChild(songItem);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(toolbar);
+    container.appendChild(resultsList);
+
+    bindToolbarEvents(songs, containerId);
 }

@@ -22,6 +22,8 @@
     flex-direction: column;
     height: calc(100vh - 180px);
     overflow-y: auto;
+    overflow-x: hidden;
+    max-width: 100%;
 }
 
 .my-section::-webkit-scrollbar {
@@ -982,7 +984,7 @@
     .main-container {
         grid-template-columns: 1fr 400px;
     }
-    
+
     .albums-grid {
         grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     }
@@ -998,15 +1000,29 @@
         width: 100%;
     }
 
+    /* 老王注释：移动端隐藏"我的"区域，避免在第一屏和第二屏显示 */
+    .my-section {
+        display: none !important;
+    }
+
+    .my-section.mobile-active {
+        display: flex !important;
+    }
+
     .search-toolbar {
-        flex-direction: column;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
     }
 
     .toolbar-btn {
-        width: 100%;
+        flex: 1 1 calc(50% - 4px);
+        min-width: 120px;
         justify-content: center;
+        padding: 10px 12px;
+        font-size: 14px;
     }
-    
+
     .albums-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 10px;
@@ -1020,27 +1036,36 @@
     }
 
     .chart-item {
-        padding: 10px;
+        padding: 12px;
+        gap: 12px;
     }
 
     .chart-rank {
-        width: 35px;
-        height: 35px;
+        width: 40px;
+        height: 40px;
         font-size: 14px;
     }
-    
+
+    .chart-name {
+        font-size: 15px;
+    }
+
+    .chart-artist {
+        font-size: 13px;
+    }
+
     .albums-grid {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     }
-    
+
     .album-info {
         padding: 8px;
     }
-    
+
     .album-name {
         font-size: 12px;
     }
-    
+
     .album-artist {
         font-size: 11px;
     }
