@@ -50,20 +50,20 @@ function parseApiResponse(data: any): any[] {
 }
 
 // 1. Multiple API sources for improved reliability
+// 🔧 修复：统一使用本地Vercel API代理（已通过vite.config.ts配置代理）
 const API_SOURCES: ApiSource[] = [
     {
-        name: 'Vite Meting 代理 API',
+        name: 'Vercel Meting 代理 API',
         url: '/api/meting',
         type: 'meting'
-    },
-    {
-        name: '主 API',
-        url: 'https://music-api.gdstudio.xyz/api.php'
     }
-    // 注意：本地开发使用Vite代理避免CORS问题
-    // /api/meting 用于搜索和播放功能 (Meting API格式)
-    // /api/music-proxy 用于发现音乐功能 (网易云API格式)
 ];
+
+// 注意：
+// 1. 开发环境通过 vite.config.ts 的 proxy 配置代理到真实API
+// 2. 生产环境通过 vercel.json 的 rewrites 配置路由到 Serverless Functions
+// 3. 移除了失效的公共API（有CORS限制）
+// 4. 所有环境统一使用 /api/meting 路径，简化配置
 
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
@@ -72,21 +72,51 @@ const API_FAILURE_THRESHOLD = 3; // 连续失败3次后切换API
 let totalApiSwitchCount = 0; // 总切换次数
 const MAX_API_SWITCH_COUNT = 10; // 最大切换次数，防止无限循环
 
+// 🔍 DEBUG LOG: API初始化信息
+console.log('🔧 [API初始化] 当前API配置:', {
+    初始API: API_BASE,
+    API索引: currentApiIndex,
+    可用API列表: API_SOURCES.map(s => s.name),
+    失败阈值: API_FAILURE_THRESHOLD
+});
+
 async function testAPI(apiUrl: string): Promise<boolean> {
+    console.log('🔍 [testAPI] 开始测试API:', apiUrl);
+    const startTime = Date.now();
+    
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        // 🔧 修复方案2: 减少超时时间从5秒到3秒
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
         // Adapt test URL based on API provider
         const testUrl = apiUrl.includes('meting')
             ? `${apiUrl}?server=netease&type=search&name=test&count=1`
             : `${apiUrl}?types=search&source=netease&name=test&count=1`;
         
+        console.log('🔍 [testAPI] 测试URL:', testUrl);
+        
         const response = await fetch(testUrl, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);
-        return response.ok;
+        
+        const elapsed = Date.now() - startTime;
+        const success = response.ok;
+        
+        console.log(`${success ? '✅' : '❌'} [testAPI] API测试${success ? '成功' : '失败'}:`, {
+            API: apiUrl,
+            状态码: response.status,
+            响应时间: `${elapsed}ms`
+        });
+        
+        return success;
     } catch (error) {
+        const elapsed = Date.now() - startTime;
+        console.error('❌ [testAPI] API测试异常:', {
+            API: apiUrl,
+            错误: error instanceof Error ? error.message : String(error),
+            响应时间: `${elapsed}ms`
+        });
         return false;
     }
 }
@@ -155,10 +185,21 @@ export function resetApiFailureCount(): void {
 }
 
 export async function fetchWithRetry(url: string, options: RequestInit = {}, retries: number = 2): Promise<Response> {
-    const timeoutDuration = 15000; // 增加到15秒
-    const retryDelays = [1000, 2000, 3000]; // 递增重试延迟
+    // 🔧 修复方案2: 减少超时时间从15秒到5秒
+    const timeoutDuration = 5000;
+    const retryDelays = [500, 1000, 1500]; // 减少重试延迟
+
+    console.log('🔍 [fetchWithRetry] 开始请求:', {
+        URL: url,
+        重试次数: retries,
+        超时时间: `${timeoutDuration}ms`
+    });
 
     for (let i = 0; i <= retries; i++) {
+        const attemptNum = i + 1;
+        console.log(`🔄 [fetchWithRetry] 第${attemptNum}次尝试...`);
+        const startTime = Date.now();
+        
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
@@ -169,24 +210,49 @@ export async function fetchWithRetry(url: string, options: RequestInit = {}, ret
             });
             clearTimeout(timeoutId);
 
+            const elapsed = Date.now() - startTime;
+            
             if (response.ok) {
+                console.log(`✅ [fetchWithRetry] 请求成功:`, {
+                    尝试次数: attemptNum,
+                    状态码: response.status,
+                    响应时间: `${elapsed}ms`
+                });
                 return response;
             } else if (response.status >= 500 && i < retries) {
                 // 服务器错误时重试
                 const delay = retryDelays[i] || 3000;
+                console.warn(`⚠️ [fetchWithRetry] 服务器错误，${delay}ms后重试:`, {
+                    状态码: response.status,
+                    尝试次数: attemptNum
+                });
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             } else {
+                console.error(`❌ [fetchWithRetry] API返回错误:`, {
+                    状态码: response.status,
+                    响应时间: `${elapsed}ms`
+                });
                 throw new Error(`API returned error: ${response.status}`);
             }
         } catch (error) {
+            const elapsed = Date.now() - startTime;
             const isTimeout = error instanceof Error && error.name === 'AbortError';
             const errorType = isTimeout ? '请求超时' : '请求失败';
 
+            console.error(`❌ [fetchWithRetry] ${errorType}:`, {
+                尝试次数: attemptNum,
+                错误: error instanceof Error ? error.message : String(error),
+                响应时间: `${elapsed}ms`,
+                是否超时: isTimeout
+            });
+
             if (i < retries) {
                 const delay = retryDelays[i] || 3000;
-                                await new Promise(resolve => setTimeout(resolve, delay));
+                console.log(`🔄 [fetchWithRetry] ${delay}ms后重试...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             } else {
+                console.error('❌ [fetchWithRetry] 所有重试均失败');
                 throw error;
             }
         }
@@ -601,12 +667,22 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
 }
 
 export async function searchMusicAPI(keyword: string, source: string, limit: number = 100): Promise<Song[]> {
+    console.log('🔍 [searchMusicAPI] 搜索请求:', {
+        关键词: keyword,
+        音乐源: source,
+        数量: limit,
+        当前API: API_BASE,
+        API失败计数: apiFailureCount
+    });
+
     // Bilibili 音乐源使用独立API，失败时自动降级
     if (source === 'bilibili') {
         try {
+            console.log('🔍 [searchMusicAPI] 使用Bilibili独立API');
             return await searchBilibiliMusic(keyword, 1, limit);
         } catch (error) {
-                        source = 'netease'; // 降级到网易云音乐
+            console.warn('⚠️ [searchMusicAPI] Bilibili API失败，降级到网易云音乐');
+            source = 'netease'; // 降级到网易云音乐
         }
     }
 
@@ -616,7 +692,9 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         ? `${API_BASE}?server=${source}&type=search&name=${encodeURIComponent(keyword)}&count=${limit}`
         : `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
 
-        try {
+    console.log('🔍 [searchMusicAPI] 请求URL:', url);
+
+    try {
             const response = await fetchWithRetry(url);
             
             // 检查响应状态
@@ -643,14 +721,17 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
             }
 
         if (songs.length === 0) {
-                        await handleApiFailure(); // 触发API切换机制
+            console.warn('⚠️ [searchMusicAPI] API返回空数据');
+            await handleApiFailure(); // 触发API切换机制
             
             // 如果当前不是最后一个API，抛出错误以触发重试
             if (currentApiIndex < API_SOURCES.length - 1) {
+                console.log('🔄 [searchMusicAPI] 尝试切换API源');
                 throw new Error('API返回空数据，尝试切换API源');
             }
             
-                                                            return [];
+            console.error('❌ [searchMusicAPI] 所有API均返回空数据');
+            return [];
         }
 
         // 过滤掉无效数据（酷狗的id可能为null，使用url_id作为备用）
@@ -663,11 +744,22 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
             id: song.id || song.url_id || song.lyric_id || `${source}_${Date.now()}_${Math.random()}`
         }));
 
-                resetApiFailureCount(); // 成功时重置失败计数
+        console.log(`✅ [searchMusicAPI] 搜索成功:`, {
+            返回歌曲数: songs.length,
+            关键词: keyword,
+            音乐源: source
+        });
+        
+        resetApiFailureCount(); // 成功时重置失败计数
         
         return songs.map((song: any) => ({ ...song, source: source }));
     } catch (error) {
-                await handleApiFailure();
+        console.error('❌ [searchMusicAPI] 搜索失败:', {
+            关键词: keyword,
+            音乐源: source,
+            错误: error instanceof Error ? error.message : String(error)
+        });
+        await handleApiFailure();
         throw error;
     }
 }

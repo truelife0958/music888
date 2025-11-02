@@ -48,17 +48,29 @@ export function switchTab(tabName: string): void {
     }
 }
 
-function initializeApp(): void {
+async function initializeApp(): Promise<void> {
     ui.init();
     // 老王修复：先初始化播放器，确保audio元素正确连接
     player.init();
-    api.findWorkingAPI().then(result => {
+    
+    // 🔧 修复方案3: 启动时预检测API（改进版）
+    console.log('🚀 正在初始化应用...');
+    ui.showNotification('正在连接音乐服务...', 'info');
+    
+    try {
+        const result = await api.findWorkingAPI();
         if (result.success) {
+            console.log(`✅ API初始化成功: ${result.name}`);
             ui.showNotification(`已连接到 ${result.name}`, 'success');
         } else {
-            ui.showNotification('所有 API 均不可用，请稍后重试', 'error');
+            console.error('❌ 所有API均不可用');
+            ui.showNotification('所有 API 均不可用，搜索功能可能受影响', 'warning');
         }
-    });
+    } catch (error) {
+        console.error('❌ API初始化失败:', error);
+        ui.showNotification('API连接失败，将使用默认配置', 'warning');
+    }
+    
     player.loadSavedPlaylists();
 
     // --- Event Listeners ---
