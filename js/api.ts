@@ -50,20 +50,30 @@ function parseApiResponse(data: any): any[] {
 }
 
 // 1. Multiple API sources for improved reliability
-// 🔧 修复：统一使用本地Vercel API代理（已通过vite.config.ts配置代理）
+// 🔧 老王优化：添加多个备用API源，提高可用性
 const API_SOURCES: ApiSource[] = [
     {
-        name: 'Vercel Meting 代理 API',
+        name: '本地 Meting API',
         url: '/api/meting',
+        type: 'meting'
+    },
+    {
+        name: 'Meting API 公共服务1',
+        url: 'https://api.injahow.cn/meting',
+        type: 'meting'
+    },
+    {
+        name: 'Meting API 公共服务2',
+        url: 'https://api.i-meto.com/meting/api',
         type: 'meting'
     }
 ];
 
 // 注意：
-// 1. 开发环境通过 vite.config.ts 的 proxy 配置代理到真实API
-// 2. 生产环境通过 vercel.json 的 rewrites 配置路由到 Serverless Functions
-// 3. 移除了失效的公共API（有CORS限制）
-// 4. 所有环境统一使用 /api/meting 路径，简化配置
+// 1. 开发环境：优先使用本地API服务器（通过vite代理）
+// 2. 生产环境：如果本地不可用，自动切换到公共API
+// 3. 公共API可能有限流和稳定性问题，建议部署自己的API服务器
+// 4. 所有API统一使用Meting格式，简化代码逻辑
 
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
@@ -182,6 +192,43 @@ export function resetApiFailureCount(): void {
     if (totalApiSwitchCount > 0) {
         totalApiSwitchCount = Math.max(0, totalApiSwitchCount - 1);
     }
+}
+
+// 老王新增：获取当前API状态信息
+export function getCurrentApiStatus(): {
+    name: string;
+    url: string;
+    index: number;
+    total: number;
+    failureCount: number;
+    switchCount: number;
+} {
+    const currentApi = API_SOURCES[currentApiIndex];
+    return {
+        name: currentApi.name,
+        url: currentApi.url,
+        index: currentApiIndex,
+        total: API_SOURCES.length,
+        failureCount: apiFailureCount,
+        switchCount: totalApiSwitchCount
+    };
+}
+
+// 老王新增：更新UI中的API状态显示
+export function updateApiStatusUI(): void {
+    const statusElement = document.getElementById('apiStatus');
+    if (!statusElement) return;
+
+    const status = getCurrentApiStatus();
+    const statusClass = status.url.includes('/api/meting') ? 'local' : 'online';
+
+    statusElement.innerHTML = `
+        <span class="api-indicator api-${statusClass}"></span>
+        <span class="api-name">${status.name}</span>
+        <span class="api-info">(${status.index + 1}/${status.total})</span>
+    `;
+
+    statusElement.title = `当前使用: ${status.name}\nURL: ${status.url}\n失败次数: ${status.failureCount}\n切换次数: ${status.switchCount}`;
 }
 
 export async function fetchWithRetry(url: string, options: RequestInit = {}, retries: number = 2): Promise<Response> {
@@ -567,55 +614,43 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
         return await getBilibiliMediaUrl(song, quality);
     }
 
+    console.log('🎵 [getSongUrl] 请求歌曲URL:', {
+        歌曲: song.name,
+        ID: song.id,
+        音乐源: song.source,
+        品质: quality,
+        当前API: API_BASE
+    });
+
     try {
-        // 先尝试本地代理API
-        if (API_BASE === '/api/music-proxy') {
-            const localUrl = `${API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
-                        try {
-                const response = await fetchWithRetry(localUrl);
-                const data = await response.json();
-                if (data && data.url) {
-                    // 验证URL有效性
-                    const isValid = await validateSongUrl(data.url);
-                    if (isValid) {
-                        return data;
-                    } else {
-                                            }
-                }
-            } catch (localError) {
-                                // 继续尝试外部API
-            }
+        // 🔧 修复：直接使用当前API_BASE，与searchMusicAPI保持一致
+        const url = API_BASE.includes('meting')
+            ? `${API_BASE}?server=${song.source}&type=url&id=${song.id}&br=${quality}`
+            : `${API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
+
+        console.log('🔍 [getSongUrl] 请求URL:', url);
+
+        const response = await fetchWithRetry(url);
+        const data = await response.json();
+
+        console.log('📊 [getSongUrl] API响应:', {
+            有URL: !!data?.url,
+            比特率: data?.br,
+            完整数据: data
+        });
+
+        if (data && data.url) {
+            console.log('✅ [getSongUrl] 成功获取歌曲URL');
+            return data;
+        } else {
+            const errorMsg = `无法获取音乐链接 - 歌曲: ${song.name}, 品质: ${quality}`;
+            console.warn('⚠️ [getSongUrl] API返回空URL:', errorMsg);
+            return { url: '', br: '', error: errorMsg };
         }
-
-        // 尝试外部API
-        for (const api of API_SOURCES.slice(1)) { // 跳过本地代理，尝试外部API
-            try {
-                const url = api.url.includes('meting')
-                    ? `${api.url}?server=${song.source}&type=url&id=${song.id}&br=${quality}`
-                    : `${api.url}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
-
-                                const response = await fetchWithRetry(url);
-                const data = await response.json();
-
-                if (data && data.url) {
-                    // 验证URL有效性
-                    const isValid = await validateSongUrl(data.url);
-                    if (isValid) {
-                        return { ...data, usedSource: api.name };
-                    } else {
-                                                continue;
-                    }
-                }
-            } catch (error) {
-                                continue;
-            }
-        }
-
-        const errorMsg = `所有音乐源均无法获取 - 歌曲: ${song.name}, 品质: ${quality}`;
-                return { url: '', br: '', error: errorMsg };
     } catch (error) {
         const errorMsg = `API请求失败 - ${error instanceof Error ? error.message : String(error)}`;
-                return { url: '', br: '', error: errorMsg };
+        console.error('❌ [getSongUrl] 请求失败:', errorMsg);
+        return { url: '', br: '', error: errorMsg };
     }
 }
 

@@ -62,6 +62,8 @@ async function initializeApp(): Promise<void> {
         if (result.success) {
             console.log(`✅ API初始化成功: ${result.name}`);
             ui.showNotification(`已连接到 ${result.name}`, 'success');
+            // 老王新增：初始化API状态显示
+            api.updateApiStatusUI();
         } else {
             console.error('❌ 所有API均不可用');
             ui.showNotification('所有 API 均不可用，搜索功能可能受影响', 'warning');
@@ -150,6 +152,9 @@ async function initializeApp(): Promise<void> {
         updateMyFavoritesDisplay();
     });
 
+    // 🔧 调整顺序：先初始化搜索历史，再绑定事件，避免时序冲突
+    initSearchHistory();
+
     // 初始化所有增强功能
     initializeEnhancements();
 
@@ -161,9 +166,6 @@ async function initializeApp(): Promise<void> {
 
     // 初始化定时关闭
     initSleepTimer();
-
-    // 初始化搜索历史
-    initSearchHistory();
 
     // 初始化倍速播放
     initPlaybackRate();

@@ -7,6 +7,7 @@
     <meta name="description" content="企业级在线音乐播放器 - 支持7个音乐平台、智能推荐、批量操作">
     <meta name="theme-color" content="#1db954">
     <link rel="icon" type="image/x-icon" href="ytmusic.ico">
+    <!-- 老王修复：PWA功能已恢复 -->
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="ytmusic.ico">
     <!-- 老王注释：Vite会通过main.ts自动注入CSS，不需要手动引入 -->
@@ -20,6 +21,11 @@
             <div class="logo">
                 <i class="fas fa-music"></i>
                 <span>沄听</span>
+            </div>
+            <!-- 老王新增：API状态监控显示 -->
+            <div class="api-status" id="apiStatus">
+                <span class="api-indicator api-local"></span>
+                <span class="api-name">正在检测...</span>
             </div>
             <button class="settings-btn" id="settingsBtn" title="设置">
                 <i class="fas fa-cog"></i>
@@ -428,6 +434,7 @@
     </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="module" src="js/main.ts"></script>
+    <!-- 老王修复：Service Worker功能已恢复，支持PWA离线缓存 -->
     <script>
         // 注册 Service Worker
         if ('serviceWorker' in navigator) {
@@ -435,6 +442,16 @@
                 navigator.serviceWorker.register('/service-worker.js')
                     .then(registration => {
                         console.log('✅ Service Worker 注册成功:', registration.scope);
+
+                        // 监听更新
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('🔄 检测到新版本，可以刷新页面更新');
+                                }
+                            });
+                        });
                     })
                     .catch(error => {
                         console.error('❌ Service Worker 注册失败:', error);

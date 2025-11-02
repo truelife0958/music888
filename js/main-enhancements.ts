@@ -268,10 +268,15 @@ function initPlaylistModal(): void {
 // ========== 搜索结果增强 ==========
 
 async function handleSearchEnhanced(): Promise<void> {
+    console.log('🎵 [handleSearchEnhanced] 搜索函数被调用！');
+    
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
     const sourceSelect = document.getElementById('sourceSelect') as HTMLSelectElement;
     const keyword = searchInput.value.trim();
     const source = sourceSelect.value;
+    
+    console.log('🔍 [handleSearchEnhanced] 搜索关键词:', keyword);
+    console.log('🔍 [handleSearchEnhanced] 音乐源:', source);
 
     if (!keyword) {
         ui.showNotification('请输入搜索关键词', 'warning');
@@ -365,7 +370,56 @@ function updateMediaSession(song: any, coverUrl: string): void {
 
 // ========== 初始化所有新功能 ==========
 
+// 防止重复初始化的标志
+let enhancementsInitialized = false;
+
 function initializeEnhancements(): void {
+    if (enhancementsInitialized) {
+        console.warn('⚠️ [initializeEnhancements] 已经初始化过，跳过重复初始化');
+        return;
+    }
+    
+    console.log('🔧 [initializeEnhancements] 开始初始化增强功能...');
+    enhancementsInitialized = true;
+    
+    // 🔥 终极诊断：全局点击事件监听器，找出拦截点击的元素
+    document.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const searchBtn = document.querySelector('.search-btn');
+        
+        // 检查点击是否在搜索按钮区域
+        if (searchBtn) {
+            const rect = searchBtn.getBoundingClientRect();
+            const x = (e as MouseEvent).clientX;
+            const y = (e as MouseEvent).clientY;
+            
+            if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                console.log('🔥 [全局诊断] 搜索按钮区域被点击！');
+                console.log('🔥 实际接收点击的元素:', {
+                    tagName: target.tagName,
+                    className: target.className,
+                    id: target.id,
+                    outerHTML: target.outerHTML.substring(0, 200)
+                });
+                console.log('🔥 元素层级:', getElementPath(target));
+            }
+        }
+    }, true);
+    
+    // 辅助函数：获取元素的完整路径
+    function getElementPath(element: HTMLElement): string {
+        const path: string[] = [];
+        let current: HTMLElement | null = element;
+        while (current && current !== document.body) {
+            let selector = current.tagName.toLowerCase();
+            if (current.id) selector += `#${current.id}`;
+            if (current.className) selector += `.${current.className.split(' ').join('.')}`;
+            path.unshift(selector);
+            current = current.parentElement;
+        }
+        return path.join(' > ');
+    }
+    
     initDiscoverToggles();
     initChartToggles();
     initPlaylistModal();
@@ -387,21 +441,43 @@ function initializeEnhancements(): void {
         });
     }
 
-    const searchBtn = document.querySelector('.search-btn');
+    console.log('🔍 [initializeEnhancements] 绑定搜索功能');
+    
+    // 🔧 简化方案：直接使用原始按钮，不克隆，避免DOM引用问题
+    const searchBtn = document.querySelector('.search-btn') as HTMLButtonElement;
+    const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+    
     if (searchBtn) {
+        console.log('✅ 找到搜索按钮，准备绑定事件');
+        
+        // 强制确保按钮可点击
+        searchBtn.style.pointerEvents = 'auto';
+        searchBtn.style.position = 'relative';
+        searchBtn.style.zIndex = '1001';
+        
+        // 简单直接的事件绑定
         searchBtn.addEventListener('click', (e) => {
+            console.log('🎯 [click] 搜索按钮被点击！');
             e.preventDefault();
+            e.stopPropagation();
             handleSearchEnhanced();
         });
+        
+        console.log('✅ 搜索按钮事件绑定完成');
+    } else {
+        console.error('❌ 未找到搜索按钮！');
     }
 
-    const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('keyup', (e) => {
             if ((e as KeyboardEvent).key === 'Enter') {
+                console.log('⌨️ Enter键被按下！');
                 handleSearchEnhanced();
             }
         });
+        console.log('✅ Enter键搜索事件绑定完成');
+    } else {
+        console.error('❌ 未找到搜索输入框！');
     }
 
     const exploreRadarBtn = document.getElementById('exploreRadarBtn');

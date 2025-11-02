@@ -51,22 +51,34 @@ class MetingAdapter {
     const { id, br = 320000 } = params;
 
     try {
+      console.log(`🎵 [Meting Adapter] 获取歌曲URL: ID=${id}, BR=${br}`);
+      
       const result = await api.song_url_v1({
         id,
         level: this._getBrLevel(br)
       });
 
+      console.log(`📊 [Meting Adapter] API响应:`, JSON.stringify(result.body, null, 2));
+
       if (!result.body || !result.body.data || result.body.data.length === 0) {
+        console.warn(`⚠️ [Meting Adapter] 歌曲 ${id} 无数据返回`);
         return { url: '', br: '' };
       }
 
       const song = result.body.data[0];
+      
+      if (!song.url) {
+        console.warn(`⚠️ [Meting Adapter] 歌曲 ${id} URL为空，可能是版权限制`);
+      } else {
+        console.log(`✅ [Meting Adapter] 成功获取URL: ${song.url.substring(0, 50)}...`);
+      }
+      
       return {
         url: song.url || '',
         br: song.br ? String(Math.floor(song.br / 1000)) : String(br / 1000)
       };
     } catch (error) {
-      console.error('URL Error:', error);
+      console.error('❌ [Meting Adapter] URL获取失败:', error);
       return { url: '', br: '' };
     }
   }

@@ -58,8 +58,8 @@ function initAudioPlayer(): void {
         const currentTime = audioPlayer.currentTime;
         const duration = audioPlayer.duration;
 
-        ui.updateProgressBar(currentTime, duration);
-        ui.updateTimeDisplay(currentTime, duration);
+        // 老王修复：ui模块只导出updateProgress函数，同时更新进度条和时间
+        ui.updateProgress(currentTime, duration);
 
         // 老王修复：更新歌词高亮，使用ui模块的方法
         if (currentLyrics.length > 0) {
@@ -365,8 +365,17 @@ export function downloadSongByData(song: Song | null): void {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(a.href);
                     ui.showNotification(`下载完成: ${song.name}`, 'success');
+                })
+                .catch(error => {
+                    console.error('❌ [下载音乐] 下载失败:', error);
+                    ui.showNotification(`下载失败: ${song.name}`, 'error');
                 });
+        } else {
+            ui.showNotification(`无法获取下载链接: ${song.name}`, 'error');
         }
+    }).catch(error => {
+        console.error('❌ [下载音乐] 获取链接失败:', error);
+        ui.showNotification(`下载失败: ${song.name}`, 'error');
     });
 }
 
@@ -384,7 +393,12 @@ export function downloadLyricByData(song: Song | null): void {
             document.body.removeChild(a);
             URL.revokeObjectURL(a.href);
             ui.showNotification(`歌词下载完成: ${song.name}`, 'success');
+        } else {
+            ui.showNotification(`该歌曲暂无歌词: ${song.name}`, 'warning');
         }
+    }).catch(error => {
+        console.error('❌ [下载歌词] 下载失败:', error);
+        ui.showNotification(`歌词下载失败: ${song.name}`, 'error');
     });
 }
 

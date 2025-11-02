@@ -3,6 +3,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/meting",
+      "destination": "/api/meting.js"
+    },
+    {
       "source": "/api/ncm-proxy",
       "destination": "/api/ncm-proxy.js"
     },

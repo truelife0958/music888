@@ -8,30 +8,29 @@ export default defineConfig({
     open: false, // 不自动打开浏览器
     // 本地开发时的API代理配置
     proxy: {
-      // 🔧 修复：添加Meting API代理，代理到Vercel生产环境
+      // 🔧 修复：添加Meting API代理，代理到本地API服务器
       '/api/meting': {
-        target: 'https://music888-4swa.vercel.app',
+        target: 'http://localhost:3000',
         changeOrigin: true,
         rewrite: (path) => {
           console.log(`🎵 Meting API代理: ${path} (保持不变)`);
           return path;
         },
         configure: (proxy, options) => {
-          console.log('🔧 Meting API代理已配置: /api/meting -> https://music888-4swa.vercel.app');
+          console.log('🔧 Meting API代理已配置: /api/meting -> http://localhost:3000');
         }
       },
       
       // 网易云音乐API代理 - 用于discover.ts和recommend.ts
       '/api/music-proxy': {
-        target: 'https://music888-4swa.vercel.app',
+        target: 'http://localhost:3000',
         changeOrigin: true,
         rewrite: (path) => {
-          // 老王修复：保持完整路径，因为Vercel端需要完整的/api/music-proxy路径
           console.log(`🎵 网易云API代理: ${path} (保持不变)`);
           return path;
         },
         configure: (proxy, options) => {
-          console.log('🔧 网易云音乐API代理已配置: /api/music-proxy -> https://music888-4swa.vercel.app');
+          console.log('🔧 网易云音乐API代理已配置: /api/music-proxy -> http://localhost:3000');
         }
       },
 

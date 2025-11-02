@@ -92,6 +92,64 @@ body {
     color: #ff6b6b;
     transform: rotate(90deg);
 }
+
+/* 老王新增：API状态显示样式 */
+.api-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: help;
+    transition: all 0.3s ease;
+    margin-left: auto;
+    margin-right: 15px;
+}
+
+.api-status:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.api-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.api-indicator.api-local {
+    background: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+}
+
+.api-indicator.api-online {
+    background: #FFA726;
+    box-shadow: 0 0 8px rgba(255, 167, 38, 0.6);
+}
+
+.api-name {
+    font-weight: 500;
+}
+
+.api-info {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(1.1);
+    }
+}
+
 .search-container {
     flex: 1;
     max-width: 600px;

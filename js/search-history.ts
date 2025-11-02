@@ -93,8 +93,14 @@ function setupSearchHistoryUI(): void {
     historyContainer.className = 'search-history-dropdown';
     historyContainer.style.display = 'none';
     
-    // 插入到搜索框后面
-    searchInput.parentElement?.appendChild(historyContainer);
+    // 🔧 修复: 插入到navbar下方，完全避免覆盖搜索区域
+    const navbar = document.querySelector('.navbar');
+    if (navbar) {
+        navbar.parentNode?.insertBefore(historyContainer, navbar.nextSibling);
+    } else {
+        // 降级方案：插入到body
+        document.body.appendChild(historyContainer);
+    }
 
     // 聚焦时显示历史
     searchInput.addEventListener('focus', () => {
@@ -205,18 +211,37 @@ function addHistoryStyles(): void {
     style.id = 'search-history-styles';
     style.textContent = `
         .search-history-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            margin-top: 4px;
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 80px);
+            max-width: 600px;
             background: var(--bg-secondary, #1e1e2e);
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
+            z-index: 500;
             max-height: 400px;
             overflow-y: auto;
             animation: slideDown 0.2s ease;
+            pointer-events: auto;
+        }
+        
+        .search-history-dropdown[style*="display: none"] {
+            pointer-events: none !important;
+            visibility: hidden;
+        }
+        
+        /* 🔧 确保搜索按钮始终在最上层 */
+        .search-btn {
+            position: relative !important;
+            z-index: 1001 !important;
+            pointer-events: auto !important;
+        }
+        
+        .search-wrapper {
+            position: relative;
+            z-index: 1000;
         }
 
         @keyframes slideDown {
@@ -335,9 +360,23 @@ function addHistoryStyles(): void {
             color: rgba(0, 0, 0, 0.3);
         }
 
-        /* 搜索框容器需要相对定位 */
-        .search-bar {
+        /* 搜索容器保持相对定位 */
+        .search-container {
             position: relative;
+        }
+        
+        .search-wrapper {
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .search-history-dropdown {
+                top: 120px;
+                width: calc(100% - 30px);
+                max-height: 300px;
+            }
         }
     `;
     document.head.appendChild(style);

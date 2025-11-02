@@ -1,0 +1,68 @@
+{
+  "name": "沄听 - 在线音乐播放器",
+  "short_name": "沄听音乐",
+  "description": "企业级在线音乐播放器 - 支持7个音乐平台、智能推荐、批量操作",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0c",
+  "theme_color": "#1db954",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/ytmusic.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/ytmusic.ico",
+      "sizes": "72x72",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/ytmusic.ico",
+      "sizes": "96x96",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/ytmusic.ico",
+      "sizes": "144x144",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/ytmusic.ico",
+      "sizes": "192x192",
+      "type": "image/x-icon",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/ytmusic.ico",
+      "sizes": "512x512",
+      "type": "image/x-icon",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["music", "entertainment"],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "搜索音乐",
+      "short_name": "搜索",
+      "description": "快速搜索音乐",
+      "url": "/?action=search",
+      "icons": []
+    },
+    {
+      "name": "我的收藏",
+      "short_name": "收藏",
+      "description": "查看我的收藏",
+      "url": "/?action=favorites",
+      "icons": []
+    }
+  ]
+}

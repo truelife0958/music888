@@ -37,8 +37,8 @@ app.get('/', (req, res) => {
   });
 });
 
-// Meting API 兼容路由（前端使用）
-app.all('/api.php', async (req, res) => {
+// Meting API 兼容路由 - 支持多个路径
+const metingHandler = async (req, res) => {
   const { types, type, server = 'netease', id, name, count, br, size } = { ...req.query, ...req.body };
 
   // 支持 types 和 type 两种参数名
@@ -95,7 +95,11 @@ app.all('/api.php', async (req, res) => {
       message: error.message || '服务器错误'
     });
   }
-});
+};
+
+// 注册多个Meting API路由
+app.all('/api.php', metingHandler);
+app.all('/api/meting', metingHandler);  // 🔧 添加 /api/meting 路由支持
 
 // 动态路由：将所有请求映射到对应的API函数
 app.all('/:module', async (req, res) => {
