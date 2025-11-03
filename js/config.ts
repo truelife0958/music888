@@ -75,7 +75,12 @@ export const UI_CONFIG = {
  */
 export const SOURCE_NAMES: Record<string, string> = {
     'netease': '网易云音乐',
-    'tencent': 'QQ音乐'
+    'tencent': 'QQ音乐',
+    'kugou': '酷狗音乐',
+    'kuwo': '酷我音乐',
+    'xiami': '虾米音乐',
+    'baidu': '百度音乐',
+    'bilibili': 'Bilibili音乐'
 } as const;
 
 /**
@@ -95,11 +100,16 @@ export const QUALITY_NAMES: Record<string, string> = {
 export const QUALITY_FALLBACK = ['999', '740', '320', '192', '128'] as const;
 
 /**
- * 可用音乐源列表（根据API文档，kuwo是稳定源之一）
+ * 可用音乐源列表（全部7个平台）
  */
 export const AVAILABLE_SOURCES = [
     'netease',
-    'tencent'
+    'tencent',
+    'kugou',
+    'kuwo',
+    'xiami',
+    'baidu',
+    'bilibili'
 ] as const;
 
 /**

@@ -50,30 +50,25 @@ function parseApiResponse(data: any): any[] {
 }
 
 // 1. Multiple API sources for improved reliability
-// 🔧 老王优化：添加多个备用API源，提高可用性
+// 🔧 音乐API配置：生产环境使用稳定的公共API源
 const API_SOURCES: ApiSource[] = [
     {
-        name: '本地 Meting API',
-        url: '/api/meting',
-        type: 'meting'
+        name: 'GDStudio 音乐API（主要）',
+        url: 'https://music-api.gdstudio.xyz/api.php',
+        type: 'standard'
     },
     {
-        name: 'Meting API 公共服务1',
-        url: 'https://api.injahow.cn/meting',
-        type: 'meting'
-    },
-    {
-        name: 'Meting API 公共服务2',
-        url: 'https://api.i-meto.com/meting/api',
-        type: 'meting'
+        name: '自建Vercel API（备用）',
+        url: 'https://music888-4swa.vercel.app/api.php',
+        type: 'standard'
     }
 ];
 
 // 注意：
-// 1. 开发环境：优先使用本地API服务器（通过vite代理）
-// 2. 生产环境：如果本地不可用，自动切换到公共API
-// 3. 公共API可能有限流和稳定性问题，建议部署自己的API服务器
-// 4. 所有API统一使用Meting格式，简化代码逻辑
+// 1. 生产环境使用公共API，自动故障转移
+// 2. 公共API可能有限流，已实现搜索频率控制
+// 3. 支持7个音乐平台：网易云、QQ、酷狗、酷我、虾米、百度、Bilibili
+// 4. 所有API统一使用标准格式，简化代码逻辑
 
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
@@ -174,6 +169,10 @@ export async function switchToNextAPI(): Promise<{ success: boolean; name?: stri
             apiFailureCount = 0;
             totalApiSwitchCount++;
             console.log(`切换到API: ${api.name} (切换次数: ${totalApiSwitchCount}/${MAX_API_SWITCH_COUNT})`);
+            
+            // 🔧 修复P2-9: API切换成功后更新UI显示
+            updateApiStatusUI();
+            
             return { success: true, name: api.name };
         }
     }
@@ -339,8 +338,8 @@ export async function getAlbumCoverUrl(song: Song, size: number = 300): Promise<
             }
         }
 
-        // 尝试外部API
-        for (const api of API_SOURCES.slice(1)) { // 跳过本地代理，尝试外部API
+        // 尝试所有可用API
+        for (const api of API_SOURCES) {
             try {
                 const url = api.url.includes('meting')
                     ? `${api.url}?server=${song.source}&type=pic&id=${song.pic_id}`
@@ -549,9 +548,9 @@ export async function getSongUrlWithFallback(song: Song, quality: string): Promi
         }
     }
 
-    // 如果本地代理失败，尝试外部API
+    // 尝试所有可用API
     for (const source of sourcesToTry) {
-        for (const api of API_SOURCES.slice(1)) { // 跳过本地代理
+        for (const api of API_SOURCES) {
             try {
                 // 如果不是原始音乐源,需要先搜索获取该源的歌曲ID
                 let songIdForSource = song.id;
@@ -735,7 +734,7 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
     }
 }
 
-// 获取 Bilibili 媒体源URL（使用笒鬼鬼API）
+// 获取 Bilibili 媒体源URL（使用第三方API + 降级方案）
 async function getBilibiliMediaUrl(song: Song, quality: string = '320'): Promise<{ url: string; br: string; error?: string; usedSource?: string }> {
     try {
         const bvid = song.id;
@@ -751,11 +750,11 @@ async function getBilibiliMediaUrl(song: Song, quality: string = '320'): Promise
         const bilibiliQuality = qualityMap[quality] || 'standard';
 
         const url = `${BILIBILI_API_BASE}?action=media&bvid=${bvid}&quality=${bilibiliQuality}`;
-                const response = await fetchWithRetry(url);
+        const response = await fetchWithRetry(url, {}, 1); // 🔧 减少重试次数
         const result = await response.json();
 
-                if (result.code !== 200 || !result.data || !result.data.url) {
-                        throw new Error(result.message || 'Bilibili 媒体源获取失败');
+        if (result.code !== 200 || !result.data || !result.data.url) {
+            throw new Error(result.message || 'Bilibili 媒体源获取失败');
         }
 
         return {
@@ -764,8 +763,31 @@ async function getBilibiliMediaUrl(song: Song, quality: string = '320'): Promise
             usedSource: 'bilibili'
         };
     } catch (error) {
+        // 🔧 修复：Bilibili API失败时自动降级到网易云音乐
+        console.warn('⚠️ [getBilibiliMediaUrl] Bilibili API失败，尝试降级到网易云搜索');
+        
+        try {
+            // 使用歌曲名在网易云搜索
+            const searchResults = await searchMusicAPI(song.name, 'netease', 5);
+            if (searchResults.length > 0) {
+                // 返回第一个匹配结果的URL
+                const fallbackSong = searchResults[0];
+                const fallbackResult = await getSongUrl(fallbackSong, quality);
+                
+                if (fallbackResult.url) {
+                    console.log('✅ [getBilibiliMediaUrl] 成功降级到网易云音乐');
+                    return {
+                        ...fallbackResult,
+                        usedSource: 'netease-fallback'
+                    };
+                }
+            }
+        } catch (fallbackError) {
+            console.error('❌ [getBilibiliMediaUrl] 降级方案也失败了');
+        }
+        
         const errorMsg = `Bilibili 媒体源获取失败 - ${error instanceof Error ? error.message : String(error)}`;
-                return { url: '', br: '', error: errorMsg };
+        return { url: '', br: '', error: errorMsg };
     }
 }
 
@@ -846,8 +868,7 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         }
     }
 
-    // Meting API 使用 'name' 参数而不是 'id'
-    // 移除硬编码数量限制，支持自定义数量，默认1000条
+    // 构建API请求URL - 兼容 meting 和 standard 格式
     const url = API_BASE.includes('meting')
         ? `${API_BASE}?server=${source}&type=search&name=${encodeURIComponent(keyword)}&count=${limit}`
         : `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
@@ -985,24 +1006,30 @@ async function searchBilibiliMusic(keyword: string, page: number = 1, limit: num
     }
 }
 
-export async function exploreRadarAPI(limit: number = 100): Promise<Song[]> {
+export async function exploreRadarAPI(limit: number = 100, retryCount: number = 0): Promise<Song[]> {
+    const MAX_RETRY = 3; // 🔧 修复：添加最大重试次数限制
+    
+    if (retryCount >= MAX_RETRY) {
+        console.error('❌ [exploreRadarAPI] 达到最大重试次数，停止递归');
+        return []; // 返回空数组而不是抛出错误
+    }
+    
     const keywords = ['热门', '流行', '新歌榜', '热门榜', '抖音热歌', '网络热歌'];
     const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
     const sources = ['netease', 'tencent', 'kugou'];
     const randomSource = sources[Math.floor(Math.random() * sources.length)];
     
-    // Meting API 使用不同的参数名
-    // 移除硬编码数量限制，支持自定义数量，默认1000条
+    // 构建API请求URL
     const url = API_BASE.includes('meting')
         ? `${API_BASE}?server=${randomSource}&type=search&name=${encodeURIComponent(randomKeyword)}&count=${limit}`
         : `${API_BASE}?types=search&source=${randomSource}&name=${encodeURIComponent(randomKeyword)}&count=${limit}`;
 
-            try {
+    try {
         const response = await fetchWithRetry(url);
         
         // 检查响应状态
         if (!response.ok) {
-                        await handleApiFailure();
+            await handleApiFailure();
             throw new Error(`API 响应错误: ${response.status}`);
         }
         
@@ -1010,7 +1037,7 @@ export async function exploreRadarAPI(limit: number = 100): Promise<Song[]> {
 
         // 检查API是否返回错误
         if (data && data.error) {
-                        await handleApiFailure();
+            await handleApiFailure();
             throw new Error(data.error || 'API 返回错误');
         }
 
@@ -1019,18 +1046,19 @@ export async function exploreRadarAPI(limit: number = 100): Promise<Song[]> {
         try {
             songs = parseApiResponse(data);
         } catch (parseError) {
-                        await handleApiFailure();
+            await handleApiFailure();
             throw parseError;
         }
 
         if (songs.length === 0) {
-                        await handleApiFailure(); // 触发API切换机制
+            await handleApiFailure(); // 触发API切换机制
             
-            // 重试其他音乐源
-                        return await exploreRadarAPI(limit);
+            // 🔧 修复：递归调用时传递重试计数
+            console.warn(`⚠️ [exploreRadarAPI] 返回空数据，重试 ${retryCount + 1}/${MAX_RETRY}`);
+            return await exploreRadarAPI(limit, retryCount + 1);
         }
 
-        // 过滤掉无效数据（酷狗的id可能为null，使用url_id作为备用）
+        // 过滤掉无效数据
         songs = songs.filter(song =>
             song &&
             song.name &&
@@ -1040,11 +1068,18 @@ export async function exploreRadarAPI(limit: number = 100): Promise<Song[]> {
             id: song.id || song.url_id || song.lyric_id || `${randomSource}_${Date.now()}_${Math.random()}`
         }));
 
-                resetApiFailureCount(); // 成功时重置失败计数
+        resetApiFailureCount(); // 成功时重置失败计数
         
         return songs.map((song: any) => ({ ...song, source: randomSource }));
     } catch (error) {
-                await handleApiFailure();
+        await handleApiFailure();
+        
+        // 🔧 修复：捕获错误后重试，但不超过最大次数
+        if (retryCount < MAX_RETRY) {
+            console.warn(`⚠️ [exploreRadarAPI] 请求失败，重试 ${retryCount + 1}/${MAX_RETRY}`);
+            return await exploreRadarAPI(limit, retryCount + 1);
+        }
+        
         throw error;
     }
 }

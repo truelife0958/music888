@@ -636,45 +636,66 @@ function savePlaylistsToStorage(): void {
 export type { LyricLine } from './types.js';
 
 function parseLyrics(lrc: string): LyricLine[] {
-    if (!lrc || !lrc.trim()) return [];
-    
-    const lines = lrc.split('\n');
-    const result: LyricLine[] = [];
-    
-    // 支持多种歌词时间格式:
-    // [mm:ss.xx] [mm:ss.xxx] [hh:mm:ss.xx] [mm:ss]
-    const timeRegex = /\[(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:\.(\d{2,3}))?\]/g;
-    
-    for (const line of lines) {
-        let match;
-        const matches: { time: number; text: string }[] = [];
-        
-        // 一行可能有多个时间标签
-        while ((match = timeRegex.exec(line)) !== null) {
-            const hours = match[1] ? parseInt(match[1]) : 0;
-            const minutes = parseInt(match[2]);
-            const seconds = parseInt(match[3]);
-            const milliseconds = match[4] ? parseInt(match[4].padEnd(3, '0')) : 0;
-            
-            const time = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
-            matches.push({ time, text: '' });
+    // 🔧 修复P2-8: 添加错误处理和默认歌词
+    try {
+        if (!lrc || !lrc.trim()) {
+            console.warn('⚠️ [parseLyrics] 歌词文本为空');
+            return [{ time: 0, text: '暂无歌词' }];
         }
         
-        // 提取歌词文本
-        const text = line.replace(timeRegex, '').trim();
+        const lines = lrc.split('\n');
+        const result: LyricLine[] = [];
         
-        // 为每个时间标签添加相同的歌词文本
-        if (text && matches.length > 0) {
-            matches.forEach(m => {
-                result.push({ time: m.time, text });
-            });
+        // 支持多种歌词时间格式:
+        // [mm:ss.xx] [mm:ss.xxx] [hh:mm:ss.xx] [mm:ss]
+        const timeRegex = /\[(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:\.(\d{2,3}))?\]/g;
+        
+        for (const line of lines) {
+            try {
+                let match;
+                const matches: { time: number; text: string }[] = [];
+                
+                // 一行可能有多个时间标签
+                while ((match = timeRegex.exec(line)) !== null) {
+                    const hours = match[1] ? parseInt(match[1]) : 0;
+                    const minutes = parseInt(match[2]);
+                    const seconds = parseInt(match[3]);
+                    const milliseconds = match[4] ? parseInt(match[4].padEnd(3, '0')) : 0;
+                    
+                    const time = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+                    matches.push({ time, text: '' });
+                }
+                
+                // 提取歌词文本
+                const text = line.replace(timeRegex, '').trim();
+                
+                // 为每个时间标签添加相同的歌词文本
+                if (text && matches.length > 0) {
+                    matches.forEach(m => {
+                        result.push({ time: m.time, text });
+                    });
+                }
+            } catch (lineError) {
+                // 单行解析失败不影响其他行
+                console.warn('⚠️ [parseLyrics] 解析单行失败:', line);
+                continue;
+            }
         }
+        
+        // 按时间排序
+        result.sort((a, b) => a.time - b.time);
+        
+        // 如果解析后没有有效歌词，返回默认
+        if (result.length === 0) {
+            console.warn('⚠️ [parseLyrics] 没有解析到有效歌词');
+            return [{ time: 0, text: '纯音乐，请欣赏' }];
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('❌ [parseLyrics] 歌词解析失败:', error);
+        return [{ time: 0, text: '歌词加载失败' }];
     }
-    
-    // 按时间排序
-    result.sort((a, b) => a.time - b.time);
-    
-    return result;
 }
 
 // ========== 播放列表管理增强 ==========

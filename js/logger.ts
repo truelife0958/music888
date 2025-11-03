@@ -1,140 +1,251 @@
-// 统一日志系统
+// js/logger.ts - 统一日志管理模块
 
-import { LogLevel } from './types.js';
+/**
+ * 日志级别
+ */
+export enum LogLevel {
+    DEBUG = 0,
+    INFO = 1,
+    WARN = 2,
+    ERROR = 3,
+    NONE = 4
+}
 
 /**
  * 日志配置
  */
-const LOG_CONFIG = {
-    enabled: true,
-    level: 'info' as LogLevel,
-    timestamp: true,
-    contextPrefix: true,
-};
-
-/**
- * 日志级别优先级
- */
-const LOG_LEVELS: Record<LogLevel, number> = {
-    debug: 0,
-    info: 1,
-    warn: 2,
-    error: 3,
-};
-
-/**
- * 日志级别颜色
- */
-const LOG_COLORS: Record<LogLevel, string> = {
-    debug: '#888',
-    info: '#2196F3',
-    warn: '#ff9800',
-    error: '#f44336',
-};
-
-/**
- * 格式化时间戳
- */
-function formatTimestamp(): string {
-    const now = new Date();
-    return `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}]`;
+interface LoggerConfig {
+    level: LogLevel;
+    enableConsole: boolean;
+    enableTimestamp: boolean;
+    prefix: string;
 }
 
 /**
- * 检查是否应该记录该级别的日志
+ * 默认配置
  */
-function shouldLog(level: LogLevel): boolean {
-    if (!LOG_CONFIG.enabled) return false;
-    return LOG_LEVELS[level] >= LOG_LEVELS[LOG_CONFIG.level];
+const defaultConfig: LoggerConfig = {
+    level: LogLevel.DEBUG, // 默认DEBUG，后续根据环境动态设置
+    enableConsole: true,
+    enableTimestamp: true,
+    prefix: '🎵'
+};
+
+let currentConfig: LoggerConfig = { ...defaultConfig };
+
+/**
+ * 设置日志级别
+ */
+export function setLogLevel(level: LogLevel): void {
+    currentConfig.level = level;
+    console.log(`${currentConfig.prefix} 日志级别已设置为: ${LogLevel[level]}`);
 }
 
 /**
- * 通用日志函数
+ * 设置日志配置
  */
-function log(level: LogLevel, context: string, ...args: any[]): void {
-    if (!shouldLog(level)) return;
+export function configure(config: Partial<LoggerConfig>): void {
+    currentConfig = { ...currentConfig, ...config };
+}
 
-    const timestamp = LOG_CONFIG.timestamp ? formatTimestamp() : '';
-    const prefix = LOG_CONFIG.contextPrefix ? `[${context}]` : '';
-    const levelTag = `[${level.toUpperCase()}]`;
+/**
+ * 获取当前配置
+ */
+export function getConfig(): LoggerConfig {
+    return { ...currentConfig };
+}
 
-    const style = `color: ${LOG_COLORS[level]}; font-weight: bold;`;
+/**
+ * 格式化日志消息
+ */
+function formatMessage(level: string, module: string, ...args: any[]): string {
+    const timestamp = currentConfig.enableTimestamp 
+        ? `[${new Date().toISOString().substr(11, 12)}]`
+        : '';
+    
+    const prefix = currentConfig.prefix ? `${currentConfig.prefix} ` : '';
+    const moduleStr = module ? `[${module}]` : '';
+    
+    return `${prefix}${timestamp}${moduleStr} ${level}`;
+}
 
-    switch (level) {
-        case 'debug':
-            console.debug(`%c${timestamp} ${levelTag} ${prefix}`, style, ...args);
-            break;
-        case 'info':
-            console.info(`%c${timestamp} ${levelTag} ${prefix}`, style, ...args);
-            break;
-        case 'warn':
-            console.warn(`%c${timestamp} ${levelTag} ${prefix}`, style, ...args);
-            break;
-        case 'error':
-            console.error(`%c${timestamp} ${levelTag} ${prefix}`, style, ...args);
-            break;
+/**
+ * DEBUG级别日志
+ */
+export function debug(module: string, ...args: any[]): void {
+    if (!currentConfig.enableConsole || currentConfig.level > LogLevel.DEBUG) {
+        return;
+    }
+    
+    const message = formatMessage('🔍', module);
+    console.debug(message, ...args);
+}
+
+/**
+ * INFO级别日志
+ */
+export function info(module: string, ...args: any[]): void {
+    if (!currentConfig.enableConsole || currentConfig.level > LogLevel.INFO) {
+        return;
+    }
+    
+    const message = formatMessage('ℹ️', module);
+    console.info(message, ...args);
+}
+
+/**
+ * WARN级别日志
+ */
+export function warn(module: string, ...args: any[]): void {
+    if (!currentConfig.enableConsole || currentConfig.level > LogLevel.WARN) {
+        return;
+    }
+    
+    const message = formatMessage('⚠️', module);
+    console.warn(message, ...args);
+}
+
+/**
+ * ERROR级别日志
+ */
+export function error(module: string, ...args: any[]): void {
+    if (!currentConfig.enableConsole || currentConfig.level > LogLevel.ERROR) {
+        return;
+    }
+    
+    const message = formatMessage('❌', module);
+    console.error(message, ...args);
+}
+
+/**
+ * SUCCESS日志（特殊类型，总是显示）
+ */
+export function success(module: string, ...args: any[]): void {
+    if (!currentConfig.enableConsole) {
+        return;
+    }
+    
+    const message = formatMessage('✅', module);
+    console.log(message, ...args);
+}
+
+/**
+ * 性能计时器
+ */
+const timers = new Map<string, number>();
+
+/**
+ * 开始计时
+ */
+export function time(label: string): void {
+    timers.set(label, performance.now());
+}
+
+/**
+ * 结束计时并输出
+ */
+export function timeEnd(label: string): void {
+    const startTime = timers.get(label);
+    if (startTime === undefined) {
+        warn('Logger', `计时器 "${label}" 不存在`);
+        return;
+    }
+    
+    const duration = performance.now() - startTime;
+    info('Performance', `${label}: ${duration.toFixed(2)}ms`);
+    timers.delete(label);
+}
+
+/**
+ * 分组日志开始
+ */
+export function group(label: string, collapsed: boolean = false): void {
+    if (!currentConfig.enableConsole || currentConfig.level > LogLevel.DEBUG) {
+        return;
+    }
+    
+    if (collapsed) {
+        console.groupCollapsed(label);
+    } else {
+        console.group(label);
     }
 }
 
 /**
- * 统一日志系统
+ * 分组日志结束
  */
-export const Logger = {
-    /**
-     * 调试日志
-     */
-    debug: (context: string, ...args: any[]) => {
-        log('debug', context, ...args);
-    },
+export function groupEnd(): void {
+    if (!currentConfig.enableConsole || currentConfig.level > LogLevel.DEBUG) {
+        return;
+    }
+    
+    console.groupEnd();
+}
 
-    /**
-     * 信息日志
-     */
-    info: (context: string, ...args: any[]) => {
-        log('info', context, ...args);
-    },
+/**
+ * 表格日志
+ */
+export function table(data: any): void {
+    if (!currentConfig.enableConsole || currentConfig.level > LogLevel.DEBUG) {
+        return;
+    }
+    
+    console.table(data);
+}
 
-    /**
-     * 警告日志
-     */
-    warn: (context: string, ...args: any[]) => {
-        log('warn', context, ...args);
-    },
+/**
+ * 创建模块专用logger
+ */
+export function createLogger(moduleName: string) {
+    return {
+        debug: (...args: any[]) => debug(moduleName, ...args),
+        info: (...args: any[]) => info(moduleName, ...args),
+        warn: (...args: any[]) => warn(moduleName, ...args),
+        error: (...args: any[]) => error(moduleName, ...args),
+        success: (...args: any[]) => success(moduleName, ...args),
+        time: (label: string) => time(`${moduleName}:${label}`),
+        timeEnd: (label: string) => timeEnd(`${moduleName}:${label}`),
+        group: (label: string, collapsed?: boolean) => group(`${moduleName}: ${label}`, collapsed),
+        groupEnd: () => groupEnd(),
+        table: (data: any) => table(data)
+    };
+}
 
-    /**
-     * 错误日志
-     */
-    error: (context: string, ...args: any[]) => {
-        log('error', context, ...args);
-    },
+// 🔧 修复P2-11: 根据环境自动设置日志级别
+if (typeof window !== 'undefined') {
+    // 浏览器环境
+    const hostname = window.location.hostname;
+    
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // 开发环境：显示所有日志
+        setLogLevel(LogLevel.DEBUG);
+    } else {
+        // 生产环境：只显示警告和错误
+        setLogLevel(LogLevel.WARN);
+    }
+    
+    // 暴露到全局，方便调试
+    (window as any).__setLogLevel = setLogLevel;
+    (window as any).__LogLevel = LogLevel;
+    
+    console.log(`${currentConfig.prefix} Logger initialized. Current level: ${LogLevel[currentConfig.level]}`);
+    console.log('💡 Tip: Use __setLogLevel(__LogLevel.DEBUG) to enable all logs');
+}
 
-    /**
-     * 设置日志级别
-     */
-    setLevel: (level: LogLevel) => {
-        LOG_CONFIG.level = level;
-    },
-
-    /**
-     * 启用/禁用日志
-     */
-    setEnabled: (enabled: boolean) => {
-        LOG_CONFIG.enabled = enabled;
-    },
-
-    /**
-     * 设置是否显示时间戳
-     */
-    setTimestamp: (enabled: boolean) => {
-        LOG_CONFIG.timestamp = enabled;
-    },
-
-    /**
-     * 设置是否显示上下文前缀
-     */
-    setContextPrefix: (enabled: boolean) => {
-        LOG_CONFIG.contextPrefix = enabled;
-    },
+export default {
+    LogLevel,
+    setLogLevel,
+    configure,
+    getConfig,
+    debug,
+    info,
+    warn,
+    error,
+    success,
+    time,
+    timeEnd,
+    group,
+    groupEnd,
+    table,
+    createLogger
 };
-
-export default Logger;
