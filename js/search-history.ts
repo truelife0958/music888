@@ -225,3 +225,13 @@ function escapeHtml(text: string): string {
     div.textContent = text;
     return div.innerHTML;
 }
+
+/**
+ * 初始化搜索历史功能
+ * 在应用启动时调用，绑定相关事件
+ */
+export function initSearchHistory(): void {
+    console.log('搜索历史模块已初始化');
+    // 这个函数主要用于未来扩展，目前搜索历史功能通过直接调用其他导出函数实现
+    // 例如：在搜索框下方显示历史记录、绑定快捷键等
+}

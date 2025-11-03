@@ -701,7 +701,7 @@ async function handleSearch(): Promise<void> {
         return;
     }
     
-    addSearchHistory(keyword);
+    addSearchHistory(keyword, source);
     ui.showLoading('searchResults');
 
     const sourcesToTry = [source, 'netease', 'tencent'];
