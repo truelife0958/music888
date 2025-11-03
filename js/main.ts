@@ -704,7 +704,7 @@ async function handleSearch(): Promise<void> {
     addSearchHistory(keyword);
     ui.showLoading('searchResults');
 
-    const sourcesToTry = [source, 'netease', 'tencent', 'kugou', 'kuwo'];
+    const sourcesToTry = [source, 'netease', 'tencent'];
     const uniqueSources = [...new Set(sourcesToTry)];
     let lastError: any = null;
     

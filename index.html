@@ -34,13 +34,8 @@
                 <form class="search-wrapper" onsubmit="event.preventDefault(); window.triggerSearch && window.triggerSearch(); return false;">
                     <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput" required>
                     <select class="source-select" id="sourceSelect">
-                        <option value="netease">网易云</option>
+                        <option value="netease">网易云音乐</option>
                         <option value="tencent">QQ音乐</option>
-                        <option value="kugou">酷狗</option>
-                        <option value="kuwo">酷我</option>
-                        <option value="xiami">虾米</option>
-                        <option value="baidu">百度</option>
-                        <option value="bilibili">B站</option>
                     </select>
                     <button type="submit" class="search-btn">
                         <i class="fas fa-search" style="pointer-events: none;"></i>
@@ -96,7 +91,7 @@
 
                 <div class="playlist-input-container">
                     <select class="playlist-source-select" id="playlistSourceSelect" style="margin-bottom: 10px;">
-                        <option value="netease">网易云</option>
+                        <option value="netease">网易云音乐</option>
                         <option value="tencent">QQ音乐</option>
                     </select>
                     <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入歌单ID (如: 60198, 3778678) 或链接...">
@@ -336,9 +331,6 @@
                         <select id="apiSourceSelect" class="settings-select">
                             <option value="netease">网易云音乐</option>
                             <option value="tencent">QQ音乐</option>
-                            <option value="kugou">酷狗音乐</option>
-                            <option value="kuwo">酷我音乐</option>
-                            <option value="bilibili">Bilibili音乐</option>
                         </select>
                     </div>
                     <div class="settings-item">

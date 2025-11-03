@@ -281,7 +281,7 @@ async function handleSearchEnhanced(): Promise<void> {
     ui.showLoading('searchResults');
     switchTab('search');
 
-    const sourcesToTry = [source, 'netease', 'tencent', 'kugou', 'kuwo'];
+    const sourcesToTry = [source, 'netease', 'tencent'];
     const uniqueSources = [...new Set(sourcesToTry)];
     let lastError: any = null;
     
