@@ -1,7 +1,7 @@
 // api/meting.js - Meting API 格式兼容层
-// 老王修复：将Meting API格式参数转换为标准格式，然后调用音乐API
+// 修复：转换为ES Module语法以兼容Vercel部署
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 /**
  * Meting API 兼容端点
@@ -10,7 +10,7 @@ const fetch = require('node-fetch');
  * Meting格式: ?server=netease&type=search&name=xxx&count=30
  * 标准格式: ?types=search&source=netease&name=xxx&count=30
  */
-module.exports = async (req, res) => {
+export default async (req, res) => {
     try {
         // 老王注释：从查询参数中提取Meting API格式的参数
         const { server, type, id, name, count, br, size } = req.query;
