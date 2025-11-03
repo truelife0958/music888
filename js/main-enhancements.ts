@@ -382,6 +382,29 @@ function initializeEnhancements(): void {
     console.log('🔧 [initializeEnhancements] 开始初始化增强功能...');
     enhancementsInitialized = true;
     
+    // 🔧 监听紧急修复脚本发出的manualSearch事件
+    document.addEventListener('manualSearch', ((e: CustomEvent) => {
+        console.log('🚨 [manualSearch事件] 收到紧急修复脚本的搜索请求');
+        console.log('📦 事件详情:', e.detail);
+        const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+        const sourceSelect = document.getElementById('sourceSelect') as HTMLSelectElement;
+        if (searchInput && e.detail?.keyword) {
+            searchInput.value = e.detail.keyword;
+        }
+        if (sourceSelect && e.detail?.source) {
+            sourceSelect.value = e.detail.source;
+        }
+        handleSearchEnhanced();
+    }) as EventListener);
+    console.log('✅ manualSearch事件监听器已注册');
+    
+    // 🔧 表单包装方案：暴露全局搜索触发函数
+    (window as any).triggerSearch = () => {
+        console.log('🎯 [triggerSearch] 表单提交触发搜索！');
+        handleSearchEnhanced();
+    };
+    console.log('✅ 全局搜索函数已注册');
+    
     // 🔥 终极诊断：全局点击事件监听器，找出拦截点击的元素
     document.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
@@ -443,29 +466,50 @@ function initializeEnhancements(): void {
 
     console.log('🔍 [initializeEnhancements] 绑定搜索功能');
     
-    // 🔧 简化方案：直接使用原始按钮，不克隆，避免DOM引用问题
+    // 🔧 终极修复方案：使用事件委托到父容器，100%可靠
+    const searchWrapper = document.querySelector('.search-wrapper') as HTMLElement;
     const searchBtn = document.querySelector('.search-btn') as HTMLButtonElement;
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
     
-    if (searchBtn) {
-        console.log('✅ 找到搜索按钮，准备绑定事件');
+    if (searchWrapper && searchBtn) {
+        console.log('✅ 找到搜索容器和按钮，使用事件委托绑定');
+        console.log('📍 搜索按钮位置信息:', searchBtn.getBoundingClientRect());
         
-        // 强制确保按钮可点击
-        searchBtn.style.pointerEvents = 'auto';
-        searchBtn.style.position = 'relative';
-        searchBtn.style.zIndex = '1001';
+        // 🔧 方法1: 事件委托到父容器（最可靠的方法）
+        searchWrapper.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            // 检查点击的是搜索按钮或其子元素
+            if (target.closest('.search-btn')) {
+                console.log('🎯 [事件委托] 搜索按钮被点击！target:', target.tagName);
+                e.preventDefault();
+                e.stopPropagation();
+                handleSearchEnhanced();
+            }
+        }, true); // 使用捕获阶段确保优先处理
         
-        // 简单直接的事件绑定
+        // 🔧 方法2: 直接在按钮上绑定（作为后备）
         searchBtn.addEventListener('click', (e) => {
-            console.log('🎯 [click] 搜索按钮被点击！');
+            console.log('🎯 [直接绑定] 搜索按钮被点击！');
             e.preventDefault();
-            e.stopPropagation();
             handleSearchEnhanced();
         });
         
-        console.log('✅ 搜索按钮事件绑定完成');
+        // 🔧 方法3: 使用mousedown作为额外后备
+        searchBtn.addEventListener('mousedown', (e) => {
+            console.log('🎯 [mousedown] 搜索按钮被按下！');
+            e.preventDefault();
+            handleSearchEnhanced();
+        });
+        
+        // 🔧 方法4: 全局Window对象上暴露搜索函数（用于HTML onclick）
+        (window as any).handleSearch = () => {
+            console.log('🎯 [window.handleSearch] 全局搜索函数被调用！');
+            handleSearchEnhanced();
+        };
+        
+        console.log('✅ 搜索按钮事件委托绑定完成（4层防护）');
     } else {
-        console.error('❌ 未找到搜索按钮！');
+        console.error('❌ 未找到搜索容器或按钮！');
     }
 
     if (searchInput) {

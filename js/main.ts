@@ -7,7 +7,9 @@ import '../css/features.css';
 
 import * as api from './api.js';
 
-// 防止重复初始化的标志 - 移除，改用更精细的控制
+// 🔧 防止重复初始化的全局标志
+let appInitialized = false;
+
 import * as ui from './ui.js';
 import * as player from './player.js';
 import { debounce, renderPlaylistItem, renderEmptyState } from './utils.js';
@@ -49,12 +51,19 @@ export function switchTab(tabName: string): void {
 }
 
 async function initializeApp(): Promise<void> {
+    // 🔧 BUG修复：防止重复初始化
+    if (appInitialized) {
+        console.warn('⚠️ [initializeApp] 应用已初始化，跳过重复初始化');
+        return;
+    }
+    appInitialized = true;
+    console.log('🚀 [initializeApp] 开始初始化应用...');
+    
     ui.init();
     // 老王修复：先初始化播放器，确保audio元素正确连接
     player.init();
     
     // 🔧 修复方案3: 启动时预检测API（改进版）
-    console.log('🚀 正在初始化应用...');
     ui.showNotification('正在连接音乐服务...', 'info');
     
     try {

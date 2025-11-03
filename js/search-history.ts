@@ -93,18 +93,18 @@ function setupSearchHistoryUI(): void {
     historyContainer.className = 'search-history-dropdown';
     historyContainer.style.display = 'none';
     
-    // 🔧 修复: 插入到navbar下方，完全避免覆盖搜索区域
-    const navbar = document.querySelector('.navbar');
-    if (navbar) {
-        navbar.parentNode?.insertBefore(historyContainer, navbar.nextSibling);
-    } else {
-        // 降级方案：插入到body
-        document.body.appendChild(historyContainer);
-    }
+    // 🔧 关键修复：插入到body末尾，避免任何DOM层级冲突
+    document.body.appendChild(historyContainer);
 
     // 聚焦时显示历史
     searchInput.addEventListener('focus', () => {
         if (searchHistory.length > 0) {
+            // 🔧 动态计算位置，确保在搜索框下方且不覆盖搜索按钮
+            const inputRect = searchInput.getBoundingClientRect();
+            historyContainer.style.top = `${inputRect.bottom + window.scrollY + 5}px`;
+            historyContainer.style.left = `${inputRect.left + window.scrollX}px`;
+            historyContainer.style.width = `${inputRect.width}px`;
+            
             updateHistoryDropdown();
             historyContainer.style.display = 'block';
         }
@@ -112,7 +112,15 @@ function setupSearchHistoryUI(): void {
 
     // 点击外部隐藏
     document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target as Node) && !historyContainer.contains(e.target as Node)) {
+        const target = e.target as Node;
+        // 🔧 关键：检查点击目标，如果是搜索按钮则不隐藏下拉菜单
+        const searchBtn = document.querySelector('.search-btn');
+        if (searchBtn && searchBtn.contains(target)) {
+            // 点击搜索按钮时不隐藏，让搜索执行
+            return;
+        }
+        
+        if (!searchInput.contains(target) && !historyContainer.contains(target)) {
             historyContainer.style.display = 'none';
         }
     });
@@ -211,16 +219,11 @@ function addHistoryStyles(): void {
     style.id = 'search-history-styles';
     style.textContent = `
         .search-history-dropdown {
-            position: fixed;
-            top: 90px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 80px);
-            max-width: 600px;
+            position: absolute;
             background: var(--bg-secondary, #1e1e2e);
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            z-index: 500;
+            z-index: 9999;
             max-height: 400px;
             overflow-y: auto;
             animation: slideDown 0.2s ease;
@@ -232,16 +235,31 @@ function addHistoryStyles(): void {
             visibility: hidden;
         }
         
-        /* 🔧 确保搜索按钮始终在最上层 */
+        /* 🔧 确保搜索按钮和搜索框始终在最上层，高于下拉菜单 */
         .search-btn {
             position: relative !important;
             z-index: 1001 !important;
             pointer-events: auto !important;
         }
         
+        .search-input {
+            position: relative !important;
+            z-index: 1001 !important;
+        }
+        
+        .source-select {
+            position: relative !important;
+            z-index: 1001 !important;
+        }
+        
         .search-wrapper {
             position: relative;
-            z-index: 1000;
+            z-index: 1002;
+        }
+        
+        .search-container {
+            position: relative;
+            z-index: 1002;
         }
 
         @keyframes slideDown {

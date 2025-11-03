@@ -31,8 +31,8 @@
                 <i class="fas fa-cog"></i>
             </button>
             <div class="search-container">
-                <div class="search-wrapper">
-                    <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput">
+                <form class="search-wrapper" onsubmit="event.preventDefault(); window.triggerSearch && window.triggerSearch(); return false;">
+                    <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput" required>
                     <select class="source-select" id="sourceSelect">
                         <option value="netease">网易云</option>
                         <option value="tencent">QQ音乐</option>
@@ -42,10 +42,10 @@
                         <option value="baidu">百度</option>
                         <option value="bilibili">B站</option>
                     </select>
-                    <button class="search-btn">
-                        <i class="fas fa-search"></i>
+                    <button type="submit" class="search-btn">
+                        <i class="fas fa-search" style="pointer-events: none;"></i>
                     </button>
-                </div>
+                </form>
             </div>
         </div>
     </nav>
@@ -433,6 +433,86 @@
         </div>
     </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- 🚨 紧急修复脚本：确保搜索按钮在任何情况下都能工作 -->
+    <script>
+        console.log('🔧 [紧急修复] 加载搜索按钮修复脚本');
+        
+        // 立即定义全局触发函数（防止表单提交时找不到）
+        window.triggerSearch = function() {
+            console.log('🎯 [紧急修复] triggerSearch被调用');
+            const input = document.getElementById('searchInput');
+            const select = document.getElementById('sourceSelect');
+            if (input && input.value.trim()) {
+                console.log('✅ [紧急修复] 触发搜索:', input.value, select.value);
+                // 触发自定义事件，让main.ts中的处理器接收
+                const event = new CustomEvent('manualSearch', {
+                    detail: { keyword: input.value.trim(), source: select.value }
+                });
+                document.dispatchEvent(event);
+            } else {
+                console.warn('⚠️ [紧急修复] 搜索关键词为空');
+            }
+        };
+        
+        // DOM加载完成后立即绑定
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 [紧急修复] DOM加载完成，开始绑定事件');
+            
+            const searchBtn = document.querySelector('.search-btn');
+            const searchInput = document.getElementById('searchInput');
+            const searchWrapper = document.querySelector('.search-wrapper');
+            
+            if (searchBtn) {
+                // 方法1：直接点击事件（最高优先级）
+                searchBtn.addEventListener('click', function(e) {
+                    console.log('🖱️ [紧急修复] 搜索按钮被点击（直接事件）');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.triggerSearch();
+                }, true); // 使用捕获阶段
+                
+                // 方法2：鼠标按下事件
+                searchBtn.addEventListener('mousedown', function(e) {
+                    console.log('🖱️ [紧急修复] 搜索按钮mousedown');
+                    e.preventDefault();
+                    window.triggerSearch();
+                });
+                
+                // 方法3：触摸事件（移动端）
+                searchBtn.addEventListener('touchstart', function(e) {
+                    console.log('📱 [紧急修复] 搜索按钮touchstart');
+                    e.preventDefault();
+                    window.triggerSearch();
+                });
+                
+                console.log('✅ [紧急修复] 搜索按钮事件绑定完成（3层防护）');
+            }
+            
+            // Enter键触发
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        console.log('⌨️ [紧急修复] Enter键被按下');
+                        e.preventDefault();
+                        window.triggerSearch();
+                    }
+                });
+            }
+            
+            // 表单提交事件（作为最后的兜底）
+            if (searchWrapper) {
+                searchWrapper.addEventListener('submit', function(e) {
+                    console.log('📋 [紧急修复] 表单submit事件触发');
+                    e.preventDefault();
+                    window.triggerSearch();
+                });
+            }
+        });
+        
+        console.log('✅ [紧急修复] 脚本加载完成');
+    </script>
+    
     <script type="module" src="js/main.ts"></script>
     <!-- 老王修复：Service Worker功能已恢复，支持PWA离线缓存 -->
     <script>
