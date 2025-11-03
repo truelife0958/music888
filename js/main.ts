@@ -701,55 +701,39 @@ async function handleSearch(): Promise<void> {
         return;
     }
     
-    // 添加到搜索历史
     addSearchHistory(keyword);
-    
     ui.showLoading('searchResults');
 
-    // 🔥 修复无限循环BUG：智能搜索逻辑 - 正确区分"API错误"和"无结果"
     const sourcesToTry = [source, 'netease', 'tencent', 'kugou', 'kuwo'];
-    const uniqueSources = [...new Set(sourcesToTry)]; // 去重
-
+    const uniqueSources = [...new Set(sourcesToTry)];
     let lastError: any = null;
     
     for (const trySource of uniqueSources) {
         try {
-            console.log(`🔍 [handleSearch] 尝试音乐源: ${trySource}`);
             const songs = await api.searchMusicAPI(keyword, trySource);
-
             if (songs.length > 0) {
                 ui.displaySearchResults(songs, 'searchResults', songs);
                 const sourceName = getSourceName(trySource);
                 ui.showNotification(`找到 ${songs.length} 首歌曲 (来源: ${sourceName})`, 'success');
-                return; // ✅ 找到结果就返回
-            } else {
-                console.log(`⚠️ [handleSearch] ${trySource} 返回0结果，尝试下一个音乐源`);
-                // ⚠️ 无结果但没报错：继续尝试下一个音乐源
+                return;
             }
         } catch (error) {
             lastError = error;
-            
-            // 🔥 关键修复：检查是否是搜索频率限制错误
+            // 检测限流错误，立即停止
             if (error instanceof Error && error.message === 'SEARCH_RATE_LIMIT_EXCEEDED') {
-                console.error('❌ [handleSearch] 搜索频率过高，停止所有尝试');
                 const waitTime = (error as any).waitTime || 10;
                 ui.showError(`搜索过于频繁，请${waitTime}秒后再试`, 'searchResults');
                 ui.showNotification('搜索过于频繁，请稍后再试', 'error');
-                return; // ❌ 遇到限流错误，立即停止
+                return;
             }
-            
-            console.warn(`⚠️ [handleSearch] ${trySource} 搜索失败:`, error);
-            // ⚠️ 其他API错误：继续尝试下一个音乐源
         }
     }
 
-    // 所有音乐源都没结果或都失败了
+    // 所有音乐源都失败或无结果
     if (lastError) {
-        console.error('❌ [handleSearch] 所有音乐源都失败');
         ui.showError('搜索失败，请稍后重试', 'searchResults');
         ui.showNotification('搜索失败，请检查网络连接', 'error');
     } else {
-        console.warn('⚠️ [handleSearch] 所有音乐源都无结果');
         ui.showError('所有音乐平台都未找到相关歌曲，请尝试其他关键词', 'searchResults');
         ui.showNotification('未找到相关歌曲', 'warning');
     }
