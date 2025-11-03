@@ -82,10 +82,12 @@ const API_FAILURE_THRESHOLD = 3; // 连续失败3次后切换API
 let totalApiSwitchCount = 0; // 总切换次数
 const MAX_API_SWITCH_COUNT = 10; // 最大切换次数，防止无限循环
 
-// 🔥 BUG-002修复: 搜索尝试次数限制
-let searchAttemptCount = 0; // 当前搜索的尝试次数
-const MAX_SEARCH_ATTEMPTS = 20; // 最大搜索尝试次数，防止无限循环
-let lastSearchKeyword = ''; // 上次搜索的关键词
+// 🔥 BUG-002修复V2: 基于时间窗口的搜索限流（彻底解决无限循环）
+const searchTimestamps = new Map<string, number[]>(); // key: keyword, value: [timestamp1, timestamp2, ...]
+const SEARCH_WINDOW_MS = 10000; // 10秒时间窗口
+const MAX_SEARCHES_IN_WINDOW = 20; // 10秒内最多搜索20次
+let lastSearchCleanupTime = Date.now(); // 上次清理时间
+const CLEANUP_INTERVAL_MS = 60000; // 每60秒清理一次过期记录
 
 //  DEBUG LOG: API初始化信息
 console.log('🔧 [API初始化] 当前API配置:', {
@@ -781,25 +783,48 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
 }
 
 export async function searchMusicAPI(keyword: string, source: string, limit: number = 100): Promise<Song[]> {
-    // 🔥 BUG-002修复: 检测新搜索请求，重置计数器
-    if (keyword !== lastSearchKeyword) {
-        searchAttemptCount = 0;
-        lastSearchKeyword = keyword;
-        console.log('🆕 [searchMusicAPI] 新搜索请求，重置尝试计数');
+    // 🔥 BUG-002修复V2: 基于时间窗口的搜索限流
+    const now = Date.now();
+    
+    // 定期清理过期记录（每60秒）
+    if (now - lastSearchCleanupTime > CLEANUP_INTERVAL_MS) {
+        for (const [key, timestamps] of searchTimestamps.entries()) {
+            const recentTimestamps = timestamps.filter(t => now - t < SEARCH_WINDOW_MS);
+            if (recentTimestamps.length === 0) {
+                searchTimestamps.delete(key);
+            } else {
+                searchTimestamps.set(key, recentTimestamps);
+            }
+        }
+        lastSearchCleanupTime = now;
     }
     
-    // 🔥 BUG-002修复: 检查是否超过最大尝试次数
-    searchAttemptCount++;
-    if (searchAttemptCount > MAX_SEARCH_ATTEMPTS) {
-        console.error('❌ [searchMusicAPI] 已达到最大搜索尝试次数，停止搜索', {
+    // 获取该关键词的搜索时间戳
+    const timestamps = searchTimestamps.get(keyword) || [];
+    
+    // 过滤掉时间窗口外的记录
+    const recentTimestamps = timestamps.filter(t => now - t < SEARCH_WINDOW_MS);
+    
+    // 检查是否超过限制
+    if (recentTimestamps.length >= MAX_SEARCHES_IN_WINDOW) {
+        const waitTime = Math.ceil((SEARCH_WINDOW_MS - (now - recentTimestamps[0])) / 1000);
+        console.error('❌ [searchMusicAPI] 搜索频率过高，请稍后再试', {
             关键词: keyword,
-            尝试次数: searchAttemptCount,
-            最大次数: MAX_SEARCH_ATTEMPTS
+            时间窗口: `${SEARCH_WINDOW_MS / 1000}秒`,
+            当前次数: recentTimestamps.length,
+            最大次数: MAX_SEARCHES_IN_WINDOW,
+            等待时间: `${waitTime}秒`
         });
-        searchAttemptCount = 0; // 重置计数器
-        lastSearchKeyword = ''; // 重置关键词
-        return []; // 返回空数组，停止搜索
+        
+        // 抛出特殊错误，让外层调用者知道应该停止
+        const error = new Error('SEARCH_RATE_LIMIT_EXCEEDED');
+        (error as any).waitTime = waitTime;
+        throw error;
     }
+    
+    // 记录本次搜索时间
+    recentTimestamps.push(now);
+    searchTimestamps.set(keyword, recentTimestamps);
     
     console.log('🔍 [searchMusicAPI] 搜索请求:', {
         关键词: keyword,
@@ -807,7 +832,7 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         数量: limit,
         当前API: API_BASE,
         API失败计数: apiFailureCount,
-        搜索尝试次数: `${searchAttemptCount}/${MAX_SEARCH_ATTEMPTS}`
+        搜索频率: `${recentTimestamps.length}/${MAX_SEARCHES_IN_WINDOW} (${SEARCH_WINDOW_MS / 1000}秒内)`
     });
 
     // Bilibili 音乐源使用独立API，失败时自动降级
@@ -882,17 +907,10 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         console.log(`✅ [searchMusicAPI] 搜索成功:`, {
             返回歌曲数: songs.length,
             关键词: keyword,
-            音乐源: source,
-            尝试次数: searchAttemptCount
+            音乐源: source
         });
         
         resetApiFailureCount(); // 成功时重置失败计数
-        
-        // 🔥 BUG-002修复: 搜索成功后重置计数器
-        if (songs.length > 0) {
-            searchAttemptCount = 0;
-            lastSearchKeyword = '';
-        }
         
         return songs.map((song: any) => ({ ...song, source: source }));
     } catch (error) {
