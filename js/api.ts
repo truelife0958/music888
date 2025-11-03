@@ -82,7 +82,12 @@ const API_FAILURE_THRESHOLD = 3; // 连续失败3次后切换API
 let totalApiSwitchCount = 0; // 总切换次数
 const MAX_API_SWITCH_COUNT = 10; // 最大切换次数，防止无限循环
 
-// 🔍 DEBUG LOG: API初始化信息
+// 🔥 BUG-002修复: 搜索尝试次数限制
+let searchAttemptCount = 0; // 当前搜索的尝试次数
+const MAX_SEARCH_ATTEMPTS = 20; // 最大搜索尝试次数，防止无限循环
+let lastSearchKeyword = ''; // 上次搜索的关键词
+
+//  DEBUG LOG: API初始化信息
 console.log('🔧 [API初始化] 当前API配置:', {
     初始API: API_BASE,
     API索引: currentApiIndex,
@@ -631,6 +636,40 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
         console.log('🔍 [getSongUrl] 请求URL:', url);
 
         const response = await fetchWithRetry(url);
+        
+        // 🔥 BUG-001修复: 检测401未授权错误
+        if (response.status === 401) {
+            console.warn('⚠️ [getSongUrl] API返回401未授权，尝试网易云直链API降级');
+            
+            // 只对网易云音乐源使用直链API
+            if (song.source === 'netease') {
+                const directUrl = `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`;
+                console.log('🔄 [getSongUrl] 使用网易云直链API:', directUrl);
+                
+                // 验证直链是否有效
+                try {
+                    const testResponse = await fetch(directUrl, { method: 'HEAD' });
+                    if (testResponse.ok) {
+                        console.log('✅ [getSongUrl] 网易云直链API可用');
+                        return {
+                            url: directUrl,
+                            br: quality,
+                            usedSource: 'netease-direct'
+                        };
+                    }
+                } catch (directError) {
+                    console.warn('⚠️ [getSongUrl] 网易云直链API不可用');
+                }
+            }
+            
+            // 如果直链也失败，返回错误
+            return {
+                url: '',
+                br: '',
+                error: `API授权失败 (401)，请稍后重试 - 歌曲: ${song.name}`
+            };
+        }
+        
         const data = await response.json();
 
         console.log('📊 [getSongUrl] API响应:', {
@@ -643,11 +682,51 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
             console.log('✅ [getSongUrl] 成功获取歌曲URL');
             return data;
         } else {
+            // 🔥 BUG-001修复: API返回空URL时尝试网易云直链
+            if (song.source === 'netease') {
+                console.warn('⚠️ [getSongUrl] API返回空URL，尝试网易云直链API');
+                const directUrl = `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`;
+                
+                try {
+                    const testResponse = await fetch(directUrl, { method: 'HEAD' });
+                    if (testResponse.ok) {
+                        console.log('✅ [getSongUrl] 网易云直链API可用');
+                        return {
+                            url: directUrl,
+                            br: quality,
+                            usedSource: 'netease-direct'
+                        };
+                    }
+                } catch (directError) {
+                    console.warn('⚠️ [getSongUrl] 网易云直链API不可用');
+                }
+            }
+            
             const errorMsg = `无法获取音乐链接 - 歌曲: ${song.name}, 品质: ${quality}`;
             console.warn('⚠️ [getSongUrl] API返回空URL:', errorMsg);
             return { url: '', br: '', error: errorMsg };
         }
     } catch (error) {
+        // 🔥 BUG-001修复: 请求失败时尝试网易云直链
+        if (song.source === 'netease') {
+            console.warn('⚠️ [getSongUrl] API请求失败，尝试网易云直链API');
+            const directUrl = `https://music.163.com/song/media/outer/url?id=${song.id}.mp3`;
+            
+            try {
+                const testResponse = await fetch(directUrl, { method: 'HEAD' });
+                if (testResponse.ok) {
+                    console.log('✅ [getSongUrl] 网易云直链API可用');
+                    return {
+                        url: directUrl,
+                        br: quality,
+                        usedSource: 'netease-direct'
+                    };
+                }
+            } catch (directError) {
+                console.warn('⚠️ [getSongUrl] 网易云直链API不可用');
+            }
+        }
+        
         const errorMsg = `API请求失败 - ${error instanceof Error ? error.message : String(error)}`;
         console.error('❌ [getSongUrl] 请求失败:', errorMsg);
         return { url: '', br: '', error: errorMsg };
@@ -702,12 +781,33 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
 }
 
 export async function searchMusicAPI(keyword: string, source: string, limit: number = 100): Promise<Song[]> {
+    // 🔥 BUG-002修复: 检测新搜索请求，重置计数器
+    if (keyword !== lastSearchKeyword) {
+        searchAttemptCount = 0;
+        lastSearchKeyword = keyword;
+        console.log('🆕 [searchMusicAPI] 新搜索请求，重置尝试计数');
+    }
+    
+    // 🔥 BUG-002修复: 检查是否超过最大尝试次数
+    searchAttemptCount++;
+    if (searchAttemptCount > MAX_SEARCH_ATTEMPTS) {
+        console.error('❌ [searchMusicAPI] 已达到最大搜索尝试次数，停止搜索', {
+            关键词: keyword,
+            尝试次数: searchAttemptCount,
+            最大次数: MAX_SEARCH_ATTEMPTS
+        });
+        searchAttemptCount = 0; // 重置计数器
+        lastSearchKeyword = ''; // 重置关键词
+        return []; // 返回空数组，停止搜索
+    }
+    
     console.log('🔍 [searchMusicAPI] 搜索请求:', {
         关键词: keyword,
         音乐源: source,
         数量: limit,
         当前API: API_BASE,
-        API失败计数: apiFailureCount
+        API失败计数: apiFailureCount,
+        搜索尝试次数: `${searchAttemptCount}/${MAX_SEARCH_ATTEMPTS}`
     });
 
     // Bilibili 音乐源使用独立API，失败时自动降级
@@ -782,10 +882,17 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         console.log(`✅ [searchMusicAPI] 搜索成功:`, {
             返回歌曲数: songs.length,
             关键词: keyword,
-            音乐源: source
+            音乐源: source,
+            尝试次数: searchAttemptCount
         });
         
         resetApiFailureCount(); // 成功时重置失败计数
+        
+        // 🔥 BUG-002修复: 搜索成功后重置计数器
+        if (songs.length > 0) {
+            searchAttemptCount = 0;
+            lastSearchKeyword = '';
+        }
         
         return songs.map((song: any) => ({ ...song, source: source }));
     } catch (error) {
@@ -803,11 +910,30 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
 async function searchBilibiliMusic(keyword: string, page: number = 1, limit: number = 100): Promise<Song[]> {
     try {
         const url = `${BILIBILI_API_BASE}?action=search&query=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`;
-                const response = await fetchWithRetry(url);
+        console.log('🔍 [searchBilibiliMusic] 请求URL:', url);
+        
+        const response = await fetchWithRetry(url);
         const result = await response.json();
 
-                if (result.code !== 200 || !result.data || !Array.isArray(result.data)) {
-                        throw new Error(result.message || 'Bilibili API 返回数据格式不正确');
+        console.log('📊 [searchBilibiliMusic] API响应:', {
+            状态码: result.code,
+            消息: result.message,
+            数据数量: result.data?.length || 0
+        });
+
+        // 🔥 BUG-003修复: 改进错误提示，让用户知道发生了什么
+        if (result.code !== 200 || !result.data || !Array.isArray(result.data)) {
+            const errorMsg = result.message || 'Bilibili API 返回数据格式不正确';
+            console.error('❌ [searchBilibiliMusic] Bilibili API错误:', {
+                错误代码: result.code,
+                错误消息: errorMsg,
+                完整响应: result
+            });
+            
+            // 🔥 BUG-003修复: 向用户显示友好的错误提示（通过console.warn）
+            console.warn(`⚠️ Bilibili搜索失败: ${errorMsg}，已自动切换到网易云音乐`);
+            
+            throw new Error(errorMsg);
         }
 
         // 转换 Bilibili 数据格式为统一格式（兼容cenguigui API格式）
@@ -829,9 +955,15 @@ async function searchBilibiliMusic(keyword: string, page: number = 1, limit: num
             }
         }));
 
-                return songs;
+        console.log(`✅ [searchBilibiliMusic] 搜索成功: 返回${songs.length}首歌曲`);
+        return songs;
     } catch (error) {
-                throw error;
+        console.error('❌ [searchBilibiliMusic] 搜索失败:', error instanceof Error ? error.message : String(error));
+        
+        // 🔥 BUG-003修复: 向用户显示具体的错误信息（通过console.warn）
+        console.warn('⚠️ Bilibili音乐搜索失败，已自动切换到其他音乐源');
+        
+        throw error;
     }
 }
 
