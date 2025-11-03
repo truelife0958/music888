@@ -286,18 +286,67 @@ async function handleSearchEnhanced(): Promise<void> {
     ui.showLoading('searchResults');
     switchTab('search');
 
-    try {
-        const songs = await api.searchMusicAPI(keyword, source);
-        if (songs.length > 0) {
-            uiEnhancements.displaySearchResultsWithSelection(songs, 'searchResults', songs);
-            ui.showNotification(`找到 ${songs.length} 首歌曲`, 'success');
-        } else {
-            uiEnhancements.showError('未找到相关歌曲', 'searchResults');
+    // 🔥 修复无限循环BUG：智能搜索逻辑 - 正确区分"API错误"和"无结果"
+    const sourcesToTry = [source, 'netease', 'tencent', 'kugou', 'kuwo'];
+    const uniqueSources = [...new Set(sourcesToTry)]; // 去重
+
+    let lastError: any = null;
+    
+    for (const trySource of uniqueSources) {
+        try {
+            console.log(`🔍 [handleSearchEnhanced] 尝试音乐源: ${trySource}`);
+            const songs = await api.searchMusicAPI(keyword, trySource);
+
+            if (songs.length > 0) {
+                uiEnhancements.displaySearchResultsWithSelection(songs, 'searchResults', songs);
+                const sourceName = getSourceName(trySource);
+                ui.showNotification(`找到 ${songs.length} 首歌曲 (来源: ${sourceName})`, 'success');
+                return; // ✅ 找到结果就返回
+            } else {
+                console.log(`⚠️ [handleSearchEnhanced] ${trySource} 返回0结果，尝试下一个音乐源`);
+                // ⚠️ 无结果但没报错：继续尝试下一个音乐源
+            }
+        } catch (error) {
+            lastError = error;
+            
+            // 🔥 关键修复：检查是否是搜索频率限制错误
+            if (error instanceof Error && error.message === 'SEARCH_RATE_LIMIT_EXCEEDED') {
+                console.error('❌ [handleSearchEnhanced] 搜索频率过高，停止所有尝试');
+                const waitTime = (error as any).waitTime || 10;
+                uiEnhancements.showError(`搜索过于频繁，请${waitTime}秒后再试`, 'searchResults');
+                ui.showNotification('搜索过于频繁，请稍后再试', 'error');
+                return; // ❌ 遇到限流错误，立即停止
+            }
+            
+            console.warn(`⚠️ [handleSearchEnhanced] ${trySource} 搜索失败:`, error);
+            // ⚠️ 其他API错误：继续尝试下一个音乐源
         }
-    } catch (error) {
-        uiEnhancements.showError('搜索失败，请稍后重试', 'searchResults');
-        ui.showNotification('搜索失败', 'error');
     }
+
+    // 所有音乐源都没结果或都失败了
+    if (lastError) {
+        console.error('❌ [handleSearchEnhanced] 所有音乐源都失败');
+        uiEnhancements.showError('搜索失败，请稍后重试', 'searchResults');
+        ui.showNotification('搜索失败，请检查网络连接', 'error');
+    } else {
+        console.warn('⚠️ [handleSearchEnhanced] 所有音乐源都无结果');
+        uiEnhancements.showError('所有音乐平台都未找到相关歌曲，请尝试其他关键词', 'searchResults');
+        ui.showNotification('未找到相关歌曲', 'warning');
+    }
+}
+
+// 获取音乐源名称辅助函数
+function getSourceName(source: string): string {
+    const sourceNames: { [key: string]: string } = {
+        'netease': '网易云音乐',
+        'tencent': 'QQ音乐',
+        'kugou': '酷狗音乐',
+        'kuwo': '酷我音乐',
+        'xiami': '虾米音乐',
+        'baidu': '百度音乐',
+        'bilibili': 'Bilibili音乐',
+    };
+    return sourceNames[source] || source;
 }
 
 async function handleExploreEnhanced(): Promise<void> {
