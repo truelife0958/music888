@@ -32,6 +32,10 @@ export default async function handler(req, res) {
         console.log('🔄 [GDStudio代理] 转发请求到:', apiUrl.toString());
 
         // 请求GDStudio API（服务器端无CORS限制）
+        // 使用 AbortController 实现超时控制
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+        
         const response = await fetch(apiUrl.toString(), {
             method: 'GET',
             headers: {
@@ -40,8 +44,10 @@ export default async function handler(req, res) {
                 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
                 'Referer': 'https://music888.vercel.app/'
             },
-            timeout: 10000 // 10秒超时
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
 
         // 检查响应状态
         if (!response.ok) {

@@ -19,6 +19,10 @@
       "destination": "/api/bilibili-proxy.js"
     },
     {
+      "source": "/api/gdstudio-proxy",
+      "destination": "/api/gdstudio-proxy.js"
+    },
+    {
       "source": "/api/proxy",
       "destination": "/api/proxy.js"
     }
