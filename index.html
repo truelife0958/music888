@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>沄听 - 在线音乐播放器</title>
-    <meta name="description" content="企业级在线音乐播放器 - 支持7个音乐平台、智能推荐、批量操作">
+    <meta name="description" content="简洁的在线音乐播放器">
     <meta name="theme-color" content="#1db954">
     <link rel="icon" type="image/x-icon" href="ytmusic.ico">
-    <!-- 老王修复：PWA功能已恢复 -->
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="ytmusic.ico">
-    <!-- 老王注释：Vite会通过main.ts自动注入CSS，不需要手动引入 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -22,135 +19,71 @@
                 <i class="fas fa-music"></i>
                 <span>沄听</span>
             </div>
-            <!-- 老王新增：API状态监控显示 -->
+            <button class="control-btn small" id="rankBtn" title="音乐排行榜" style="margin-right: 10px;">
+                <i class="fas fa-chart-line"></i>
+            </button>
+            <button class="control-btn small" id="dailyRecommendBtn" title="每日推荐" style="margin-right: 10px;">
+                <i class="fas fa-dice"></i>
+            </button>
+            <button class="control-btn small" id="statsBtn" title="播放统计" style="margin-right: 20px;">
+                <i class="fas fa-chart-bar"></i>
+            </button>
             <div class="api-status" id="apiStatus">
                 <span class="api-indicator api-local"></span>
                 <span class="api-name">正在检测...</span>
             </div>
-            <button class="settings-btn" id="settingsBtn" title="设置">
-                <i class="fas fa-cog"></i>
-            </button>
             <div class="search-container">
-                <form class="search-wrapper" onsubmit="event.preventDefault(); window.triggerSearch && window.triggerSearch(); return false;">
+                <form class="search-wrapper" onsubmit="event.preventDefault(); return false;">
                     <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput" required>
                     <select class="source-select" id="sourceSelect">
                         <option value="netease">网易云音乐</option>
                         <option value="tencent">QQ音乐</option>
                         <option value="kugou">酷狗音乐</option>
                         <option value="kuwo">酷我音乐</option>
-                        <option value="xiami">虾米音乐</option>
-                        <option value="baidu">百度音乐</option>
-                        <option value="bilibili">Bilibili音乐</option>
                     </select>
                     <button type="submit" class="search-btn">
-                        <i class="fas fa-search" style="pointer-events: none;"></i>
+                        <i class="fas fa-search"></i>
                     </button>
                 </form>
             </div>
         </div>
     </nav>
+    
     <div class="main-container">
         <div class="content-section">
             <div class="tabs">
                 <button class="tab-btn active" data-tab="search">
                     <i class="fas fa-search"></i> 搜索结果
                 </button>
-                <button class="tab-btn" data-tab="discover">
-                    <i class="fas fa-compass"></i> 发现音乐
-                </button>
                 <button class="tab-btn" data-tab="parse">
                     <i class="fas fa-cloud-download-alt"></i> 解析歌单
                 </button>
             </div>
 
-            <!-- 发现音乐标签 - 只保留排行榜 -->
-            <div id="discoverTab" class="tab-content">
-                <div class="section-header">
-                    <h3><i class="fas fa-trophy"></i> 排行榜</h3>
+            <div id="searchTab" class="tab-content">
+                <div class="search-results" id="searchResults">
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <div>在上方搜索框输入关键词开始搜索音乐</div>
+                    </div>
                 </div>
-                <div id="toplistsGrid"></div>
             </div>
-            <div id="parseTab" class="tab-content">
-                <!-- 我保存的歌单 -->
-                <div class="saved-playlists-container" style="margin-bottom: 15px;">
-                    <div class="saved-playlists-header">
-                        <h4 style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;" id="savedPlaylistsHeader">
-                            <i class="fas fa-bookmark"></i>
-                            我保存的歌单
-                            <i class="fas fa-chevron-down" id="savedPlaylistsToggleIcon" style="font-size: 12px; color: rgba(255, 255, 255, 0.6);"></i>
-                        </h4>
-                        <button class="clear-all-btn" id="clearSavedPlaylistsBtn" title="清空所有歌单">
-                            <i class="fas fa-trash"></i> 清空
-                        </button>
-                    </div>
-                    <div class="saved-playlists-list" id="savedPlaylistsListInParse" style="display: none;">
-                        <div class="empty-saved-state">
-                            <i class="fas fa-music"></i>
-                            <div>暂无保存的歌单</div>
-                            <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
-                                在下方解析歌单后保存
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
+            <div id="parseTab" class="tab-content">
                 <div class="playlist-input-container">
                     <select class="playlist-source-select" id="playlistSourceSelect" style="margin-bottom: 10px;">
                         <option value="netease">网易云音乐</option>
                         <option value="tencent">QQ音乐</option>
                     </select>
-                    <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入歌单ID (如: 60198, 3778678) 或链接...">
+                    <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入歌单ID (如: 60198) 或链接...">
                     <button class="playlist-btn">
                         <i class="fas fa-download"></i> 解析
                     </button>
                 </div>
-                <div id="currentParsedPlaylist" style="display: none;">
-                    <div class="parsed-playlist-header">
-                        <div class="parsed-playlist-info">
-                            <h3 id="parsedPlaylistName">歌单名称</h3>
-                            <p id="parsedPlaylistStats"><i class="fas fa-music"></i> 0首歌曲</p>
-                        </div>
-                        <div class="parsed-playlist-actions">
-                            <button class="action-btn-large download-all-btn" title="下载整个歌单">
-                                <i class="fas fa-download"></i> 下载全部
-                            </button>
-                            <button class="action-btn-large save-btn" title="保存到我的歌单">
-                                <i class="fas fa-bookmark"></i> 保存歌单
-                            </button>
-                            <button class="action-btn-large clear-btn" title="清除当前解析">
-                                <i class="fas fa-times-circle"></i> 清除
-                            </button>
-                        </div>
-                    </div>
-                </div>
                 <div class="search-results" id="parseResults">
                     <div class="empty-state">
                         <i class="fas fa-cloud-download-alt"></i>
-                        <div>输入网易云歌单ID或链接后点击解析按钮</div>
-                        <div style="margin-top: 10px; font-size: 12px; color: rgba(255, 255, 255, 0.5);">
-                            推荐测试歌单ID: <span style="color: #1db954; cursor: pointer;" onclick="document.getElementById('playlistIdInput').value='60198'">60198</span> ·
-                            <span style="color: #1db954; cursor: pointer;" onclick="document.getElementById('playlistIdInput').value='3778678'">3778678</span> ·
-                            <span style="color: #1db954; cursor: pointer;" onclick="document.getElementById('playlistIdInput').value='2884035'">2884035</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div id="searchTab" class="tab-content">
-                <!-- 推荐音乐和探索雷达按钮 -->
-                <div class="discover-section" style="display: flex; gap: 10px; margin-bottom: 20px; padding: 0 20px;">
-                    <button class="explore-radar-btn" id="recommendMusicBtn" style="flex: 1;">
-                        <i class="fas fa-star"></i>
-                        <span>推荐音乐</span>
-                    </button>
-                    <button class="explore-radar-btn" id="exploreRadarBtn" style="flex: 1;">
-                        <i class="fas fa-radar"></i>
-                        <span>探索雷达</span>
-                    </button>
-                </div>
-                <div class="search-results" id="searchResults">
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <div>在上方搜索框输入关键词开始搜索音乐，或点击下方按钮发现更多音乐</div>
+                        <div>输入歌单ID或链接后点击解析按钮</div>
                     </div>
                 </div>
             </div>
@@ -161,7 +94,10 @@
             <div class="player-content">
                 <div class="current-song">
                     <div class="current-cover-container">
-                        <img class="current-cover" id="currentCover" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIwIiBoZWlnaHQ9IjIyMCIgdmlld0JveD0iMCAwIDIyMCAyMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMjAiIGhlaWdodD0iMjIwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU5LDAuMSkiIHJ4PSIyMCIvPgo8cGF0aCBkPSJNMTEwIDcwTDE0MCAxMTBIMTIwVjE1MEg5MFYxMTBINzBMMTEwIDcwWiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=" alt="专辑封面">
+                        <img class="current-cover" id="currentCover"
+                             src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIwIiBoZWlnaHQ9IjIyMCIgdmlld0JveD0iMCAwIDIyMCAyMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMjAiIGhlaWdodD0iMjIwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU5LDAuMSkiIHJ4PSIyMCIvPgo8cGF0aCBkPSJNMTEwIDcwTDE0MCAxMTBIMTIwVjE1MEg5MFYxMTBINzBMMTEwIDcwWiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo="
+                             alt="专辑封面"
+                             loading="eager">
                     </div>
                     <div class="current-info">
                         <h3 id="currentTitle">未选择歌曲</h3>
@@ -188,7 +124,6 @@
                         <i class="fas fa-repeat"></i>
                     </button>
                 </div>
-                <!-- 歌词显示区域 -->
                 <div class="lyrics-container-inline" id="lyricsContainerInline">
                     <div class="lyric-line">暂无歌词</div>
                 </div>
@@ -209,9 +144,7 @@
                     <select class="quality-select" id="qualitySelect">
                         <option value="128">标准 128K</option>
                         <option value="192">较高 192K</option>
-                        <option value="320">高品质 320K</option>
-                        <option value="740" selected>无损 FLAC</option>
-                        <option value="999">Hi-Res</option>
+                        <option value="320" selected>高品质 320K</option>
                     </select>
                     <button class="download-btn" id="downloadSongBtn" disabled>
                         <i class="fas fa-download"></i>
@@ -226,66 +159,9 @@
             <audio id="audioPlayer" preload="metadata"></audio>
         </div>
 
-
-        <!-- 我的区域 -->
-        <div class="my-section">
-            <h2 class="section-title">
-                <i class="fas fa-bookmark"></i> 我的
-            </h2>
-
-            <!-- 播放历史 -->
-            <div class="saved-playlists-container" style="margin-bottom: 15px;">
-                <div class="saved-playlists-header">
-                    <h4 style="display: flex; align-items: center; gap: 8px; margin: 0;">
-                        <i class="fas fa-history"></i>
-                        播放历史
-                    </h4>
-                    <button class="clear-all-btn" id="myClearHistoryBtn" title="清空播放历史">
-                        <i class="fas fa-trash"></i> 清空
-                    </button>
-                </div>
-                <div class="saved-playlists-list" id="myPlayHistoryList" style="display: block;">
-                    <div class="empty-saved-state">
-                        <i class="fas fa-history"></i>
-                        <div>暂无播放记录</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 我的喜欢 -->
-            <div class="saved-playlists-container" style="margin-bottom: 15px;">
-                <div class="saved-playlists-header">
-                    <h4 style="display: flex; align-items: center; gap: 8px; margin: 0;">
-                        <i class="fas fa-heart"></i>
-                        我的喜欢
-                    </h4>
-                    <button class="clear-all-btn" id="myClearFavoritesBtn" title="清空收藏">
-                        <i class="fas fa-trash"></i> 清空
-                    </button>
-                </div>
-                <div class="saved-playlists-list" id="myFavoritesList" style="display: block;">
-                    <div class="empty-saved-state">
-                        <i class="fas fa-heart"></i>
-                        <div>暂无收藏歌曲</div>
-                        <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
-                            点击播放器的爱心按钮收藏歌曲
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="search-results" id="myResults">
-                <div class="empty-state">
-                    <i class="fas fa-hand-pointer"></i>
-                    <div>点击上方播放历史或收藏查看详情</div>
-                </div>
-            </div>
-        </div>
-
         <div class="mobile-page-indicators">
-            <div class="page-indicator active" onclick="switchMobilePage(0)"></div>
-            <div class="page-indicator" onclick="switchMobilePage(1)"></div>
-            <div class="page-indicator" onclick="switchMobilePage(2)"></div>
+            <div class="page-indicator active" onclick="switchMobilePage(0)" ontouchend="event.preventDefault(); switchMobilePage(0)"></div>
+            <div class="page-indicator" onclick="switchMobilePage(1)" ontouchend="event.preventDefault(); switchMobilePage(1)"></div>
         </div>
     </div>
 
@@ -308,227 +184,31 @@
                 <button class="modal-btn" id="clearPlaylistBtn">
                     <i class="fas fa-trash"></i> 清空列表
                 </button>
-                <button class="modal-btn" id="savePlaylistBtn">
-                    <i class="fas fa-save"></i> 保存为歌单
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 设置面板弹窗 -->
-    <div class="settings-modal" id="settingsModal">
-        <div class="settings-modal-content">
-            <div class="settings-modal-header">
-                <h3><i class="fas fa-cog"></i> 设置</h3>
-                <button class="close-modal-btn" id="closeSettingsModal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="settings-modal-body">
-                <!-- API设置 -->
-                <div class="settings-section">
-                    <div class="settings-section-title">
-                        <i class="fas fa-server"></i>
-                        <span>API设置</span>
-                    </div>
-                    <div class="settings-item">
-                        <label for="apiSourceSelect">默认音乐源</label>
-                        <select id="apiSourceSelect" class="settings-select">
-                            <option value="netease">网易云音乐</option>
-                            <option value="tencent">QQ音乐</option>
-                        </select>
-                    </div>
-                    <div class="settings-item">
-                        <label>
-                            <input type="checkbox" id="autoRetryCheckbox" checked>
-                            <span>API失败时自动重试</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- 缓存管理 -->
-                <div class="settings-section">
-                    <div class="settings-section-title">
-                        <i class="fas fa-database"></i>
-                        <span>缓存管理</span>
-                    </div>
-                    <div class="settings-item">
-                        <div class="cache-info">
-                            <span>缓存大小:</span>
-                            <span id="cacheSize">计算中...</span>
-                        </div>
-                    </div>
-                    <div class="settings-item">
-                        <button class="settings-btn-action" id="clearCacheBtn">
-                            <i class="fas fa-trash-alt"></i>
-                            清理缓存
-                        </button>
-                        <button class="settings-btn-action" id="clearAllDataBtn">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            清空所有数据
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 播放设置 -->
-                <div class="settings-section">
-                    <div class="settings-section-title">
-                        <i class="fas fa-play-circle"></i>
-                        <span>播放设置</span>
-                    </div>
-                    <div class="settings-item">
-                        <label>
-                            <input type="checkbox" id="autoPlayCheckbox">
-                            <span>自动播放下一首</span>
-                        </label>
-                    </div>
-                    <div class="settings-item">
-                        <label>
-                            <input type="checkbox" id="showLyricsCheckbox" checked>
-                            <span>显示歌词</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- 关于 -->
-                <div class="settings-section">
-                    <div class="settings-section-title">
-                        <i class="fas fa-info-circle"></i>
-                        <span>关于</span>
-                    </div>
-                    <div class="settings-item about-info">
-                        <p><strong>沄听 - 在线音乐播放器</strong></p>
-                        <p>版本: 2.0.0</p>
-                        <p>支持7个音乐平台、智能推荐、批量操作</p>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 
     <footer class="footer">
         <div class="footer-content">
-            <div class="footer-links">
-                <a href="https://github.com/truelife0958/music888" target="_blank" rel="noopener noreferrer">
-                    <i class="fab fa-github"></i>
-                    <span>GitHub 仓库</span>
-                </a>
-                <span class="footer-divider">|</span>
-                <a href="https://github.com/truelife0958/music888/issues" target="_blank" rel="noopener noreferrer">
-                    <i class="fas fa-bug"></i>
-                    <span>反馈问题</span>
-                </a>
-                <span class="footer-divider">|</span>
-                <a href="https://github.com/truelife0958/music888/stargazers" target="_blank" rel="noopener noreferrer">
-                    <i class="fas fa-star"></i>
-                    <span>Star 支持</span>
-                </a>
-            </div>
             <div class="footer-info">
-                <p>© 2025 沄听 - 开源在线音乐播放器</p>
+                <p>© 2025 沄听 - 简洁在线音乐播放器</p>
             </div>
         </div>
     </footer>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    
-    <!-- 🚨 紧急修复脚本：确保搜索按钮在任何情况下都能工作 -->
-    <script>
-        console.log('🔧 [紧急修复] 加载搜索按钮修复脚本');
-        
-        // 立即定义全局触发函数（防止表单提交时找不到）
-        window.triggerSearch = function() {
-            console.log('🎯 [紧急修复] triggerSearch被调用');
-            const input = document.getElementById('searchInput');
-            const select = document.getElementById('sourceSelect');
-            if (input && input.value.trim()) {
-                console.log('✅ [紧急修复] 触发搜索:', input.value, select.value);
-                // 触发自定义事件，让main.ts中的处理器接收
-                const event = new CustomEvent('manualSearch', {
-                    detail: { keyword: input.value.trim(), source: select.value }
-                });
-                document.dispatchEvent(event);
-            } else {
-                console.warn('⚠️ [紧急修复] 搜索关键词为空');
-            }
-        };
-        
-        // DOM加载完成后立即绑定
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔧 [紧急修复] DOM加载完成，开始绑定事件');
-            
-            const searchBtn = document.querySelector('.search-btn');
-            const searchInput = document.getElementById('searchInput');
-            const searchWrapper = document.querySelector('.search-wrapper');
-            
-            if (searchBtn) {
-                // 方法1：直接点击事件（最高优先级）
-                searchBtn.addEventListener('click', function(e) {
-                    console.log('🖱️ [紧急修复] 搜索按钮被点击（直接事件）');
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.triggerSearch();
-                }, true); // 使用捕获阶段
-                
-                // 方法2：鼠标按下事件
-                searchBtn.addEventListener('mousedown', function(e) {
-                    console.log('🖱️ [紧急修复] 搜索按钮mousedown');
-                    e.preventDefault();
-                    window.triggerSearch();
-                });
-                
-                // 方法3：触摸事件（移动端）
-                searchBtn.addEventListener('touchstart', function(e) {
-                    console.log('📱 [紧急修复] 搜索按钮touchstart');
-                    e.preventDefault();
-                    window.triggerSearch();
-                });
-                
-                console.log('✅ [紧急修复] 搜索按钮事件绑定完成（3层防护）');
-            }
-            
-            // Enter键触发
-            if (searchInput) {
-                searchInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        console.log('⌨️ [紧急修复] Enter键被按下');
-                        e.preventDefault();
-                        window.triggerSearch();
-                    }
-                });
-            }
-            
-            // 表单提交事件（作为最后的兜底）
-            if (searchWrapper) {
-                searchWrapper.addEventListener('submit', function(e) {
-                    console.log('📋 [紧急修复] 表单submit事件触发');
-                    e.preventDefault();
-                    window.triggerSearch();
-                });
-            }
-        });
-        
-        console.log('✅ [紧急修复] 脚本加载完成');
-    </script>
+
+    <!-- 优化: 资源预加载提示 -->
+    <link rel="preload" href="/css/style.css" as="style">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="https://music.163.com">
     
     <script type="module" src="js/main.ts"></script>
-    <!-- 老王修复：Service Worker功能已恢复，支持PWA离线缓存 -->
     <script>
         // 注册 Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
                     .then(registration => {
-                        console.log('✅ Service Worker 注册成功:', registration.scope);
-
-                        // 监听更新
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('🔄 检测到新版本，可以刷新页面更新');
-                                }
-                            });
-                        });
+                        console.log('✅ Service Worker 注册成功');
                     })
                     .catch(error => {
                         console.error('❌ Service Worker 注册失败:', error);

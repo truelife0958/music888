@@ -196,34 +196,98 @@ export const storage = {
 };
 
 /**
+ * 错误类型枚举
+ */
+export enum ErrorType {
+    COPYRIGHT = 'COPYRIGHT',
+    EMPTY_RESOURCE = 'EMPTY_RESOURCE',
+    TIMEOUT = 'TIMEOUT',
+    NETWORK = 'NETWORK',
+    PARSE = 'PARSE',
+    UNKNOWN = 'UNKNOWN'
+}
+
+/**
  * 错误消息格式化
  * @param error 错误对象
  * @param context 错误上下文
  * @returns 格式化后的错误消息
+ * @example
+ * ```typescript
+ * formatErrorMessage(new Error('timeout'), '搜索音乐')
+ * // => '搜索音乐: timeout - 网络超时'
+ * ```
  */
 export function formatErrorMessage(error: unknown, context: string = ''): string {
-    let message = context ? `${context}: ` : '';
+    try {
+        let message = context ? `${context}: ` : '';
+        let errorType = ErrorType.UNKNOWN;
 
-    if (error instanceof Error) {
-        message += error.message;
-
-        // 识别常见错误类型
-        if (error.message.includes('版权') || error.message.includes('copyright')) {
-            message += ' - 版权保护';
-        } else if (error.message.includes('空URL') || error.message.includes('empty')) {
-            message += ' - 音乐源无此资源';
-        } else if (error.message.includes('timeout') || error.message.includes('超时')) {
-            message += ' - 网络超时';
-        } else if (error.message.includes('network') || error.message.includes('网络')) {
-            message += ' - 网络连接失败';
+        if (error instanceof Error) {
+            message += error.message;
+            errorType = detectErrorType(error.message);
+        } else if (typeof error === 'string') {
+            message += error;
+            errorType = detectErrorType(error);
+        } else if (error && typeof error === 'object') {
+            // 处理包含 message 属性的对象
+            message += (error as any).message || JSON.stringify(error);
+        } else {
+            message += '未知错误';
         }
-    } else if (typeof error === 'string') {
-        message += error;
-    } else {
-        message += '未知错误';
-    }
 
-    return message;
+        // 添加错误类型提示
+        const typeHint = getErrorTypeHint(errorType);
+        if (typeHint) {
+            message += ` - ${typeHint}`;
+        }
+
+        return message;
+    } catch (err) {
+        console.warn('格式化错误消息失败:', err);
+        return context ? `${context}: 发生错误` : '发生错误';
+    }
+}
+
+/**
+ * 检测错误类型
+ */
+function detectErrorType(message: string): ErrorType {
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes('版权') || lowerMessage.includes('copyright')) {
+        return ErrorType.COPYRIGHT;
+    }
+    if (lowerMessage.includes('空url') || lowerMessage.includes('empty')) {
+        return ErrorType.EMPTY_RESOURCE;
+    }
+    if (lowerMessage.includes('timeout') || lowerMessage.includes('超时')) {
+        return ErrorType.TIMEOUT;
+    }
+    if (lowerMessage.includes('network') || lowerMessage.includes('网络')) {
+        return ErrorType.NETWORK;
+    }
+    if (lowerMessage.includes('parse') || lowerMessage.includes('解析')) {
+        return ErrorType.PARSE;
+    }
+    
+    return ErrorType.UNKNOWN;
+}
+
+/**
+ * 获取错误类型提示
+ */
+function getErrorTypeHint(errorType: ErrorType): string {
+    const hints: Record<ErrorType, string> = {
+        [ErrorType.COPYRIGHT]: '版权保护',
+        [ErrorType.EMPTY_RESOURCE]: '音乐源无此资源',
+        [ErrorType.TIMEOUT]: '网络超时',
+        [ErrorType.NETWORK]: '网络连接失败',
+        [ErrorType.PARSE]: '数据解析失败',
+        [ErrorType.UNKNOWN]: ''
+    };
+    
+    return hints[errorType] || '';
 }
 
 /**
@@ -269,71 +333,179 @@ export function isMobile(): boolean {
 }
 
 /**
+ * 艺术家对象接口
+ */
+interface Artist {
+    name: string;
+    id?: string;
+}
+
+/**
+ * 艺术家类型定义
+ */
+type ArtistInput = string | string[] | Artist | Artist[] | null | undefined;
+
+/**
  * 格式化艺术家信息 - 统一处理各种格式
  * @param artist 艺术家信息（可能是字符串、数组、对象或对象数组）
  * @returns 格式化后的艺术家字符串
+ * @example
+ * ```typescript
+ * formatArtist('周杰伦') // => '周杰伦'
+ * formatArtist(['周杰伦', '方文山']) // => '周杰伦 / 方文山'
+ * formatArtist({ name: '周杰伦', id: '123' }) // => '周杰伦'
+ * ```
  */
-export function formatArtist(artist: any): string {
+export function formatArtist(artist: ArtistInput): string {
+    // 优化: 类型保护和边界检查
     if (!artist) return '未知歌手';
     
-    // 如果是数组
-    if (Array.isArray(artist)) {
-        if (artist.length === 0) return '未知歌手';
-        // 检查数组元素是否是对象
-        if (typeof artist[0] === 'object' && artist[0]?.name) {
-            return artist.map((a: any) => a.name || '未知歌手').join(' / ');
+    try {
+        // 如果是数组
+        if (Array.isArray(artist)) {
+            if (artist.length === 0) return '未知歌手';
+            
+            return artist
+                .map(item => {
+                    if (typeof item === 'string') return item;
+                    if (typeof item === 'object' && item !== null && 'name' in item) {
+                        return String(item.name || '未知歌手');
+                    }
+                    return '未知歌手';
+                })
+                .filter(name => name !== '未知歌手')
+                .join(' / ') || '未知歌手';
         }
-        // 字符串数组
-        return artist.join(' / ');
+        
+        // 如果是对象
+        if (typeof artist === 'object' && artist !== null && 'name' in artist) {
+            return String(artist.name || '未知歌手');
+        }
+        
+        // 如果是字符串
+        if (typeof artist === 'string') {
+            return artist.trim() || '未知歌手';
+        }
+        
+        // 其他情况尝试转换为字符串
+        return String(artist) || '未知歌手';
+    } catch (error) {
+        console.warn('格式化艺术家信息失败:', error);
+        return '未知歌手';
     }
-    
-    // 如果是对象
-    if (typeof artist === 'object' && artist.name) {
-        return artist.name;
-    }
-    
-    // 如果是字符串
-    if (typeof artist === 'string') {
-        return artist;
-    }
-    
-    return '未知歌手';
 }
 
 /**
  * 生成歌曲文件名
  * @param song 歌曲对象
  * @param extension 文件扩展名（默认为.mp3）
- * @returns 文件名字符串
+ * @returns 安全的文件名字符串
+ * @example
+ * ```typescript
+ * generateSongFileName({ name: '晴天', artist: '周杰伦' }) // => '晴天 - 周杰伦.mp3'
+ * generateSongFileName({ name: '歌名', artist: '歌手' }, '.lrc') // => '歌名 - 歌手.lrc'
+ * ```
  */
-export function generateSongFileName(song: { name: string; artist: string | string[] | any }, extension: string = '.mp3'): string {
-    const artistStr = formatArtist(song.artist);
-    return `${song.name} - ${artistStr}${extension}`;
+export function generateSongFileName(
+    song: { name: string; artist: ArtistInput },
+    extension: string = '.mp3'
+): string {
+    try {
+        const artistStr = formatArtist(song.artist);
+        const songName = sanitizeFileName(song.name || '未知歌曲');
+        const artist = sanitizeFileName(artistStr);
+        
+        return `${songName} - ${artist}${extension}`;
+    } catch (error) {
+        console.warn('生成文件名失败:', error);
+        return `未知歌曲${extension}`;
+    }
+}
+
+/**
+ * 清理文件名中的非法字符
+ * @param fileName 原始文件名
+ * @returns 清理后的文件名
+ */
+function sanitizeFileName(fileName: string): string {
+    // 移除或替换 Windows 和 Unix 文件系统中的非法字符
+    return fileName
+        .replace(/[<>:"/\\|?*]/g, '') // 移除非法字符
+        .replace(/\s+/g, ' ') // 合并多个空格
+        .trim()
+        .substring(0, 200); // 限制长度
 }
 
 /**
  * 复制文本到剪贴板
  * @param text 要复制的文本
  * @returns 是否成功
+ * @example
+ * ```typescript
+ * const success = await copyToClipboard('Hello World');
+ * if (success) {
+ *     console.log('复制成功');
+ * }
+ * ```
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
+    // 优化: 参数验证
+    if (!text || typeof text !== 'string') {
+        console.warn('copyToClipboard: 无效的文本参数');
+        return false;
+    }
+    
     try {
+        // 现代浏览器使用 Clipboard API
         if (navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(text);
             return true;
-        } else {
-            // 降级方案
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            const success = document.execCommand('copy');
-            document.body.removeChild(textarea);
-            return success;
         }
+        
+        // 降级方案：使用 execCommand
+        return fallbackCopyToClipboard(text);
     } catch (error) {
-                return false;
+        console.warn('复制到剪贴板失败:', error);
+        
+        // 如果现代 API 失败，尝试降级方案
+        try {
+            return fallbackCopyToClipboard(text);
+        } catch (fallbackError) {
+            console.error('降级复制方案也失败:', fallbackError);
+            return false;
+        }
+    }
+}
+
+/**
+ * 降级复制方案
+ */
+function fallbackCopyToClipboard(text: string): boolean {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    
+    // 优化: 更好的隐藏方式
+    textarea.style.cssText = `
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
+        opacity: 0;
+        pointer-events: none;
+    `;
+    
+    document.body.appendChild(textarea);
+    
+    try {
+        textarea.focus();
+        textarea.select();
+        
+        // 尝试选择所有文本（iOS 兼容性）
+        textarea.setSelectionRange(0, textarea.value.length);
+        
+        const success = document.execCommand('copy');
+        return success;
+    } finally {
+        // 确保清理 DOM
+        document.body.removeChild(textarea);
     }
 }

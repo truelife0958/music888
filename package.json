@@ -1,16 +1,12 @@
 {
   "name": "music888",
-  "version": "3.0.1",
-  "description": "企业级在线音乐播放器 - 支持7个音乐平台、智能推荐、批量操作、完善的容错机制",
+  "version": "3.1.0",
+  "description": "简洁的在线音乐播放器 - 核心功能版",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "type-check": "tsc --noEmit",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "preview": "vite preview"
   },
   "keywords": [
     "music",
@@ -24,13 +20,7 @@
   "license": "MIT",
   "type": "module",
   "devDependencies": {
-    "@vitest/coverage-v8": "^1.0.0",
-    "@vitest/ui": "^1.0.0",
     "typescript": "^5.9.3",
-    "vite": "^7.1.10",
-    "vitest": "^1.0.0"
-  },
-  "dependencies": {
-    "node-fetch": "^2.7.0"
+    "vite": "^7.1.10"
   }
 }

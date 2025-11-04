@@ -1,237 +1,211 @@
-// js/search-history.ts - 搜索历史功能模块
+// js/search-history.ts - 搜索历史功能
 
-const MAX_HISTORY_SIZE = 10; // 最多保存10条搜索历史
-const STORAGE_KEY = 'musicSearchHistory';
+import { showNotification } from './ui';
 
-/**
- * 搜索历史项
- */
-interface SearchHistoryItem {
-    keyword: string;
-    source: string;
-    timestamp: number;
-}
+// 搜索历史配置
+const SEARCH_HISTORY_CONFIG = {
+    STORAGE_KEY: 'search_history',
+    MAX_HISTORY: 20, // 最多保存20条历史记录
+};
 
-/**
- * 获取搜索历史
- */
-export function getSearchHistory(): SearchHistoryItem[] {
-    try {
-        const historyJson = localStorage.getItem(STORAGE_KEY);
-        if (!historyJson) return [];
+let searchHistory: string[] = [];
+
+// 初始化搜索历史
+export function initSearchHistory() {
+    loadSearchHistory();
+    createHistoryContainer();
+    updateHistoryDisplay();
+    
+    // 监听搜索框获得焦点时显示历史
+    const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+    if (searchInput) {
+        searchInput.addEventListener('focus', () => {
+            if (searchHistory.length > 0) {
+                showHistoryContainer();
+            }
+        });
         
-        const history = JSON.parse(historyJson);
-        return Array.isArray(history) ? history : [];
-    } catch (error) {
-        console.error('获取搜索历史失败:', error);
-        return [];
+        // 点击页面其他地方时隐藏历史
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const historyContainer = document.getElementById('searchHistoryContainer');
+            if (historyContainer && 
+                !searchInput.contains(target) && 
+                !historyContainer.contains(target)) {
+                hideHistoryContainer();
+            }
+        });
     }
 }
 
-/**
- * 添加搜索历史
- */
-export function addSearchHistory(keyword: string, source: string): void {
-    if (!keyword || !keyword.trim()) return;
+// 创建历史记录容器
+function createHistoryContainer() {
+    const searchContainer = document.querySelector('.search-container');
+    if (!searchContainer) return;
     
+    const container = document.createElement('div');
+    container.id = 'searchHistoryContainer';
+    container.className = 'search-history-container';
+    container.innerHTML = `
+        <div class="search-history-header">
+            <span class="search-history-title">
+                <i class="fas fa-history"></i> 搜索历史
+            </span>
+            <button class="search-history-clear" onclick="window.clearAllSearchHistory()">
+                <i class="fas fa-trash-alt"></i> 清空
+            </button>
+        </div>
+        <div class="search-history-tags" id="searchHistoryTags"></div>
+    `;
+    
+    searchContainer.appendChild(container);
+    
+    // 全局函数
+    (window as any).clearAllSearchHistory = clearAllHistory;
+}
+
+// 显示历史容器
+function showHistoryContainer() {
+    const container = document.getElementById('searchHistoryContainer');
+    if (container && searchHistory.length > 0) {
+        container.classList.add('active');
+    }
+}
+
+// 隐藏历史容器
+function hideHistoryContainer() {
+    const container = document.getElementById('searchHistoryContainer');
+    if (container) {
+        container.classList.remove('active');
+    }
+}
+
+// 加载搜索历史
+function loadSearchHistory() {
     try {
-        const history = getSearchHistory();
-        
-        // 移除重复项（相同关键词+音乐源）
-        const filteredHistory = history.filter(
-            item => !(item.keyword === keyword && item.source === source)
-        );
-        
-        // 添加新项到开头
-        const newItem: SearchHistoryItem = {
-            keyword: keyword.trim(),
-            source,
-            timestamp: Date.now()
-        };
-        
-        filteredHistory.unshift(newItem);
-        
-        // 限制数量
-        const limitedHistory = filteredHistory.slice(0, MAX_HISTORY_SIZE);
-        
-        // 保存
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(limitedHistory));
+        const saved = localStorage.getItem(SEARCH_HISTORY_CONFIG.STORAGE_KEY);
+        if (saved) {
+            searchHistory = JSON.parse(saved);
+        }
+    } catch (error) {
+        console.error('加载搜索历史失败:', error);
+        searchHistory = [];
+    }
+}
+
+// 保存搜索历史
+function saveSearchHistory() {
+    try {
+        localStorage.setItem(SEARCH_HISTORY_CONFIG.STORAGE_KEY, JSON.stringify(searchHistory));
     } catch (error) {
         console.error('保存搜索历史失败:', error);
     }
 }
 
-/**
- * 清空搜索历史
- */
-export function clearSearchHistory(): void {
-    try {
-        localStorage.removeItem(STORAGE_KEY);
-        console.log('搜索历史已清空');
-    } catch (error) {
-        console.error('清空搜索历史失败:', error);
+// 添加搜索记录
+export function addSearchHistory(keyword: string) {
+    if (!keyword || !keyword.trim()) return;
+    
+    const trimmedKeyword = keyword.trim();
+    
+    // 如果已存在，先移除
+    const index = searchHistory.indexOf(trimmedKeyword);
+    if (index > -1) {
+        searchHistory.splice(index, 1);
+    }
+    
+    // 添加到开头
+    searchHistory.unshift(trimmedKeyword);
+    
+    // 限制数量
+    if (searchHistory.length > SEARCH_HISTORY_CONFIG.MAX_HISTORY) {
+        searchHistory = searchHistory.slice(0, SEARCH_HISTORY_CONFIG.MAX_HISTORY);
+    }
+    
+    saveSearchHistory();
+    updateHistoryDisplay();
+}
+
+// 删除单条历史
+function removeSearchHistory(keyword: string) {
+    const index = searchHistory.indexOf(keyword);
+    if (index > -1) {
+        searchHistory.splice(index, 1);
+        saveSearchHistory();
+        updateHistoryDisplay();
+        
+        if (searchHistory.length === 0) {
+            hideHistoryContainer();
+        }
     }
 }
 
-/**
- * 删除指定搜索历史
- */
-export function removeSearchHistoryItem(keyword: string, source: string): void {
-    try {
-        const history = getSearchHistory();
-        const filteredHistory = history.filter(
-            item => !(item.keyword === keyword && item.source === source)
-        );
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredHistory));
-    } catch (error) {
-        console.error('删除搜索历史失败:', error);
+// 清空所有历史
+function clearAllHistory() {
+    if (searchHistory.length === 0) return;
+    
+    if (confirm('确定要清空所有搜索历史吗？')) {
+        searchHistory = [];
+        saveSearchHistory();
+        updateHistoryDisplay();
+        hideHistoryContainer();
+        showNotification('已清空搜索历史', 'success');
     }
 }
 
-/**
- * 渲染搜索历史UI（可选功能）
- */
-export function renderSearchHistory(containerId: string, onItemClick?: (keyword: string, source: string) => void): void {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+// 更新历史显示
+function updateHistoryDisplay() {
+    const tagsContainer = document.getElementById('searchHistoryTags');
+    if (!tagsContainer) return;
     
-    const history = getSearchHistory();
-    
-    if (history.length === 0) {
-        container.innerHTML = '<div class="empty-history">暂无搜索历史</div>';
+    if (searchHistory.length === 0) {
+        tagsContainer.innerHTML = `
+            <div class="search-history-empty">暂无搜索历史</div>
+        `;
         return;
     }
     
-    const historyHTML = history.map(item => {
-        const sourceName = getSourceName(item.source);
-        const timeStr = formatTime(item.timestamp);
-        
-        return `
-            <div class="history-item" data-keyword="${item.keyword}" data-source="${item.source}">
-                <div class="history-content">
-                    <i class="fas fa-history"></i>
-                    <span class="history-keyword">${escapeHtml(item.keyword)}</span>
-                    <span class="history-source">${sourceName}</span>
-                    <span class="history-time">${timeStr}</span>
-                </div>
-                <button class="history-delete" title="删除">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-    }).join('');
-    
-    container.innerHTML = `
-        <div class="history-header">
-            <h4><i class="fas fa-history"></i> 搜索历史</h4>
-            <button class="clear-history-btn" title="清空历史">
-                <i class="fas fa-trash"></i>
+    tagsContainer.innerHTML = searchHistory.map(keyword => `
+        <div class="search-history-tag">
+            <span class="search-history-tag-text" onclick="window.searchFromHistory('${escapeHtml(keyword)}')">${escapeHtml(keyword)}</span>
+            <button class="search-history-tag-remove" onclick="window.removeSearchHistoryItem('${escapeHtml(keyword)}')" title="删除">
+                <i class="fas fa-times"></i>
             </button>
         </div>
-        <div class="history-list">
-            ${historyHTML}
-        </div>
-    `;
+    `).join('');
     
-    // 绑定点击事件
-    if (onItemClick) {
-        container.querySelectorAll('.history-item').forEach(item => {
-            const keyword = item.getAttribute('data-keyword');
-            const source = item.getAttribute('data-source');
-            
-            item.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement;
-                // 如果点击的是删除按钮，不触发搜索
-                if (target.closest('.history-delete')) return;
-                
-                if (keyword && source) {
-                    onItemClick(keyword, source);
-                }
-            });
-        });
-    }
-    
-    // 绑定删除按钮
-    container.querySelectorAll('.history-delete').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const item = (e.currentTarget as HTMLElement).closest('.history-item');
-            const keyword = item?.getAttribute('data-keyword');
-            const source = item?.getAttribute('data-source');
-            
-            if (keyword && source) {
-                removeSearchHistoryItem(keyword, source);
-                renderSearchHistory(containerId, onItemClick);
+    // 全局函数
+    (window as any).searchFromHistory = (keyword: string) => {
+        const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+        if (searchInput) {
+            searchInput.value = keyword;
+            // 触发搜索
+            const searchBtn = document.querySelector('.search-btn') as HTMLButtonElement;
+            if (searchBtn) {
+                searchBtn.click();
             }
-        });
-    });
-    
-    // 绑定清空按钮
-    const clearBtn = container.querySelector('.clear-history-btn');
-    clearBtn?.addEventListener('click', () => {
-        if (confirm('确定要清空所有搜索历史吗？')) {
-            clearSearchHistory();
-            renderSearchHistory(containerId, onItemClick);
         }
-    });
-}
-
-/**
- * 获取音乐源名称
- */
-function getSourceName(source: string): string {
-    const names: Record<string, string> = {
-        'netease': '网易云',
-        'tencent': 'QQ音乐',
-        'kugou': '酷狗',
-        'kuwo': '酷我',
-        'xiami': '虾米',
-        'baidu': '百度',
-        'bilibili': 'B站'
+        hideHistoryContainer();
     };
-    return names[source] || source;
+    
+    (window as any).removeSearchHistoryItem = (keyword: string) => {
+        removeSearchHistory(keyword);
+    };
 }
 
-/**
- * 格式化时间
- */
-function formatTime(timestamp: number): string {
-    const now = Date.now();
-    const diff = now - timestamp;
-    
-    const minute = 60 * 1000;
-    const hour = 60 * minute;
-    const day = 24 * hour;
-    
-    if (diff < minute) {
-        return '刚刚';
-    } else if (diff < hour) {
-        return `${Math.floor(diff / minute)}分钟前`;
-    } else if (diff < day) {
-        return `${Math.floor(diff / hour)}小时前`;
-    } else if (diff < 7 * day) {
-        return `${Math.floor(diff / day)}天前`;
-    } else {
-        const date = new Date(timestamp);
-        return `${date.getMonth() + 1}/${date.getDate()}`;
-    }
-}
-
-/**
- * HTML转义
- */
+// HTML转义
 function escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-/**
- * 初始化搜索历史功能
- * 在应用启动时调用，绑定相关事件
- */
-export function initSearchHistory(): void {
-    console.log('搜索历史模块已初始化');
-    // 这个函数主要用于未来扩展，目前搜索历史功能通过直接调用其他导出函数实现
-    // 例如：在搜索框下方显示历史记录、绑定快捷键等
+// 获取搜索历史
+export function getSearchHistory(): string[] {
+    return [...searchHistory];
+}
+
+// 导出清空函数供外部调用
+export function clearSearchHistory() {
+    clearAllHistory();
 }

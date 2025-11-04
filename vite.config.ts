@@ -1,90 +1,92 @@
 import { defineConfig } from 'vite';
 
-// Vite 配置 - 本地开发环境优化
+// 优化版 Vite 配置 - 代码分割 + Tree Shaking + 性能优化
 export default defineConfig({
-  // 开发服务器配置
   server: {
     port: 5173,
-    open: false, // 不自动打开浏览器
-    // 本地开发时的API代理配置
+    open: false,
     proxy: {
-      // 🔧 修复：添加Meting API代理，代理到本地API服务器
-      '/api/meting': {
-        target: 'http://localhost:3000',
+      // API代理到GDStudio
+      '/api/gdstudio-proxy': {
+        target: 'https://api.gdstudio.xyz',
         changeOrigin: true,
-        rewrite: (path) => {
-          console.log(`🎵 Meting API代理: ${path} (保持不变)`);
-          return path;
-        },
-        configure: (proxy, options) => {
-          console.log('🔧 Meting API代理已配置: /api/meting -> http://localhost:3000');
-        }
+        rewrite: (path) => path.replace(/^\/api\/gdstudio-proxy/, '')
       },
-      
-      // 网易云音乐API代理 - 用于discover.ts和recommend.ts
+      // 音乐代理
       '/api/music-proxy': {
-        target: 'http://localhost:3000',
+        target: 'https://api.gdstudio.xyz',
         changeOrigin: true,
-        rewrite: (path) => {
-          console.log(`🎵 网易云API代理: ${path} (保持不变)`);
-          return path;
-        },
-        configure: (proxy, options) => {
-          console.log('🔧 网易云音乐API代理已配置: /api/music-proxy -> http://localhost:3000');
-        }
-      },
-
-      // Bilibili音频代理 - 用于绕过CORS限制
-      '/api/bilibili-proxy': {
-        target: 'https://upos-sz-mirror08h.bilivideo.com', // 必须设置默认target
-        changeOrigin: true,
-        configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            // 从查询参数中获取目标URL
-            const url = new URL(req.url, 'http://localhost');
-            const targetUrl = url.searchParams.get('url');
-
-            if (targetUrl) {
-              console.log(`🎵 Bilibili代理: ${targetUrl}`);
-
-              // 设置目标
-              const targetParsed = new URL(targetUrl);
-              proxyReq.path = targetParsed.pathname + targetParsed.search;
-              proxyReq.setHeader('Host', targetParsed.host);
-
-              // 设置Bilibili需要的请求头
-              proxyReq.setHeader('Referer', 'https://www.bilibili.com/');
-              proxyReq.setHeader('Origin', 'https://www.bilibili.com');
-              proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            }
-          });
-
-          console.log('🔧 Bilibili代理已配置: /api/bilibili-proxy');
-        },
-        // 使用router动态设置target
-        router: (req) => {
-          const url = new URL(req.url, 'http://localhost');
-          const targetUrl = url.searchParams.get('url');
-          if (targetUrl) {
-            const targetParsed = new URL(targetUrl);
-            return `${targetParsed.protocol}//${targetParsed.host}`;
-          }
-          return 'https://upos-sz-mirror08h.bilivideo.com'; // 默认Bilibili CDN
-        }
+        rewrite: (path) => path.replace(/^\/api\/music-proxy/, '')
       }
     }
   },
-
-  // 构建配置
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    minify: 'esbuild' // 使用esbuild压缩（默认）
+    minify: 'esbuild',
+    
+    // 优化: 代码分割配置
+    rollupOptions: {
+      output: {
+        // 手动分割代码块
+        manualChunks: {
+          // 核心播放器代码
+          'player': ['./js/player.ts'],
+          // API和工具函数
+          'api-utils': ['./js/api.ts', './js/utils.ts'],
+          // UI相关
+          'ui': ['./js/ui.ts'],
+          // 功能模块
+          'features': [
+            './js/rank.ts',
+            './js/daily-recommend.ts',
+            './js/search-history.ts',
+            './js/play-stats.ts',
+            './js/artist-radio.ts'
+          ]
+        },
+        // 优化: 资源文件命名
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
+      }
+    },
+    
+    // 优化: chunk大小警告阈值
+    chunkSizeWarningLimit: 500,
+    
+    // 优化: 启用CSS代码分割
+    cssCodeSplit: true,
+    
+    // 优化: 资源内联阈值 (小于4KB的资源会被内联为base64)
+    assetsInlineLimit: 4096,
+    
+    // 优化: 启用压缩
+    reportCompressedSize: true,
+    
+    // 优化: esbuild优化选项
+    target: 'es2015',
+    
+    // 优化: 清理输出目录
+    emptyOutDir: true
   },
-
-  // 优化依赖预构建
+  
+  // 优化: 依赖预构建
   optimizeDeps: {
-    include: []
+    include: [],
+    exclude: []
+  },
+  
+  // 优化: esbuild配置
+  esbuild: {
+    // 压缩标识符
+    minifyIdentifiers: true,
+    // 压缩语法
+    minifySyntax: true,
+    // 压缩空白
+    minifyWhitespace: true,
+    // 生产环境移除console (通过build命令设置mode来控制)
+    pure: ['console.log', 'console.debug', 'console.info']
   }
 });

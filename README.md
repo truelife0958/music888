@@ -77,20 +77,25 @@
 
 🌐 **[在线演示](https://music.weny888.com/)** - 立即体验
 
-### 一键部署到 Vercel
+### 一键部署到 Cloudflare Pages
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/truelife0958/music888)
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/truelife0958/music888)
 
-点击上方按钮即可一键部署到 Vercel,完全免费!
+点击上方按钮即可一键部署到 Cloudflare Pages,完全免费!
 
 #### 部署步骤:
 
-1. **点击部署按钮** - 点击上方的 "Deploy with Vercel" 按钮
-2. **登录 Vercel** - 使用 GitHub 账号登录 Vercel
-3. **克隆仓库** - Vercel 会自动从 GitHub 克隆项目
-4. **开始部署** - 点击 "Deploy" 按钮开始自动部署
-5. **等待完成** - 通常 1-2 分钟即可完成部署
-6. **访问网站** - 部署完成后会自动生成访问链接
+1. **Fork仓库** - 先将本项目Fork到你的GitHub账号
+2. **登录Cloudflare** - 访问 [Cloudflare Pages](https://pages.cloudflare.com/)
+3. **连接GitHub** - 授权Cloudflare访问你的GitHub仓库
+4. **选择项目** - 选择Fork的 `music888` 仓库
+5. **配置构建**:
+   - 构建命令: `npm run build`
+   - 构建输出目录: `dist`
+   - 环境变量: 无需配置
+6. **开始部署** - 点击"保存并部署"按钮
+7. **等待完成** - 通常1-2分钟即可完成部署
+8. **访问网站** - 部署完成后会自动生成 `*.pages.dev` 域名
 
 ### 本地运行
 
@@ -184,31 +189,26 @@ npm run build
 ### 项目结构
 ```
 music888/
-├── api/                    # API 代理
-│   ├── music-proxy.js     # 音乐API代理
-│   └── bilibili-proxy.js  # Bilibili代理
-├── css/                   # 样式文件
-│   ├── style.css         # 主样式
-│   ├── additions.css     # 附加样式
-│   └── discover.css      # 发现音乐样式
-├── js/                    # TypeScript 源码
-│   ├── api.ts            # API 调用封装
-│   ├── main.ts           # 主程序入口
-│   ├── player.ts         # 播放器逻辑
-│   ├── ui.ts             # UI 交互
-│   ├── config.ts         # 配置文件
-│   ├── utils.ts          # 工具函数
-│   └── ...               # 其他功能模块
-├── ncm-api/              # 网易云API服务
-├── index.html            # 主页面
-├── manifest.json         # PWA配置
-├── service-worker.js     # Service Worker
-├── package.json          # 项目配置
-├── tsconfig.json         # TypeScript 配置
-├── vite.config.ts        # Vite 配置
-├── vercel.json           # Vercel 部署配置
-└── README.md             # 项目说明
-
+├── functions/            # Cloudflare Workers API
+│   └── api.js           # 音乐API代理
+├── css/                 # 样式文件
+│   └── style.css       # 主样式
+├── js/                  # TypeScript 源码
+│   ├── api.ts          # API 调用封装
+│   ├── main.ts         # 主程序入口
+│   ├── player.ts       # 播放器逻辑
+│   ├── ui.ts           # UI 交互
+│   ├── config.ts       # 配置文件
+│   └── utils.ts        # 工具函数
+├── public/              # 静态资源
+│   ├── manifest.json   # PWA配置
+│   └── service-worker.js # Service Worker
+├── index.html           # 主页面
+├── package.json         # 项目配置
+├── tsconfig.json        # TypeScript 配置
+├── vite.config.ts       # Vite 配置
+├── wrangler.toml        # Cloudflare 配置
+└── README.md            # 项目说明
 ```
 
 ### 核心模块说明
@@ -241,8 +241,8 @@ music888/
 - Service Worker - PWA支持
 
 **后端**:
-- Vercel Serverless - 无服务器部署
-- Node.js - API服务
+- Cloudflare Workers - 边缘计算
+- Cloudflare Pages - 静态站点托管
 - 多API源 - 高可用性
 
 **存储**:

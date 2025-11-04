@@ -4,6 +4,7 @@ import * as ui from './ui.js';
 import { PLAYER_CONFIG, STORAGE_CONFIG, SOURCE_NAMES, QUALITY_NAMES, QUALITY_FALLBACK, DOWNLOAD_CONFIG, AVAILABLE_SOURCES } from './config.js';
 import { generateSongFileName } from './utils.js';
 import { LyricLine } from './types.js';
+import { recordPlay } from './play-stats.js';
 
 // --- Player State ---
 let currentPlaylist: Song[] = [];
@@ -17,6 +18,8 @@ let historyPosition: number = -1;
 let lastActiveContainer: string = 'searchResults';
 let consecutiveFailures: number = 0; // 连续播放失败计数
 let currentLyrics: LyricLine[] = []; // 存储当前歌曲的歌词
+let playStartTime: number = 0; // 记录播放开始时间
+let lastRecordedSong: Song | null = null; // 上一首记录统计的歌曲
 
 // 老王修复：初始化播放器，确保获取到HTML中的audio元素并绑定事件
 function initAudioPlayer(): void {
@@ -33,18 +36,41 @@ function initAudioPlayer(): void {
 
     // 老王修复：在audioPlayer初始化后绑定事件监听器
     audioPlayer.addEventListener('play', () => {
+        console.log('🎵 播放事件触发');
         isPlaying = true;
         ui.updatePlayButton(true);
         document.getElementById('currentCover')?.classList.add('playing');
     });
 
     audioPlayer.addEventListener('pause', () => {
+        console.log('⏸️ 暂停事件触发');
         isPlaying = false;
         ui.updatePlayButton(false);
         document.getElementById('currentCover')?.classList.remove('playing');
     });
+    
+    // 修复: 添加 playing 事件监听，确保状态同步
+    audioPlayer.addEventListener('playing', () => {
+        console.log('▶️ playing 事件触发（实际开始播放）');
+        isPlaying = true;
+        ui.updatePlayButton(true);
+        document.getElementById('currentCover')?.classList.add('playing');
+    });
+    
+    // 修复: 添加 waiting 事件监听，显示缓冲状态
+    audioPlayer.addEventListener('waiting', () => {
+        console.log('⏳ 缓冲中...');
+    });
+    
+    // 修复: 添加 canplay 事件监听
+    audioPlayer.addEventListener('canplay', () => {
+        console.log('✅ 音频可以播放');
+    });
 
     audioPlayer.addEventListener('ended', () => {
+        // 记录播放统计
+        recordPlayStats();
+        
         if (playMode === 'single') {
             playSong(currentIndex, currentPlaylist, lastActiveContainer);
         } else {
@@ -140,18 +166,10 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                 // 先尝试原始音乐源
                 let result = await api.getSongUrl(song, quality);
 
-                // 如果原始源失败,尝试多音乐源切换
-                if (!result || !result.url) {
-                                        result = await api.getSongUrlWithFallback(song, quality);
-                    if (result && result.url && result.usedSource !== song.source) {
-                        usedFallback = true;
-                    }
-                }
-
+                // 如果原始源失败,尝试下一个品质
                 if (result && result.url) {
                     urlData = result;
                     successQuality = quality;
-                    api.resetApiFailureCount(); // 成功时重置API失败计数
                     break;
                 } else if (result && result.error) {
                     lastError = result.error;
@@ -212,19 +230,29 @@ export async function playSong(index: number, playlist: Song[], containerId: str
             }));
 
             try {
-                await audioPlayer.play();
+                const playPromise = audioPlayer.play();
+                
+                // 修复: 确保 play() Promise 被正确处理
+                if (playPromise !== undefined) {
+                    await playPromise;
+                    // 记录播放开始时间
+                    playStartTime = Date.now();
+                    lastRecordedSong = song;
+                    // 修复: 显式更新状态
+                    isPlaying = true;
+                    ui.updatePlayButton(true);
+                }
             } catch (error) {
-                                ui.showNotification('播放失败，请点击页面以允许自动播放', 'warning');
-                // We don't automatically skip to the next song here,
-                // as it might be an autoplay issue that requires user interaction.
+                console.error('播放失败:', error);
+                ui.showNotification('播放失败，请点击页面以允许自动播放', 'warning');
+                // 修复: 确保状态正确更新
                 isPlaying = false;
                 ui.updatePlayButton(false);
+                document.getElementById('currentCover')?.classList.remove('playing');
             }
         } else {
             // 播放失败,增加连续失败计数
             consecutiveFailures++;
-                        // 触发API失败处理(可能切换API)
-            await api.handleApiFailure();
 
             // 构建详细错误信息
             let errorMsg = `无法获取音乐链接 (${song.name})`;
@@ -315,12 +343,33 @@ export function previousSong(): void {
 
 export function togglePlay(): void {
     if (!audioPlayer.src) return;
-    if (isPlaying) {
+    
+    // 修复: 基于 audio 元素的实际状态而非变量
+    if (!audioPlayer.paused) {
+        // 暂停时记录播放统计
+        recordPlayStats();
         audioPlayer.pause();
+        isPlaying = false;
+        ui.updatePlayButton(false);
         window.dispatchEvent(new Event('songPaused'));
     } else {
-        audioPlayer.play();
-        window.dispatchEvent(new Event('songPlaying'));
+        const playPromise = audioPlayer.play();
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => {
+                    // 恢复播放时重置开始时间
+                    playStartTime = Date.now();
+                    isPlaying = true;
+                    ui.updatePlayButton(true);
+                    window.dispatchEvent(new Event('songPlaying'));
+                })
+                .catch((error) => {
+                    console.error('播放失败:', error);
+                    isPlaying = false;
+                    ui.updatePlayButton(false);
+                    ui.showNotification('播放失败，请检查音频文件', 'error');
+                });
+        }
     }
 }
 
@@ -444,28 +493,53 @@ function addToPlayHistory(song: Song): void {
         playHistorySongs = playHistorySongs.slice(0, PLAYER_CONFIG.MAX_HISTORY_SIZE);
     }
 
-    // 保存到localStorage，带容量检查
+    // 优化: 改进localStorage保存，增加自动清理和降级策略
     try {
         const data = JSON.stringify(playHistorySongs);
+        const dataSizeMB = data.length / (1024 * 1024);
+        
         // 检查数据大小（localStorage通常限制5-10MB）
         if (data.length > 4 * 1024 * 1024) { // 4MB限制
-            console.warn('播放历史数据过大，清理旧记录');
+            console.warn(`播放历史数据过大 (${dataSizeMB.toFixed(2)}MB)，清理旧记录`);
             playHistorySongs = playHistorySongs.slice(0, Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE / 2));
             localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
+            ui.showNotification('播放历史已自动清理以节省空间', 'info');
         } else {
             localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, data);
         }
     } catch (error) {
         if (error instanceof Error && error.name === 'QuotaExceededError') {
-            console.error('localStorage空间不足，清理播放历史');
-            playHistorySongs = playHistorySongs.slice(0, 50); // 保留最近50首
-            try {
-                localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
-            } catch (retryError) {
-                console.error('清理后仍然失败，放弃保存');
+            console.error('localStorage空间不足，执行分级清理策略');
+            
+            // 优化: 分级清理策略
+            const cleanupStrategies = [
+                { size: Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE * 0.7), desc: '保留70%' },
+                { size: Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE * 0.5), desc: '保留50%' },
+                { size: 50, desc: '保留最近50首' },
+                { size: 20, desc: '保留最近20首' }
+            ];
+            
+            let saved = false;
+            for (const strategy of cleanupStrategies) {
+                try {
+                    playHistorySongs = playHistorySongs.slice(0, strategy.size);
+                    localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
+                    console.log(`清理成功: ${strategy.desc}`);
+                    ui.showNotification(`存储空间不足，已清理播放历史(${strategy.desc})`, 'warning');
+                    saved = true;
+                    break;
+                } catch (retryError) {
+                    continue;
+                }
+            }
+            
+            if (!saved) {
+                console.error('所有清理策略均失败，放弃保存');
+                ui.showNotification('存储空间严重不足，无法保存播放历史', 'error');
             }
         } else {
             console.error('保存播放历史失败:', error);
+            ui.showNotification('保存播放历史失败', 'error');
         }
     }
 }
@@ -881,6 +955,21 @@ export async function downloadMultipleSongs(songs: Song[]): Promise<void> {
     }
 
     ui.showNotification('所有歌曲下载完成', 'success');
+}
+
+// 记录播放统计
+function recordPlayStats(): void {
+    if (!lastRecordedSong || playStartTime === 0) return;
+    
+    const playDuration = (Date.now() - playStartTime) / 1000; // 转换为秒
+    
+    // 只记录播放超过3秒的歌曲
+    if (playDuration >= 3) {
+        recordPlay(lastRecordedSong, playDuration);
+    }
+    
+    // 重置
+    playStartTime = 0;
 }
 
 // 初始化时保存歌单到本地存储并初始化audio播放器
