@@ -19,19 +19,6 @@
                 <i class="fas fa-music"></i>
                 <span>沄听</span>
             </div>
-            <button class="control-btn small" id="rankBtn" title="音乐排行榜" style="margin-right: 10px;">
-                <i class="fas fa-chart-line"></i>
-            </button>
-            <button class="control-btn small" id="dailyRecommendBtn" title="每日推荐" style="margin-right: 10px;">
-                <i class="fas fa-dice"></i>
-            </button>
-            <button class="control-btn small" id="statsBtn" title="播放统计" style="margin-right: 20px;">
-                <i class="fas fa-chart-bar"></i>
-            </button>
-            <div class="api-status" id="apiStatus">
-                <span class="api-status-dot"></span>
-                <span class="api-status-text">正在检测...</span>
-            </div>
             <div class="search-container">
                 <form class="search-wrapper" onsubmit="event.preventDefault(); return false;">
                     <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput" required>
@@ -54,6 +41,12 @@
             <div class="tabs">
                 <button class="tab-btn active" data-tab="search">
                     <i class="fas fa-search"></i> 搜索结果
+                </button>
+                <button class="tab-btn" data-tab="rank">
+                    <i class="fas fa-chart-line"></i> 音乐排行榜
+                </button>
+                <button class="tab-btn" data-tab="recommend">
+                    <i class="fas fa-dice"></i> 每日推荐
                 </button>
                 <button class="tab-btn" data-tab="parse">
                     <i class="fas fa-cloud-download-alt"></i> 解析歌单
@@ -85,6 +78,34 @@
                         <i class="fas fa-cloud-download-alt"></i>
                         <div>输入歌单ID或链接后点击解析按钮</div>
                     </div>
+                </div>
+            </div>
+
+            <div id="rankTab" class="tab-content">
+                <div class="rank-tabs">
+                    <button class="rank-tab active" data-source="netease">网易云</button>
+                    <button class="rank-tab" data-source="tencent">QQ音乐</button>
+                    <button class="rank-tab" data-source="kugou">酷狗</button>
+                </div>
+                <div class="rank-lists" id="rankLists"></div>
+                <div class="rank-songs" id="rankSongs"></div>
+            </div>
+
+            <div id="recommendTab" class="tab-content">
+                <div class="recommend-info">
+                    <p>每天为你推荐30首精选音乐</p>
+                    <p class="recommend-date" id="recommendDate"></p>
+                </div>
+                <div class="recommend-actions">
+                    <button class="recommend-refresh-btn" id="refreshRecommendBtn">
+                        <i class="fas fa-sync-alt"></i> 刷新推荐
+                    </button>
+                    <button class="recommend-play-all-btn" id="playAllRecommendBtn">
+                        <i class="fas fa-play"></i> 播放全部
+                    </button>
+                </div>
+                <div class="recommend-songs" id="recommendSongs">
+                    <div class="loading">加载中...</div>
                 </div>
             </div>
         </div>
@@ -125,7 +146,9 @@
                     </button>
                 </div>
                 <div class="lyrics-container-inline" id="lyricsContainerInline">
-                    <div class="lyric-line">暂无歌词</div>
+                    <div class="lyric-line lyric-prev"></div>
+                    <div class="lyric-line lyric-current active">暂无歌词</div>
+                    <div class="lyric-line lyric-next"></div>
                 </div>
                 <div class="progress-container">
                     <div class="progress-bar">
@@ -157,6 +180,45 @@
                 </div>
             </div>
             <audio id="audioPlayer" preload="metadata"></audio>
+        </div>
+
+        <!-- 播放统计区域 - 独立右侧栏 -->
+        <div class="stats-section-sidebar">
+            <div class="stats-header-inline">
+                <h3><i class="fas fa-chart-bar"></i> 播放统计</h3>
+            </div>
+            <div class="stats-overview">
+                <div class="stats-card">
+                    <div class="stats-card-icon">🎵</div>
+                    <div class="stats-card-info">
+                        <div class="stats-card-value" id="totalPlaysCount">0</div>
+                        <div class="stats-card-label">总播放次数</div>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card-icon">🎧</div>
+                    <div class="stats-card-info">
+                        <div class="stats-card-value" id="uniqueSongsCount">0</div>
+                        <div class="stats-card-label">不同歌曲</div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-tabs-inline">
+                <button class="stats-tab active" data-stats-tab="most-played">最多播放</button>
+                <button class="stats-tab" data-stats-tab="recent">最近播放</button>
+            </div>
+            <div class="stats-content-inline" id="statsContentInline">
+                <div class="stats-tab-content active" id="mostPlayedContent">
+                    <div class="stats-list" id="mostPlayedList">
+                        <div class="stats-empty">暂无统计数据</div>
+                    </div>
+                </div>
+                <div class="stats-tab-content" id="recentContent">
+                    <div class="stats-list" id="recentList">
+                        <div class="stats-empty">暂无统计数据</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="page-indicators">
@@ -192,6 +254,11 @@
         <div class="footer-content">
             <div class="footer-info">
                 <p>© 2025 沄听 - 简洁在线音乐播放器</p>
+                <p>
+                    <a href="https://github.com/truelife0958/music888" target="_blank" rel="noopener noreferrer" class="github-link">
+                        <i class="fab fa-github"></i> GitHub 仓库
+                    </a>
+                </p>
             </div>
         </div>
     </footer>

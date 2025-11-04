@@ -19,11 +19,11 @@ const RANK_LISTS: RankList[] = [
     { id: '19723756', name: '热歌榜', source: 'netease', icon: '🔥' },
     { id: '2884035', name: '说唱榜', source: 'netease', icon: '🎤' },
     
-    // QQ音乐排行榜
-    { id: '26', name: 'QQ流行榜', source: 'tencent', icon: '⭐' },
-    { id: '4', name: 'QQ热歌榜', source: 'tencent', icon: '🎵' },
+    // QQ音乐排行榜 - 使用正确的歌单ID
+    { id: '3812895', name: 'QQ流行榜', source: 'tencent', icon: '⭐' },
+    { id: '3885842924', name: 'QQ热歌榜', source: 'tencent', icon: '🎵' },
     
-    // 酷狗音乐排行榜
+    // 酷狗音乐排行榜 - 使用正确的歌单ID
     { id: '8888', name: '酷狗TOP500', source: 'kugou', icon: '🏆' },
     { id: '6666', name: '酷狗飙升榜', source: 'kugou', icon: '📈' }
 ];
