@@ -53,8 +53,8 @@ function parseApiResponse(data: any): any[] {
 // 🔧 音乐API配置：生产环境使用稳定的公共API源
 const API_SOURCES: ApiSource[] = [
     {
-        name: 'GDStudio 音乐API（主要）',
-        url: 'https://music-api.gdstudio.xyz/api.php',
+        name: 'GDStudio 音乐API（通过代理）',
+        url: '/api/gdstudio-proxy',
         type: 'standard'
     },
     {
