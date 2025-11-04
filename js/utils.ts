@@ -396,41 +396,54 @@ type ArtistInput = string | string[] | Artist | Artist[] | null | undefined;
  * ```
  */
 export function formatArtist(artist: ArtistInput): string {
-    // 优化: 类型保护和边界检查
-    if (!artist) return '未知歌手';
+    // 优化: 类型保护和边界检查，增强未知艺术家显示
+    if (!artist) return '未知艺术家';
     
     try {
         // 如果是数组
         if (Array.isArray(artist)) {
-            if (artist.length === 0) return '未知歌手';
+            if (artist.length === 0) return '未知艺术家';
             
-            return artist
+            const formattedArtists = artist
                 .map(item => {
-                    if (typeof item === 'string') return item;
-                    if (typeof item === 'object' && item !== null && 'name' in item) {
-                        return String(item.name || '未知歌手');
+                    if (typeof item === 'string') {
+                        const trimmed = item.trim();
+                        // 过滤空字符串和无效值
+                        return trimmed && trimmed !== 'null' && trimmed !== 'undefined' ? trimmed : '';
                     }
-                    return '未知歌手';
+                    if (typeof item === 'object' && item !== null && 'name' in item) {
+                        const name = String(item.name || '').trim();
+                        return name && name !== 'null' && name !== 'undefined' ? name : '';
+                    }
+                    return '';
                 })
-                .filter(name => name !== '未知歌手')
-                .join(' / ') || '未知歌手';
+                .filter(name => name !== '');
+            
+            return formattedArtists.length > 0 ? formattedArtists.join(' / ') : '未知艺术家';
         }
         
         // 如果是对象
         if (typeof artist === 'object' && artist !== null && 'name' in artist) {
-            return String(artist.name || '未知歌手');
+            const name = String(artist.name || '').trim();
+            return name && name !== 'null' && name !== 'undefined' ? name : '未知艺术家';
         }
         
         // 如果是字符串
         if (typeof artist === 'string') {
-            return artist.trim() || '未知歌手';
+            const trimmed = artist.trim();
+            // 过滤常见的无效值
+            if (!trimmed || trimmed === 'null' || trimmed === 'undefined' || trimmed === '[object Object]') {
+                return '未知艺术家';
+            }
+            return trimmed;
         }
         
         // 其他情况尝试转换为字符串
-        return String(artist) || '未知歌手';
+        const stringValue = String(artist).trim();
+        return stringValue && stringValue !== 'null' && stringValue !== 'undefined' ? stringValue : '未知艺术家';
     } catch (error) {
         console.warn('格式化艺术家信息失败:', error);
-        return '未知歌手';
+        return '未知艺术家';
     }
 }
 

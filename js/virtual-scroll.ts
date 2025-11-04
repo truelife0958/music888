@@ -1,190 +1,200 @@
-/**
- * 虚拟滚动组件 - 优化长列表渲染性能
- * 只渲染可见区域的元素，大幅减少DOM节点数量
- */
+// js/virtual-scroll.ts - 虚拟滚动优化大列表性能
 
-export interface VirtualScrollOptions<T> {
-    // 容器元素
+import { Song } from './api.js';
+import * as player from './player.js';
+
+interface VirtualScrollConfig {
     container: HTMLElement;
-    // 数据列表
-    items: T[];
-    // 单项高度（像素）
+    items: Song[];
     itemHeight: number;
-    // 渲染函数
-    renderItem: (item: T, index: number) => string;
-    // 缓冲区大小（上下额外渲染的项目数）
-    bufferSize?: number;
-    // 点击回调
-    onItemClick?: (item: T, index: number, event: MouseEvent) => void;
+    bufferSize: number;
+    renderItem: (song: Song, index: number) => HTMLElement;
+    onItemClick: (index: number, song: Song) => void;
 }
 
-export class VirtualScroll<T> {
-    private container: HTMLElement;
-    private items: T[];
-    private itemHeight: number;
-    private renderItem: (item: T, index: number) => string;
-    private bufferSize: number;
-    private onItemClick?: (item: T, index: number, event: MouseEvent) => void;
-    
-    private scrollContainer!: HTMLElement;
-    private contentContainer!: HTMLElement;
-    private visibleRange: { start: number; end: number } = { start: 0, end: 0 };
+export class VirtualScroll {
+    private config: VirtualScrollConfig;
     private scrollTop: number = 0;
-    
-    // 保存绑定后的函数引用，以便正确移除监听器
-    private boundHandleScroll!: () => void;
-    private boundHandleClick!: (e: MouseEvent) => void;
-    
-    constructor(options: VirtualScrollOptions<T>) {
-        this.container = options.container;
-        this.items = options.items;
-        this.itemHeight = options.itemHeight;
-        this.renderItem = options.renderItem;
-        this.bufferSize = options.bufferSize || 5;
-        this.onItemClick = options.onItemClick;
+    private visibleStart: number = 0;
+    private visibleEnd: number = 0;
+    private contentHeight: number = 0;
+    private viewport!: HTMLElement;
+    private content!: HTMLElement;
+    private scrollListener: () => void;
+
+    constructor(config: VirtualScrollConfig) {
+        this.config = config;
+        this.contentHeight = config.items.length * config.itemHeight;
         
-        // 提前绑定方法
-        this.boundHandleScroll = this.handleScroll.bind(this);
-        this.boundHandleClick = this.handleClick.bind(this);
-        
-        this.init();
-    }
-    
-    private init(): void {
-        // 清空容器
-        this.container.innerHTML = '';
-        
-        // 创建滚动容器
-        this.scrollContainer = document.createElement('div');
-        this.scrollContainer.style.cssText = `
-            height: 100%;
-            overflow-y: auto;
-            overflow-x: hidden;
-            position: relative;
-        `;
-        
-        // 创建内容容器（用于撑起滚动高度）
-        this.contentContainer = document.createElement('div');
-        this.contentContainer.style.cssText = `
-            position: relative;
-            height: ${this.items.length * this.itemHeight}px;
-        `;
-        
-        this.scrollContainer.appendChild(this.contentContainer);
-        this.container.appendChild(this.scrollContainer);
+        // 创建虚拟滚动容器结构
+        this.setupViewport();
         
         // 绑定滚动事件
-        this.scrollContainer.addEventListener('scroll', this.boundHandleScroll);
-        
-        // 绑定点击事件（事件委托）
-        if (this.onItemClick) {
-            this.contentContainer.addEventListener('click', this.boundHandleClick);
-        }
+        this.scrollListener = this.onScroll.bind(this);
+        this.viewport.addEventListener('scroll', this.scrollListener, { passive: true });
         
         // 初始渲染
         this.render();
     }
-    
-    private handleScroll(): void {
-        this.scrollTop = this.scrollContainer.scrollTop;
+
+    private setupViewport(): void {
+        const container = this.config.container;
+        container.innerHTML = '';
+        container.style.position = 'relative';
+        container.style.overflow = 'auto';
         
-        // 使用requestAnimationFrame优化滚动性能
-        requestAnimationFrame(() => {
-            this.render();
-        });
+        // 创建视口
+        this.viewport = container;
+        
+        // 创建内容容器（撑开滚动高度）
+        const spacer = document.createElement('div');
+        spacer.style.height = `${this.contentHeight}px`;
+        spacer.style.position = 'relative';
+        this.viewport.appendChild(spacer);
+        
+        // 创建实际内容容器
+        this.content = document.createElement('div');
+        this.content.style.position = 'absolute';
+        this.content.style.top = '0';
+        this.content.style.left = '0';
+        this.content.style.right = '0';
+        spacer.appendChild(this.content);
     }
-    
-    private handleClick(event: MouseEvent): void {
-        if (!this.onItemClick) return;
-        
-        const target = event.target as HTMLElement;
-        const itemElement = target.closest('[data-virtual-index]') as HTMLElement;
-        
-        if (itemElement) {
-            const index = parseInt(itemElement.dataset.virtualIndex || '0');
-            const item = this.items[index];
-            if (item) {
-                this.onItemClick(item, index, event);
-            }
-        }
-    }
-    
-    private calculateVisibleRange(): { start: number; end: number } {
-        const containerHeight = this.scrollContainer.clientHeight;
-        const start = Math.floor(this.scrollTop / this.itemHeight);
-        const visibleCount = Math.ceil(containerHeight / this.itemHeight);
-        
-        // 添加缓冲区
-        const bufferedStart = Math.max(0, start - this.bufferSize);
-        const bufferedEnd = Math.min(
-            this.items.length,
-            start + visibleCount + this.bufferSize
-        );
-        
-        return { start: bufferedStart, end: bufferedEnd };
-    }
-    
-    private render(): void {
-        const newRange = this.calculateVisibleRange();
-        
-        // 如果范围没有变化，不需要重新渲染
-        if (
-            newRange.start === this.visibleRange.start &&
-            newRange.end === this.visibleRange.end
-        ) {
-            return;
-        }
-        
-        this.visibleRange = newRange;
-        
-        // 生成可见项的HTML
-        const fragment = document.createDocumentFragment();
-        const wrapper = document.createElement('div');
-        
-        for (let i = newRange.start; i < newRange.end; i++) {
-            const item = this.items[i];
-            const itemElement = document.createElement('div');
-            itemElement.style.cssText = `
-                position: absolute;
-                top: ${i * this.itemHeight}px;
-                left: 0;
-                right: 0;
-                height: ${this.itemHeight}px;
-            `;
-            itemElement.dataset.virtualIndex = String(i);
-            itemElement.innerHTML = this.renderItem(item, i);
-            
-            wrapper.appendChild(itemElement);
-        }
-        
-        // 一次性更新DOM
-        this.contentContainer.innerHTML = '';
-        this.contentContainer.appendChild(wrapper);
-    }
-    
-    // 更新数据
-    public updateItems(items: T[]): void {
-        this.items = items;
-        this.contentContainer.style.height = `${items.length * this.itemHeight}px`;
+
+    private onScroll(): void {
+        this.scrollTop = this.viewport.scrollTop;
         this.render();
     }
-    
-    // 滚动到指定索引
-    public scrollToIndex(index: number, behavior: ScrollBehavior = 'smooth'): void {
-        const targetScroll = index * this.itemHeight;
-        this.scrollContainer.scrollTo({
+
+    private render(): void {
+        const { items, itemHeight, bufferSize, renderItem, onItemClick } = this.config;
+        const viewportHeight = this.viewport.clientHeight;
+        
+        // 计算可见范围
+        const visibleStart = Math.floor(this.scrollTop / itemHeight);
+        const visibleEnd = Math.ceil((this.scrollTop + viewportHeight) / itemHeight);
+        
+        // 添加缓冲区
+        this.visibleStart = Math.max(0, visibleStart - bufferSize);
+        this.visibleEnd = Math.min(items.length, visibleEnd + bufferSize);
+        
+        // 清空内容
+        this.content.innerHTML = '';
+        this.content.style.transform = `translateY(${this.visibleStart * itemHeight}px)`;
+        
+        // 渲染可见项
+        const fragment = document.createDocumentFragment();
+        for (let i = this.visibleStart; i < this.visibleEnd; i++) {
+            const item = items[i];
+            const element = renderItem(item, i);
+            element.addEventListener('click', () => onItemClick(i, item));
+            fragment.appendChild(element);
+        }
+        
+        this.content.appendChild(fragment);
+    }
+
+    public update(items: Song[]): void {
+        this.config.items = items;
+        this.contentHeight = items.length * this.config.itemHeight;
+        this.setupViewport();
+        this.render();
+    }
+
+    public scrollToIndex(index: number): void {
+        const targetScroll = index * this.config.itemHeight;
+        this.viewport.scrollTo({
             top: targetScroll,
-            behavior
+            behavior: 'smooth'
+        });
+    }
+
+    public destroy(): void {
+        this.viewport.removeEventListener('scroll', this.scrollListener);
+        this.content.innerHTML = '';
+    }
+}
+
+// 工厂函数：创建歌曲列表虚拟滚动
+export function createSongListVirtualScroll(
+    container: HTMLElement,
+    songs: Song[],
+    playlistForPlayback: Song[],
+    containerId: string
+): VirtualScroll {
+    return new VirtualScroll({
+        container,
+        items: songs,
+        itemHeight: 64, // 歌曲项高度
+        bufferSize: 5, // 缓冲5个项目
+        renderItem: (song, index) => createSongElement(song, index, containerId),
+        onItemClick: (index, song) => {
+            player.playSong(index, playlistForPlayback, containerId);
+        }
+    });
+}
+
+// 创建歌曲元素
+function createSongElement(song: Song, index: number, containerId: string): HTMLElement {
+    const songItem = document.createElement('div');
+    songItem.className = 'song-item';
+    songItem.dataset.index = String(index);
+    
+    const isFavorite = player.isSongInFavorites(song);
+    const favoriteIconClass = isFavorite ? 'fas fa-heart' : 'far fa-heart';
+    const favoriteIconColor = isFavorite ? 'color: #ff6b6b;' : '';
+    
+    const artist = Array.isArray(song.artist) ? song.artist.join(', ') : song.artist;
+    const artistDisplay = artist && artist !== '未知艺术家' ? artist : '未知艺术家';
+
+    songItem.innerHTML = `
+        <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
+        <div class="song-info">
+            <div class="song-name">${escapeHtml(song.name)}</div>
+            <div class="song-artist">${escapeHtml(artistDisplay)} · ${escapeHtml(song.album || '未知专辑')}</div>
+        </div>
+        <div class="song-actions">
+            <button class="action-btn favorite-btn" title="添加到我的喜欢" data-action="favorite">
+                <i class="${favoriteIconClass}" style="${favoriteIconColor}"></i>
+            </button>
+            <button class="action-btn download-btn" title="下载音乐" data-action="download">
+                <i class="fas fa-download"></i>
+            </button>
+        </div>
+    `;
+    
+    // 绑定操作按钮事件
+    const favoriteBtn = songItem.querySelector('.favorite-btn');
+    const downloadBtn = songItem.querySelector('.download-btn');
+    
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            player.toggleFavoriteButton(song);
+            // 更新图标
+            const icon = favoriteBtn.querySelector('i');
+            if (icon && player.isSongInFavorites(song)) {
+                icon.className = 'fas fa-heart';
+                (icon as HTMLElement).style.color = '#ff6b6b';
+            } else if (icon) {
+                icon.className = 'far fa-heart';
+                (icon as HTMLElement).style.color = '';
+            }
         });
     }
     
-    // 销毁
-    public destroy(): void {
-        // 使用保存的绑定引用来正确移除监听器
-        this.scrollContainer.removeEventListener('scroll', this.boundHandleScroll);
-        if (this.onItemClick) {
-            this.contentContainer.removeEventListener('click', this.boundHandleClick);
-        }
-        this.container.innerHTML = '';
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            player.downloadSongByData(song);
+        });
     }
+    
+    return songItem;
+}
+
+function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

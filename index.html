@@ -19,6 +19,9 @@
                 <i class="fas fa-music"></i>
                 <span>沄听</span>
             </div>
+            <button class="control-btn small" id="themeToggleBtn" title="切换主题" style="margin-right: 20px;">
+                <i class="fas fa-moon"></i>
+            </button>
             <div class="search-container">
                 <form class="search-wrapper" onsubmit="event.preventDefault(); return false;">
                     <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput" required>
@@ -263,6 +266,9 @@
             </div>
         </div>
     </footer>
+
+    <!-- 下载进度提示容器 -->
+    <div class="download-progress-container" id="downloadProgressContainer"></div>
 
     <!-- 优化: 资源预加载提示 -->
     <link rel="preload" href="/css/style.css" as="style">

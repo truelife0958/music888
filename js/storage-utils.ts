@@ -79,15 +79,18 @@ export function safeRemoveItem(key: string): boolean {
 }
 
 /**
- * 清理存储空间策略
+ * 修复BUG-002: 渐进式清理存储空间策略
+ * 使用多级清理策略，避免一次性删除过多数据
  */
 function tryCleanupStorage(currentKey: string): boolean {
-    console.log('🧹 开始清理 localStorage...');
+    console.log('🧹 开始渐进式清理 localStorage...');
     
+    // 第一阶段：清理明确的临时和缓存数据
     const cleanupPriority = [
         { pattern: /^temp_/, desc: '临时数据' },
         { pattern: /^cache_/, desc: '缓存数据' },
         { pattern: /^old_/, desc: '旧版本数据' },
+        { pattern: /^expire_/, desc: '过期数据' },
     ];
     
     // 按优先级清理
@@ -107,8 +110,61 @@ function tryCleanupStorage(currentKey: string): boolean {
         }
     }
     
-    // 如果没有可清理的项目，尝试压缩最大的项
+    // 第二阶段：渐进式清理播放历史（保留重要数据）
+    const progressiveResult = progressiveCleanupHistory(currentKey);
+    if (progressiveResult) {
+        return true;
+    }
+    
+    // 第三阶段：尝试压缩最大的项
     return compressLargestItem(currentKey);
+}
+
+/**
+ * 修复BUG-002: 渐进式清理播放历史
+ * 优先保留收藏和最近的历史记录
+ */
+function progressiveCleanupHistory(excludeKey: string): boolean {
+    const historyKey = 'playHistory';
+    
+    if (historyKey === excludeKey) {
+        return false; // 不清理正在写入的键
+    }
+    
+    try {
+        const historyData = localStorage.getItem(historyKey);
+        if (!historyData) return false;
+        
+        const history = JSON.parse(historyData);
+        if (!Array.isArray(history) || history.length === 0) return false;
+        
+        // 渐进式清理策略：删除10% -> 30% -> 50% -> 70%
+        const strategies = [
+            { ratio: 0.9, desc: '删除10%最旧记录' },
+            { ratio: 0.7, desc: '删除30%最旧记录' },
+            { ratio: 0.5, desc: '删除50%最旧记录' },
+            { ratio: 0.3, desc: '删除70%最旧记录' },
+        ];
+        
+        for (const strategy of strategies) {
+            const keepCount = Math.floor(history.length * strategy.ratio);
+            const reducedHistory = history.slice(0, keepCount);
+            
+            try {
+                localStorage.setItem(historyKey, JSON.stringify(reducedHistory));
+                console.log(`✅ ${strategy.desc}，保留 ${keepCount}/${history.length} 条记录`);
+                return true;
+            } catch (error) {
+                // 如果这个策略也失败，尝试更激进的策略
+                continue;
+            }
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('清理播放历史失败:', error);
+        return false;
+    }
 }
 
 /**

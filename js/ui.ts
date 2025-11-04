@@ -2,6 +2,7 @@ import { Song } from './api.js';
 import * as player from './player.js';
 import { formatTime, formatArtist } from './utils.js';
 import { LyricLine } from './types.js';
+import { VirtualScroll, createSongListVirtualScroll } from './virtual-scroll.js';
 
 // --- DOM Element Cache ---
 interface DOMElements {
@@ -29,6 +30,9 @@ let currentSongList: Song[] = [];
 // 优化: 存储事件监听器引用，防止内存泄漏
 const containerEventListeners = new WeakMap<HTMLElement, (e: Event) => void>();
 
+// 虚拟滚动实例管理
+const virtualScrollInstances = new WeakMap<HTMLElement, VirtualScroll>();
+
 // 优化: 添加全局清理函数
 export function cleanup(): void {
     // 清理所有事件监听器
@@ -43,6 +47,13 @@ export function cleanup(): void {
             const listener = containerEventListeners.get(container);
             if (listener) {
                 container.removeEventListener('click', listener);
+            }
+            
+            // 清理虚拟滚动实例
+            const virtualScroll = virtualScrollInstances.get(container);
+            if (virtualScroll) {
+                virtualScroll.destroy();
+                virtualScrollInstances.delete(container);
             }
         }
     });
@@ -139,7 +150,7 @@ function escapeHtml(text: string): string {
     return div.innerHTML;
 }
 
-// 优化: 使用事件委托和 DocumentFragment，防止内存泄漏
+// 优化: 使用虚拟滚动和事件委托，大幅提升大列表性能
 export function displaySearchResults(songs: Song[], containerId: string, playlistForPlayback: Song[]): void {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -149,60 +160,83 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
         return;
     }
 
+    // 清理旧的虚拟滚动实例
+    const oldVirtualScroll = virtualScrollInstances.get(container);
+    if (oldVirtualScroll) {
+        oldVirtualScroll.destroy();
+        virtualScrollInstances.delete(container);
+    }
+
     // 优化: 移除旧的事件监听器，防止内存泄漏
     const oldListener = containerEventListeners.get(container);
     if (oldListener) {
         container.removeEventListener('click', oldListener);
     }
 
-    // 优化: 使用 DocumentFragment 批量插入 DOM
-    const fragment = document.createDocumentFragment();
+    // 判断是否需要使用虚拟滚动（超过50首歌曲时启用）
+    const USE_VIRTUAL_SCROLL_THRESHOLD = 50;
     
-    songs.forEach((song, index) => {
-        const songElement = createSongElement(song, index, playlistForPlayback, containerId);
-        fragment.appendChild(songElement);
-    });
+    if (songs.length > USE_VIRTUAL_SCROLL_THRESHOLD) {
+        // 使用虚拟滚动优化性能
+        console.log(`🚀 启用虚拟滚动优化 (${songs.length} 首歌曲)`);
+        const virtualScroll = createSongListVirtualScroll(
+            container,
+            songs,
+            playlistForPlayback,
+            containerId
+        );
+        virtualScrollInstances.set(container, virtualScroll);
+    } else {
+        // 歌曲数量较少，使用传统渲染方式
+        // 优化: 使用 DocumentFragment 批量插入 DOM
+        const fragment = document.createDocumentFragment();
+        
+        songs.forEach((song, index) => {
+            const songElement = createSongElement(song, index, playlistForPlayback, containerId);
+            fragment.appendChild(songElement);
+        });
 
-    // 优化: 一次性清空并插入，减少重排
-    container.innerHTML = '';
-    container.appendChild(fragment);
-    
-    // 优化: 创建新的事件监听器并保存引用
-    const clickHandler = (e: Event) => {
-        const target = e.target as HTMLElement;
-        const songItem = target.closest('.song-item') as HTMLElement;
+        // 优化: 一次性清空并插入，减少重排
+        container.innerHTML = '';
+        container.appendChild(fragment);
         
-        if (!songItem) return;
-        
-        const index = parseInt(songItem.dataset.index || '0');
-        const action = target.closest('[data-action]')?.getAttribute('data-action');
-        
-        if (action === 'favorite') {
-            e.stopPropagation();
-            const song = playlistForPlayback[index];
-            player.toggleFavoriteButton(song);
+        // 优化: 创建新的事件监听器并保存引用
+        const clickHandler = (e: Event) => {
+            const target = e.target as HTMLElement;
+            const songItem = target.closest('.song-item') as HTMLElement;
             
-            // 优化: 乐观更新 UI
-            const icon = target.closest('.favorite-btn')?.querySelector('i');
-            if (icon && player.isSongInFavorites(song)) {
-                icon.className = 'fas fa-heart';
-                icon.style.color = '#ff6b6b';
-            } else if (icon) {
-                icon.className = 'far fa-heart';
-                icon.style.color = '';
+            if (!songItem) return;
+            
+            const index = parseInt(songItem.dataset.index || '0');
+            const action = target.closest('[data-action]')?.getAttribute('data-action');
+            
+            if (action === 'favorite') {
+                e.stopPropagation();
+                const song = playlistForPlayback[index];
+                player.toggleFavoriteButton(song);
+                
+                // 优化: 乐观更新 UI
+                const icon = target.closest('.favorite-btn')?.querySelector('i');
+                if (icon && player.isSongInFavorites(song)) {
+                    icon.className = 'fas fa-heart';
+                    icon.style.color = '#ff6b6b';
+                } else if (icon) {
+                    icon.className = 'far fa-heart';
+                    icon.style.color = '';
+                }
+            } else if (action === 'download') {
+                e.stopPropagation();
+                player.downloadSongByData(playlistForPlayback[index]);
+            } else {
+                // 点击歌曲项播放
+                player.playSong(index, playlistForPlayback, containerId);
             }
-        } else if (action === 'download') {
-            e.stopPropagation();
-            player.downloadSongByData(playlistForPlayback[index]);
-        } else {
-            // 点击歌曲项播放
-            player.playSong(index, playlistForPlayback, containerId);
-        }
-    };
-    
-    // 添加新的事件监听器并保存引用
-    container.addEventListener('click', clickHandler);
-    containerEventListeners.set(container, clickHandler);
+        };
+        
+        // 添加新的事件监听器并保存引用
+        container.addEventListener('click', clickHandler);
+        containerEventListeners.set(container, clickHandler);
+    }
 }
 
 export function updatePlayButton(isPlaying: boolean): void {
@@ -213,7 +247,30 @@ export function updatePlayButton(isPlaying: boolean): void {
 export function updateCurrentSongInfo(song: Song, coverUrl: string): void {
     DOM.currentTitle.textContent = song.name;
     DOM.currentArtist.textContent = `${formatArtist(song.artist)} · ${song.album || '未知专辑'}`;
-    (DOM.currentCover as HTMLImageElement).src = coverUrl;
+    
+    // 优化: 使用图片懒加载
+    const coverImg = DOM.currentCover as HTMLImageElement;
+    if (coverUrl) {
+        // 添加加载状态
+        coverImg.classList.add('loading');
+        coverImg.classList.remove('loaded', 'error');
+        
+        // 预加载图片
+        const tempImg = new Image();
+        tempImg.onload = () => {
+            coverImg.src = coverUrl;
+            coverImg.classList.remove('loading');
+            coverImg.classList.add('loaded');
+        };
+        tempImg.onerror = () => {
+            // 使用默认封面
+            coverImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIwIiBoZWlnaHQ9IjIyMCIgdmlld0JveD0iMCAwIDIyMCAyMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMjAiIGhlaWdodD0iMjIwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU5LDAuMSkiIHJ4PSIyMCIvPgo8cGF0aCBkPSJNMTEwIDcwTDE0MCAxMTBIMTIwVjE1MEg5MFYxMTBINzBMMTEwIDcwWiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
+            coverImg.classList.remove('loading');
+            coverImg.classList.add('error');
+        };
+        tempImg.src = coverUrl;
+    }
+    
     (DOM.downloadSongBtn as HTMLButtonElement).disabled = false;
     (DOM.downloadLyricBtn as HTMLButtonElement).disabled = false;
 }

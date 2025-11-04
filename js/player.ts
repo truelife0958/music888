@@ -5,6 +5,8 @@ import { PLAYER_CONFIG, STORAGE_CONFIG, SOURCE_NAMES, QUALITY_NAMES, QUALITY_FAL
 import { generateSongFileName } from './utils.js';
 import { LyricLine } from './types.js';
 import { recordPlay } from './play-stats.js';
+import { startDownloadWithProgress } from './download-progress.js';
+import lyricsWorkerManager from './lyrics-worker-manager.js';
 
 // --- Player State ---
 let currentPlaylist: Song[] = [];
@@ -265,7 +267,10 @@ export async function playSong(index: number, playlist: Song[], containerId: str
             addToPlayHistory(song);
 
             const lyricsData = await api.getLyrics(song);
-            const lyrics = lyricsData.lyric ? parseLyrics(lyricsData.lyric) : [];
+            // 优化: 使用 Web Worker 解析歌词，避免阻塞主线程
+            const lyrics = lyricsData.lyric
+                ? await lyricsWorkerManager.parseLyric(lyricsData.lyric)
+                : [];
             currentLyrics = lyrics; // 保存当前歌词
             ui.updateLyrics(lyrics, 0);
 
@@ -445,31 +450,23 @@ export function togglePlayMode(): void {
 
 export function downloadSongByData(song: Song | null): void {
     if (!song) return;
-    ui.showNotification(`开始下载: ${song.name}`, 'info');
-    api.getSongUrl(song, '999').then(urlData => {
+    
+    // 使用下载进度管理器
+    startDownloadWithProgress(song, async () => {
+        const urlData = await api.getSongUrl(song, '999');
         if (urlData && urlData.url) {
-            fetch(urlData.url)
-                .then(res => res.blob())
-                .then(blob => {
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = generateSongFileName(song);
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(a.href);
-                    ui.showNotification(`下载完成: ${song.name}`, 'success');
-                })
-                .catch(error => {
-                    console.error('❌ [下载音乐] 下载失败:', error);
-                    ui.showNotification(`下载失败: ${song.name}`, 'error');
-                });
+            const res = await fetch(urlData.url);
+            const blob = await res.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = generateSongFileName(song);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
         } else {
-            ui.showNotification(`无法获取下载链接: ${song.name}`, 'error');
+            throw new Error('无法获取下载链接');
         }
-    }).catch(error => {
-        console.error('❌ [下载音乐] 获取链接失败:', error);
-        ui.showNotification(`下载失败: ${song.name}`, 'error');
     });
 }
 
@@ -1022,6 +1019,8 @@ function recordPlayStats(): void {
 export function init(): void {
     initAudioPlayer();
     loadSavedPlaylists();
+    // 初始化歌词 Worker
+    lyricsWorkerManager.init();
 }
 
 // 老王修复：移除自动调用，避免重复初始化

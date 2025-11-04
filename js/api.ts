@@ -409,20 +409,28 @@ export async function getAlbumCoverUrl(song: Song, size: number = 300): Promise<
     }
 }
 
-// 优化: 验证URL是否有效
+// 修复BUG-003: 使用GET+Range替代HEAD请求，避免CORS问题
 async function validateUrl(url: string): Promise<boolean> {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
+        // 使用GET请求+Range头，只请求第一个字节，避免CORS阻止HEAD请求
         const response = await fetch(url, {
-            method: 'HEAD',
+            method: 'GET',
+            headers: {
+                'Range': 'bytes=0-0'
+            },
             signal: controller.signal
         });
         
         clearTimeout(timeoutId);
-        return response.ok || response.status === 206; // 206 Partial Content 也算有效
+        
+        // 206 Partial Content, 200 OK, 或 416 Range Not Satisfiable 都表示URL有效
+        return response.ok || response.status === 206 || response.status === 416;
     } catch (error) {
+        // 网络错误或超时，认为URL无效
+        console.warn('URL验证失败:', url, error);
         return false;
     }
 }

@@ -5,13 +5,30 @@ import * as api from './api.js';
 import * as ui from './ui.js';
 import * as player from './player.js';
 import { debounce } from './utils.js';
-import { initRank } from './rank.js';
-import { initDailyRecommend } from './daily-recommend.js';
-import { initSearchHistory, addSearchHistory } from './search-history.js';
-import { initPlayStats } from './play-stats.js';
+import storageAdapter from './storage-adapter.js';
+import { ThemeManager } from './theme-manager.js';
+
+// 优化: 使用动态导入实现代码分割，减少初始加载时间
+let rankModule: any = null;
+let dailyRecommendModule: any = null;
+let searchHistoryModule: any = null;
+let playStatsModule: any = null;
+let imageLazyLoader: any = null;
+let downloadProgressManager: any = null;
+let themeManager: ThemeManager | null = null;
 
 // 防止重复初始化的全局标志
 let appInitialized = false;
+
+// 模块加载状态
+const moduleLoadStatus = {
+    rank: false,
+    dailyRecommend: false,
+    searchHistory: false,
+    playStats: false,
+    imageLoader: false,
+    downloadProgress: false
+};
 
 // Tab切换逻辑
 export function switchTab(tabName: string): void {
@@ -43,12 +60,35 @@ async function initializeApp(): Promise<void> {
     appInitialized = true;
     console.log('🚀 开始初始化应用...');
     
+    // 优化: 初始化主题管理器
+    themeManager = new ThemeManager();
+    console.log('✅ 主题系统初始化成功');
+    
+    // 优化: 初始化存储适配器（IndexedDB）
+    try {
+        await storageAdapter.initialize();
+        console.log('✅ 存储系统初始化成功');
+    } catch (error) {
+        console.error('❌ 存储系统初始化失败:', error);
+    }
+    
     ui.init();
     player.init();
-    initRank();
-    initDailyRecommend();
-    initSearchHistory();
-    initPlayStats();
+    
+    // 优化: 延迟初始化非关键模块
+    initPerformanceOptimizations();
+    
+    // 优化: 使用 requestIdleCallback 在浏览器空闲时初始化非关键功能
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+            initNonCriticalModules();
+        }, { timeout: 2000 });
+    } else {
+        // 降级方案：使用 setTimeout
+        setTimeout(() => {
+            initNonCriticalModules();
+        }, 100);
+    }
     
     // 增强功能：键盘快捷键
     initKeyboardShortcuts();
@@ -74,18 +114,34 @@ async function initializeApp(): Promise<void> {
     
     player.loadSavedPlaylists();
 
-    // 搜索功能
+    // 搜索功能 - 修复BUG-004: 添加防抖，提升性能
     const searchBtn = document.querySelector('.search-btn');
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
     
     if (searchBtn && searchInput) {
         searchBtn.addEventListener('click', handleSearch);
+        
+        // 回车键搜索
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 handleSearch();
             }
         });
+        
+        // 实时搜索防抖（可选功能，默认禁用）
+        // 如需启用实时搜索，取消下面的注释
+        /*
+        const debouncedSearch = debounce(() => {
+            if (searchInput.value.trim()) {
+                handleSearch();
+            }
+        }, 500);
+        
+        searchInput.addEventListener('input', () => {
+            debouncedSearch();
+        });
+        */
     }
 
     // 播放器控制 - 使用ID选择器更安全
@@ -95,6 +151,47 @@ async function initializeApp(): Promise<void> {
     document.getElementById('playModeBtn')!.addEventListener('click', player.togglePlayMode);
     document.getElementById('volumeSlider')!.addEventListener('input', (e) => player.setVolume((e.target as HTMLInputElement).value));
     document.querySelector('.progress-bar')!.addEventListener('click', (e) => player.seekTo(e as MouseEvent));
+    
+    // 主题切换按钮
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    if (themeToggleBtn && themeManager) {
+        themeToggleBtn.addEventListener('click', () => {
+            themeManager!.toggleTheme();
+        });
+        
+        // 监听主题变化事件以更新按钮图标
+        themeManager.on('themeChanged', (theme: string) => {
+            const icon = themeToggleBtn.querySelector('i');
+            if (icon) {
+                if (theme === 'dark') {
+                    icon.className = 'fas fa-moon';
+                    themeToggleBtn.title = '切换到亮色模式';
+                } else if (theme === 'light') {
+                    icon.className = 'fas fa-sun';
+                    themeToggleBtn.title = '切换到暗色模式';
+                } else {
+                    icon.className = 'fas fa-adjust';
+                    themeToggleBtn.title = '自动主题';
+                }
+            }
+        });
+        
+        // 初始化按钮状态
+        const currentTheme = themeManager.getCurrentTheme();
+        const icon = themeToggleBtn.querySelector('i');
+        if (icon) {
+            if (currentTheme === 'dark') {
+                icon.className = 'fas fa-moon';
+                themeToggleBtn.title = '切换到亮色模式';
+            } else if (currentTheme === 'light') {
+                icon.className = 'fas fa-sun';
+                themeToggleBtn.title = '切换到暗色模式';
+            } else {
+                icon.className = 'fas fa-adjust';
+                themeToggleBtn.title = '自动主题';
+            }
+        }
+    }
     
     // 下载按钮
     document.getElementById('downloadSongBtn')!.addEventListener('click', () => {
@@ -114,10 +211,19 @@ async function initializeApp(): Promise<void> {
         }
     });
 
-    // Tab按钮
+    // Tab按钮 - 优化: 按需加载对应模块
     document.querySelectorAll('.tab-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            switchTab((button as HTMLElement).dataset.tab!);
+        button.addEventListener('click', async () => {
+            const tab = (button as HTMLElement).dataset.tab!;
+            
+            // 根据tab类型按需加载模块
+            if (tab === 'rank' && !moduleLoadStatus.rank) {
+                await loadRankModule();
+            } else if (tab === 'recommend' && !moduleLoadStatus.dailyRecommend) {
+                await loadDailyRecommendModule();
+            }
+            
+            switchTab(tab);
         });
     });
 
@@ -132,6 +238,80 @@ async function initializeApp(): Promise<void> {
     
     // 移动端页面指示器事件绑定
     initMobilePageIndicators();
+}
+
+// 优化: 按需加载非关键模块
+async function initNonCriticalModules(): Promise<void> {
+    try {
+        // 并行加载所有非关键模块
+        await Promise.all([
+            loadSearchHistoryModule(),
+            loadPlayStatsModule()
+        ]);
+        console.log('✅ 非关键模块加载完成');
+    } catch (error) {
+        console.error('❌ 非关键模块加载失败:', error);
+    }
+}
+
+// 优化: 按需加载排行榜模块
+async function loadRankModule(): Promise<void> {
+    if (moduleLoadStatus.rank) return;
+    
+    try {
+        console.log('📦 加载排行榜模块...');
+        rankModule = await import('./rank.js');
+        rankModule.initRank();
+        moduleLoadStatus.rank = true;
+        console.log('✅ 排行榜模块加载完成');
+    } catch (error) {
+        console.error('❌ 排行榜模块加载失败:', error);
+    }
+}
+
+// 优化: 按需加载每日推荐模块
+async function loadDailyRecommendModule(): Promise<void> {
+    if (moduleLoadStatus.dailyRecommend) return;
+    
+    try {
+        console.log('📦 加载每日推荐模块...');
+        dailyRecommendModule = await import('./daily-recommend.js');
+        dailyRecommendModule.initDailyRecommend();
+        moduleLoadStatus.dailyRecommend = true;
+        console.log('✅ 每日推荐模块加载完成');
+    } catch (error) {
+        console.error('❌ 每日推荐模块加载失败:', error);
+    }
+}
+
+// 优化: 按需加载搜索历史模块
+async function loadSearchHistoryModule(): Promise<void> {
+    if (moduleLoadStatus.searchHistory) return;
+    
+    try {
+        console.log('📦 加载搜索历史模块...');
+        searchHistoryModule = await import('./search-history.js');
+        searchHistoryModule.initSearchHistory();
+        moduleLoadStatus.searchHistory = true;
+        console.log('✅ 搜索历史模块加载完成');
+    } catch (error) {
+        console.error('❌ 搜索历史模块加载失败:', error);
+    }
+}
+
+// 优化: 按需加载播放统计模块
+async function loadPlayStatsModule(): Promise<void> {
+    if (moduleLoadStatus.playStats) return;
+    
+    try {
+        console.log('📦 加载播放统计模块...');
+        playStatsModule = await import('./play-stats.js');
+        playStatsModule.initPlayStats();
+        moduleLoadStatus.playStats = true;
+        console.log('✅ 播放统计模块加载完成');
+    } catch (error) {
+        console.error('❌ 播放统计模块加载失败:', error);
+    }
 }
 
 // 初始化移动端页面指示器
@@ -153,8 +333,15 @@ async function handleSearch(): Promise<void> {
         return;
     }
     
+    // 确保搜索历史模块已加载
+    if (!moduleLoadStatus.searchHistory) {
+        await loadSearchHistoryModule();
+    }
+    
     // 添加到搜索历史
-    addSearchHistory(keyword.trim());
+    if (searchHistoryModule && searchHistoryModule.addSearchHistory) {
+        searchHistoryModule.addSearchHistory(keyword.trim());
+    }
     
     ui.showLoading('searchResults');
 
@@ -341,29 +528,54 @@ window.addEventListener('beforeunload', () => {
     if (typeof ui.cleanup === 'function') {
         ui.cleanup();
     }
+    
+    // 清理性能优化模块
+    if (imageLazyLoader) {
+        imageLazyLoader.destroy();
+        imageLazyLoader = null;
+    }
+    
+    if (downloadProgressManager) {
+        downloadProgressManager = null;
+    }
+    
+    // 清理主题管理器
+    if (themeManager) {
+        themeManager.destroy();
+        themeManager = null;
+    }
+    
+    // 清理歌词 Worker
+    import('./lyrics-worker-manager.js').then(module => {
+        module.default.destroy();
+    });
 });
 
-// 修复: 添加移动端滑动手势支持
+// 优化: 移动端滑动手势支持 - 增强版
 let touchStartX = 0;
 let touchStartY = 0;
 let touchEndX = 0;
 let touchEndY = 0;
+let touchStartTime = 0;
 
 const mainContainer = document.querySelector('.main-container');
 if (mainContainer && window.innerWidth <= 768) {
-    // 优化: 添加touchmove事件以改进滑动检测
+    // 优化: 添加更精确的滑动检测
     let isSwiping = false;
     let hasMovedEnough = false;
+    let swipeDirection: 'horizontal' | 'vertical' | 'none' = 'none';
     
     mainContainer.addEventListener('touchstart', (e: Event) => {
         const touchEvent = e as TouchEvent;
         touchStartX = touchEvent.changedTouches[0].screenX;
         touchStartY = touchEvent.changedTouches[0].screenY;
+        touchStartTime = Date.now();
         isSwiping = false;
         hasMovedEnough = false;
+        swipeDirection = 'none';
     }, { passive: true });
 
-    // 修复: 只在确定是水平滑动且滑动距离足够时才阻止默认行为
+    // 优化: 改进滑动方向判断和惯性检测
     mainContainer.addEventListener('touchmove', (e: Event) => {
         const touchEvent = e as TouchEvent;
         const currentX = touchEvent.changedTouches[0].screenX;
@@ -371,42 +583,57 @@ if (mainContainer && window.innerWidth <= 768) {
         const deltaX = Math.abs(currentX - touchStartX);
         const deltaY = Math.abs(currentY - touchStartY);
         
-        // 修复: 只有在移动距离足够且水平方向明显大于垂直方向时才判定为滑动
-        if (!hasMovedEnough && (deltaX > 30 || deltaY > 30)) {
-            hasMovedEnough = true;
-            // 修复: 水平滑动必须是垂直滑动的1.5倍以上才算页面切换手势
-            if (deltaX > deltaY * 1.5) {
+        // 优化: 更早地判断滑动方向，阈值降低到20px
+        if (swipeDirection === 'none' && (deltaX > 20 || deltaY > 20)) {
+            // 优化: 使用更宽松的比例判断（1.3倍）提高响应性
+            if (deltaX > deltaY * 1.3) {
+                swipeDirection = 'horizontal';
                 isSwiping = true;
+            } else if (deltaY > deltaX * 1.3) {
+                swipeDirection = 'vertical';
             }
         }
         
-        // 修复: 只在确认是页面切换手势时才阻止默认滚动
-        if (isSwiping && deltaX > deltaY * 1.5) {
+        // 优化: 只阻止水平滑动的默认行为，保留垂直滚动
+        if (swipeDirection === 'horizontal') {
             e.preventDefault();
+            hasMovedEnough = true;
         }
-    }, { passive: false }); // 需要preventDefault，所以不能passive
+    }, { passive: false });
 
     mainContainer.addEventListener('touchend', (e: Event) => {
         const touchEvent = e as TouchEvent;
         touchEndX = touchEvent.changedTouches[0].screenX;
         touchEndY = touchEvent.changedTouches[0].screenY;
+        const touchEndTime = Date.now();
         
-        // 只有在确认是滑动手势时才处理
-        if (isSwiping) {
-            handleSwipe();
+        // 优化: 计算滑动速度，支持快速滑动
+        const swipeTime = touchEndTime - touchStartTime;
+        const swipeDistance = Math.abs(touchEndX - touchStartX);
+        const swipeVelocity = swipeDistance / swipeTime; // px/ms
+        
+        // 只有在确认是水平滑动时才处理
+        if (swipeDirection === 'horizontal' && hasMovedEnough) {
+            handleSwipe(swipeVelocity);
         }
         
+        // 重置状态
         isSwiping = false;
         hasMovedEnough = false;
+        swipeDirection = 'none';
     }, { passive: true });
 }
 
-function handleSwipe(): void {
+// 优化: 支持快速滑动和惯性检测
+function handleSwipe(velocity: number = 0): void {
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
-    const minSwipeDistance = 50;
+    
+    // 优化: 根据滑动速度动态调整最小距离要求
+    // 快速滑动（velocity > 0.5）只需30px，慢速滑动需要60px
+    const minSwipeDistance = velocity > 0.5 ? 30 : 60;
 
-    // 只处理水平滑动，忽略垂直滑动（用于滚动）
+    // 只处理水平滑动
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
         const sections = document.querySelectorAll('.content-section, .player-section, .stats-section-sidebar');
         const indicators = document.querySelectorAll('.page-indicator');
@@ -419,13 +646,21 @@ function handleSwipe(): void {
             }
         });
 
+        // 优化: 支持快速滑动跳过多页（velocity > 1.0）
+        let pagesToSkip = 1;
+        if (velocity > 1.0 && Math.abs(deltaX) > 100) {
+            pagesToSkip = 2;
+        }
+
         // 左滑显示下一页
         if (deltaX < 0 && currentPage < sections.length - 1) {
-            (window as any).switchMobilePage(currentPage + 1);
+            const targetPage = Math.min(currentPage + pagesToSkip, sections.length - 1);
+            (window as any).switchMobilePage(targetPage);
         }
         // 右滑显示上一页
         else if (deltaX > 0 && currentPage > 0) {
-            (window as any).switchMobilePage(currentPage - 1);
+            const targetPage = Math.max(currentPage - pagesToSkip, 0);
+            (window as any).switchMobilePage(targetPage);
         }
     }
 }
@@ -437,6 +672,45 @@ if (document.readyState === 'loading') {
     });
 } else {
     initializeApp();
+}
+
+// ========== 性能优化模块初始化 ==========
+async function initPerformanceOptimizations(): Promise<void> {
+    console.log('🚀 初始化性能优化模块...');
+    
+    // 1. 初始化图片懒加载
+    if (!moduleLoadStatus.imageLoader) {
+        try {
+            const { ImageLazyLoader } = await import('./image-lazy-load.js');
+            imageLazyLoader = new ImageLazyLoader();
+            moduleLoadStatus.imageLoader = true;
+            console.log('✅ 图片懒加载已启用');
+            
+            // 为现有图片添加懒加载
+            const images = document.querySelectorAll('img[loading="lazy"]');
+            images.forEach(img => {
+                if (img instanceof HTMLImageElement) {
+                    imageLazyLoader.observe(img);
+                }
+            });
+        } catch (error) {
+            console.error('❌ 图片懒加载初始化失败:', error);
+        }
+    }
+    
+    // 2. 初始化下载进度管理器
+    if (!moduleLoadStatus.downloadProgress) {
+        try {
+            const { DownloadProgressManager } = await import('./download-progress.js');
+            downloadProgressManager = new DownloadProgressManager();
+            moduleLoadStatus.downloadProgress = true;
+            console.log('✅ 下载进度管理器已启用');
+        } catch (error) {
+            console.error('❌ 下载进度管理器初始化失败:', error);
+        }
+    }
+    
+    console.log('✅ 性能优化模块初始化完成');
 }
 
 // ========== 增强功能：键盘快捷键 ==========
