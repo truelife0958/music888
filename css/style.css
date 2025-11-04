@@ -245,6 +245,45 @@ body {
     gap: 10px;
 }
 
+/* 页脚样式 */
+.footer {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px 0;
+    margin-top: 40px;
+}
+
+.footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 30px;
+    text-align: center;
+}
+
+.footer-info p {
+    margin: 8px 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+}
+
+.github-link {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+}
+
+.github-link:hover {
+    color: #ff6b6b;
+}
+
+.github-link i {
+    font-size: 16px;
+}
+
 /* 标签页 */
 .tabs {
     display: flex;
@@ -615,7 +654,7 @@ body {
 /* 音质和下载 */
 .quality-download-container {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 2fr 1.5fr 1.5fr;
     gap: 10px;
     margin-bottom: 20px;
 }
@@ -638,15 +677,24 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 10px 15px;
+    gap: 6px;
+    padding: 10px 12px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     color: #fff;
     cursor: pointer;
     transition: all 0.3s ease;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.download-btn i {
     font-size: 14px;
+}
+
+.download-btn span {
+    display: inline-block;
 }
 
 .download-btn:hover:not(:disabled) {
@@ -1842,47 +1890,55 @@ body {
 .stats-overview {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    padding: 20px 30px;
+    gap: 12px;
+    padding: 15px 20px;
     background: rgba(255, 255, 255, 0.02);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .stats-card {
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 15px;
+    border-radius: 10px;
+    padding: 12px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .stats-card-icon {
-    font-size: 32px;
-    width: 50px;
-    height: 50px;
+    font-size: 28px;
+    width: 45px;
+    height: 45px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(255, 107, 107, 0.2);
-    border-radius: 10px;
+    border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .stats-card-info {
     flex: 1;
+    min-width: 0;
 }
 
 .stats-card-value {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: #ff6b6b;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .stats-card-label {
-    font-size: 12px;
+    font-size: 11px;
     color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .stats-tabs {

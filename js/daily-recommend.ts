@@ -29,76 +29,37 @@ let isRecommendVisible = false;
 
 // 初始化每日推荐
 export function initDailyRecommend() {
-    const recommendBtn = document.getElementById('dailyRecommendBtn');
-    if (recommendBtn) {
-        recommendBtn.addEventListener('click', toggleRecommendPanel);
+    // 初始化推荐标签页内的内容
+    initRecommendTab();
+}
+
+// 初始化推荐标签页
+function initRecommendTab() {
+    // 绑定刷新按钮
+    const refreshBtn = document.getElementById('refreshRecommendBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => loadDailyRecommend(true));
     }
     
-    // 创建推荐面板
-    createRecommendPanel();
-}
-
-// 创建推荐面板
-function createRecommendPanel() {
-    const panel = document.createElement('div');
-    panel.id = 'recommendPanel';
-    panel.className = 'recommend-panel';
-    panel.innerHTML = `
-        <div class="recommend-header">
-            <h3>🎲 每日推荐</h3>
-            <button class="recommend-close" onclick="window.closeRecommendPanel()">×</button>
-        </div>
-        <div class="recommend-info">
-            <p>每天为你推荐${DAILY_RECOMMEND_CONFIG.SONGS_COUNT}首精选音乐</p>
-            <p class="recommend-date" id="recommendDate"></p>
-        </div>
-        <div class="recommend-actions">
-            <button class="recommend-refresh-btn" onclick="window.refreshDailyRecommend()">
-                <i class="fas fa-sync-alt"></i> 刷新推荐
-            </button>
-            <button class="recommend-play-all-btn" onclick="window.playAllRecommend()">
-                <i class="fas fa-play"></i> 播放全部
-            </button>
-        </div>
-        <div class="recommend-songs" id="recommendSongs">
-            <div class="loading">加载中...</div>
-        </div>
-    `;
-    document.body.appendChild(panel);
+    // 绑定播放全部按钮
+    const playAllBtn = document.getElementById('playAllRecommendBtn');
+    if (playAllBtn) {
+        playAllBtn.addEventListener('click', playAllRecommend);
+    }
     
-    // 全局函数
-    (window as any).closeRecommendPanel = closeRecommendPanel;
-    (window as any).refreshDailyRecommend = () => loadDailyRecommend(true);
-    (window as any).playAllRecommend = playAllRecommend;
-}
-
-// 显示/隐藏推荐面板
-function toggleRecommendPanel() {
-    if (isRecommendVisible) {
-        closeRecommendPanel();
-    } else {
-        openRecommendPanel();
+    // 监听标签页切换，只在显示时加载
+    const tabBtn = document.querySelector('.tab-btn[data-tab="recommend"]');
+    if (tabBtn) {
+        tabBtn.addEventListener('click', () => {
+            // 如果还没有加载过，则加载推荐
+            const songsContainer = document.getElementById('recommendSongs');
+            if (songsContainer && songsContainer.querySelector('.loading')) {
+                loadDailyRecommend();
+            }
+        });
     }
 }
 
-// 打开推荐面板
-async function openRecommendPanel() {
-    const panel = document.getElementById('recommendPanel');
-    if (panel) {
-        panel.classList.add('active');
-        isRecommendVisible = true;
-        await loadDailyRecommend();
-    }
-}
-
-// 关闭推荐面板
-function closeRecommendPanel() {
-    const panel = document.getElementById('recommendPanel');
-    if (panel) {
-        panel.classList.remove('active');
-        isRecommendVisible = false;
-    }
-}
 
 // 加载每日推荐
 async function loadDailyRecommend(forceRefresh: boolean = false) {

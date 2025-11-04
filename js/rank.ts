@@ -33,37 +33,14 @@ let isRankVisible = false;
 
 // 初始化排行榜
 export function initRank() {
-    const rankBtn = document.getElementById('rankBtn');
-    if (rankBtn) {
-        rankBtn.addEventListener('click', toggleRankPanel);
-    }
-    
-    // 创建排行榜面板
-    createRankPanel();
+    // 初始化排行榜标签页内的内容
+    initRankTab();
 }
 
-// 创建排行榜面板
-function createRankPanel() {
-    const panel = document.createElement('div');
-    panel.id = 'rankPanel';
-    panel.className = 'rank-panel';
-    panel.innerHTML = `
-        <div class="rank-header">
-            <h3>🏆 音乐排行榜</h3>
-            <button class="rank-close" onclick="window.closeRankPanel()">×</button>
-        </div>
-        <div class="rank-tabs">
-            <button class="rank-tab active" data-source="netease">网易云</button>
-            <button class="rank-tab" data-source="tencent">QQ音乐</button>
-            <button class="rank-tab" data-source="kugou">酷狗</button>
-        </div>
-        <div class="rank-lists" id="rankLists"></div>
-        <div class="rank-songs" id="rankSongs"></div>
-    `;
-    document.body.appendChild(panel);
-    
+// 初始化排行榜标签页
+function initRankTab() {
     // 绑定标签切换事件
-    const tabs = panel.querySelectorAll('.rank-tab');
+    const tabs = document.querySelectorAll('#rankTab .rank-tab');
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
@@ -73,42 +50,21 @@ function createRankPanel() {
         });
     });
     
-    // 全局关闭函数
-    (window as any).closeRankPanel = closeRankPanel;
+    // 默认显示网易云排行榜
+    showRankLists('netease');
 }
 
-// 显示/隐藏排行榜面板
-function toggleRankPanel() {
-    if (isRankVisible) {
-        closeRankPanel();
-    } else {
-        openRankPanel();
-    }
-}
-
-// 打开排行榜面板
-function openRankPanel() {
-    const panel = document.getElementById('rankPanel');
-    if (panel) {
-        panel.classList.add('active');
-        isRankVisible = true;
-        showRankLists('netease'); // 默认显示网易云
-    }
-}
-
-// 关闭排行榜面板
-function closeRankPanel() {
-    const panel = document.getElementById('rankPanel');
-    if (panel) {
-        panel.classList.remove('active');
-        isRankVisible = false;
-    }
-}
 
 // 显示指定平台的排行榜列表
 function showRankLists(source: string) {
     const listsContainer = document.getElementById('rankLists');
+    const songsContainer = document.getElementById('rankSongs');
     if (!listsContainer) return;
+    
+    // 清空歌曲列表
+    if (songsContainer) {
+        songsContainer.innerHTML = '';
+    }
     
     const ranks = RANK_LISTS.filter(r => r.source === source);
     
