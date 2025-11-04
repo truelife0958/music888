@@ -64,7 +64,6 @@
 }
 
 html {
-    overflow-x: hidden;
     max-width: 100vw;
 }
 
@@ -72,7 +71,6 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     background: var(--bg-color);
     color: var(--text-color);
-    overflow-x: hidden;
     font-size: var(--font-base);
 }
 
@@ -1027,14 +1025,26 @@ body {
     .main-container {
         grid-template-columns: 1fr;
         padding: 20px;
+        gap: 20px;
     }
+    
     .player-section,
     .stats-section-sidebar {
         height: auto;
+        min-height: 500px;
     }
     
     .stats-section-sidebar {
         display: flex;
+        order: 3;
+    }
+    
+    .content-section {
+        order: 1;
+    }
+    
+    .player-section {
+        order: 2;
     }
 }
 
@@ -1044,23 +1054,40 @@ body {
         gap: 15px;
         padding: 0 15px;
     }
+    
     .search-container {
         margin: 0;
         width: 100%;
+        max-width: 100%;
     }
+    
     .main-container {
-        padding: 15px;
+        padding: 10px;
         grid-template-columns: 1fr;
+        gap: 15px;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
     }
+    
     .content-section,
     .player-section,
     .stats-section-sidebar {
+        width: 100%;
+        max-width: 100%;
         height: auto;
-        max-height: calc(100vh - 200px);
+        max-height: 70vh;
+        overflow-y: auto;
     }
+    
     .current-cover {
         width: 140px;
         height: 140px;
+    }
+    
+    /* 隐藏移动端不必要的统计栏 */
+    .stats-section-sidebar {
+        display: none;
     }
 }
 

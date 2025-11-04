@@ -289,23 +289,32 @@ function showPlaylistModal(): void {
     modal.style.display = 'flex';
 }
 
-// 移动端页面切换功能 - 修复：移除不存在的.my-section
+// 移动端页面切换功能 - 支持三栏布局
 (window as any).switchMobilePage = function(pageIndex: number): void {
     const sections = [
         document.querySelector('.content-section'),
-        document.querySelector('.player-section')
+        document.querySelector('.player-section'),
+        document.querySelector('.stats-section-sidebar')
     ];
 
     const indicators = document.querySelectorAll('.page-indicator');
+    const mainContainer = document.querySelector('.main-container');
 
-    sections.forEach(section => section?.classList.remove('mobile-active'));
+    // 更新指示器
     indicators.forEach(indicator => indicator.classList.remove('active'));
-
-    if (sections[pageIndex] && pageIndex < sections.length) {
-        sections[pageIndex]!.classList.add('mobile-active');
-    }
     if (indicators[pageIndex] && pageIndex < indicators.length) {
         indicators[pageIndex].classList.add('active');
+    }
+
+    // 滚动到对应的section
+    if (sections[pageIndex] && mainContainer && window.innerWidth <= 768) {
+        const sectionElement = sections[pageIndex] as HTMLElement;
+        const containerElement = mainContainer as HTMLElement;
+        const scrollLeft = sectionElement.offsetLeft - parseInt(getComputedStyle(containerElement).paddingLeft);
+        containerElement.scrollTo({
+            left: scrollLeft,
+            behavior: 'smooth'
+        });
     }
 };
 
@@ -399,7 +408,7 @@ function handleSwipe(): void {
 
     // 只处理水平滑动，忽略垂直滑动（用于滚动）
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
-        const sections = document.querySelectorAll('.content-section, .player-section');
+        const sections = document.querySelectorAll('.content-section, .player-section, .stats-section-sidebar');
         const indicators = document.querySelectorAll('.page-indicator');
         let currentPage = 0;
 
