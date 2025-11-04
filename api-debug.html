@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API配置调试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .info-box {
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        h2 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        pre {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #2a2a2a;
+            border-left: 3px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 API配置调试工具</h1>
+    
+    <div class="info-box">
+        <h2>1. 当前API配置</h2>
+        <div id="apiConfig"></div>
+    </div>
+    
+    <div class="info-box">
+        <h2>2. 清除缓存</h2>
+        <button onclick="clearAllCache()">清除所有缓存</button>
+        <button onclick="unregisterServiceWorker()">注销Service Worker</button>
+        <div id="cacheResult" class="result" style="display:none;"></div>
+    </div>
+    
+    <div class="info-box">
+        <h2>3. 测试API</h2>
+        <button onclick="testAPI()">测试搜索API</button>
+        <div id="testResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script type="module">
+        // 动态导入API模块
+        import * as api from './js/api.js';
+        
+        // 显示API配置
+        const apiStatus = api.getCurrentApiStatus();
+        document.getElementById('apiConfig').innerHTML = `
+            <pre>${JSON.stringify({
+                当前API名称: apiStatus.name,
+                当前API_URL: apiStatus.url,
+                API索引: apiStatus.index + 1,
+                总API数: apiStatus.total,
+                失败计数: apiStatus.failureCount,
+                切换次数: apiStatus.switchCount
+            }, null, 2)}</pre>
+        `;
+        
+        // 清除所有缓存
+        window.clearAllCache = async function() {
+            const resultDiv = document.getElementById('cacheResult');
+            resultDiv.style.display = 'block';
+            
+            try {
+                // 清除localStorage
+                localStorage.clear();
+                
+                // 清除sessionStorage
+                sessionStorage.clear();
+                
+                // 清除Cache API
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                }
+                
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = `
+                    <strong>✅ 缓存清除成功！</strong><br>
+                    - localStorage: 已清除<br>
+                    - sessionStorage: 已清除<br>
+                    - Cache API: ${cacheNames.length}个缓存已清除<br>
+                    <br>
+                    <strong>请刷新页面以重新加载！</strong>
+                `;
+                
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 2000);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>❌ 清除失败：</strong> ${error.message}`;
+            }
+        };
+        
+        // 注销Service Worker
+        window.unregisterServiceWorker = async function() {
+            const resultDiv = document.getElementById('cacheResult');
+            resultDiv.style.display = 'block';
+            
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(reg => reg.unregister()));
+                    
+                    resultDiv.className = 'result';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Service Worker注销成功！</strong><br>
+                        共注销 ${registrations.length} 个Service Worker<br>
+                        <br>
+                        <strong>请刷新页面！</strong>
+                    `;
+                    
+                    setTimeout(() => {
+                        window.location.reload(true);
+                    }, 2000);
+                } else {
+                    resultDiv.className = 'result';
+                    resultDiv.innerHTML = '浏览器不支持Service Worker';
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>❌ 注销失败：</strong> ${error.message}`;
+            }
+        };
+        
+        // 测试API
+        window.testAPI = async function() {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ 测试中...';
+            
+            try {
+                console.log('开始测试搜索API...');
+                const songs = await api.searchMusicAPI('周杰伦', 'netease', 5);
+                
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = `
+                    <strong>✅ API测试成功！</strong><br>
+                    找到 ${songs.length} 首歌曲<br>
+                    <br>
+                    <strong>歌曲列表：</strong><br>
+                    ${songs.map((s, i) => `${i+1}. ${s.name} - ${s.artist.join(', ')}`).join('<br>')}
+                    <br><br>
+                    <strong>请打开浏览器控制台查看详细请求URL</strong>
+                `;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <strong>❌ API测试失败：</strong><br>
+                    ${error.message}<br>
+                    <br>
+                    <strong>请打开浏览器控制台查看详细错误信息</strong>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
