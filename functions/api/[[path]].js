@@ -1,5 +1,6 @@
 /**
- * Cloudflare Workers - 音乐API代理
+ * Cloudflare Pages Functions - 通用API代理
+ * 路由: /api/* 
  * 支持: search, url, pic, lyric, playlist
  */
 
