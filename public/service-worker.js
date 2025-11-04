@@ -66,6 +66,7 @@ self.addEventListener('fetch', (event) => {
 
   // 跨域请求直接放行，不缓存
   if (url.origin !== location.origin) {
+    event.respondWith(fetch(request));
     return;
   }
 

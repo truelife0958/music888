@@ -6,13 +6,41 @@ import { showNotification } from './ui';
 
 let isRadioVisible = false;
 let currentArtistSongs: Song[] = [];
+let contextMenuListener: ((e: MouseEvent) => void) | null = null;
 
 // 初始化歌手电台
 export function initArtistRadio() {
     createRadioPanel();
     
     // 监听歌曲项的右键菜单
-    document.addEventListener('contextmenu', handleContextMenu);
+    contextMenuListener = handleContextMenu;
+    document.addEventListener('contextmenu', contextMenuListener);
+}
+
+// 清理资源
+export function cleanup() {
+    if (contextMenuListener) {
+        document.removeEventListener('contextmenu', contextMenuListener);
+        contextMenuListener = null;
+    }
+    
+    // 清理右键菜单
+    const menu = document.getElementById('artistContextMenu');
+    if (menu) {
+        menu.remove();
+    }
+    
+    // 清理面板
+    const panel = document.getElementById('artistRadioPanel');
+    if (panel) {
+        panel.remove();
+    }
+    
+    // 清理全局函数
+    delete (window as any).closeArtistRadio;
+    delete (window as any).searchArtistSongs;
+    delete (window as any).openArtistRadioWith;
+    delete (window as any).playAllArtistSongs;
 }
 
 // 创建电台面板

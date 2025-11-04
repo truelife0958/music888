@@ -54,10 +54,13 @@ if (typeof window !== 'undefined') {
 }
 
 export function init(): void {
+    // 修复：添加安全检查，防止元素不存在导致崩溃
+    const lyricsContainer = document.getElementById('lyricsContainerInline');
+    
     DOM = {
         searchResults: document.getElementById('searchResults')!,
         parseResults: document.getElementById('parseResults')!,
-        savedResults: document.getElementById('savedResults')!,
+        savedResults: document.getElementById('savedResults') || document.createElement('div'),
         currentCover: document.getElementById('currentCover') as HTMLImageElement,
         currentTitle: document.getElementById('currentTitle')!,
         currentArtist: document.getElementById('currentArtist')!,
@@ -65,10 +68,15 @@ export function init(): void {
         progressFill: document.getElementById('progressFill')!,
         currentTime: document.getElementById('currentTime')!,
         totalTime: document.getElementById('totalTime')!,
-        lyricsContainer: document.getElementById('lyricsContainer')!,
+        lyricsContainer: lyricsContainer || document.createElement('div'),
         downloadSongBtn: document.getElementById('downloadSongBtn') as HTMLButtonElement,
         downloadLyricBtn: document.getElementById('downloadLyricBtn') as HTMLButtonElement,
     };
+    
+    // 如果歌词容器不存在，添加警告
+    if (!lyricsContainer) {
+        console.warn('⚠️ 歌词容器 #lyricsContainerInline 不存在，歌词功能可能无法正常工作');
+    }
 }
 
 // --- UI Functions ---
@@ -222,6 +230,12 @@ let lastActiveLyricIndex = -1;
 let lastRenderedLyrics: LyricLine[] = [];
 
 export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
+    // 修复：增强安全检查
+    if (!DOM.lyricsContainer || !DOM.lyricsContainer.parentNode) {
+        console.warn('⚠️ 歌词容器不可用，跳过更新');
+        return;
+    }
+    
     if (!lyrics.length) {
         if (DOM.lyricsContainer) {
             DOM.lyricsContainer.innerHTML = '<div class="lyric-line">暂无歌词</div>';
@@ -276,18 +290,19 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
     }
 }
 
-// 优化: 渲染歌词列表
+// 优化: 渲染歌词列表 - 增强安全检查
 function renderLyricsList(lyrics: LyricLine[]): void {
     const lyricsHTML = lyrics.map((line, index) =>
         `<div class="lyric-line" data-time="${escapeHtml(String(line.time))}" data-index="${escapeHtml(String(index))}">${escapeHtml(line.text)}</div>`
     ).join('');
 
-    if (DOM.lyricsContainer) {
+    // 修复：检查元素是否存在且已挂载到DOM
+    if (DOM.lyricsContainer && DOM.lyricsContainer.parentNode) {
         DOM.lyricsContainer.innerHTML = lyricsHTML;
     }
 
     const inlineContainer = document.getElementById('lyricsContainerInline');
-    if (inlineContainer) {
+    if (inlineContainer && inlineContainer.parentNode) {
         inlineContainer.innerHTML = lyricsHTML;
     }
 }

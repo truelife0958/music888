@@ -37,11 +37,15 @@ class ApiError extends Error {
     }
 }
 
-// 音乐API配置
+// 音乐API配置 - 直接使用原始API源
 const API_SOURCES: ApiSource[] = [
     {
-        name: 'Cloudflare Workers',
-        url: '/api'
+        name: 'GDStudio 音乐API',
+        url: 'https://music-api.gdstudio.xyz/api.php'
+    },
+    {
+        name: 'GDStudio 备用API',
+        url: 'https://music-api.gdstudio.org/api.php'
     }
 ];
 
@@ -151,10 +155,18 @@ class RequestDeduplicator {
         
         // 创建新的请求
         const promise = fetcher()
-            .finally(() => {
-                // 请求完成后清理
-                this.pending.delete(key);
-            });
+            .then(
+                (result) => {
+                    // 成功时使用 setTimeout 延迟清理，确保所有消费者都能获取结果
+                    setTimeout(() => this.pending.delete(key), 0);
+                    return result;
+                },
+                (error) => {
+                    // 失败时立即清理，允许重试
+                    this.pending.delete(key);
+                    throw error;
+                }
+            );
         
         this.pending.set(key, promise);
         return promise;
@@ -191,10 +203,19 @@ function stopCacheCleanup(): void {
     }
 }
 
+// 导出清理函数供外部调用
+export function cleanup(): void {
+    console.log('🧹 清理API模块资源...');
+    stopCacheCleanup();
+    cache.clear();
+    requestDeduplicator.clear();
+    console.log('✅ API模块清理完成');
+}
+
 // 页面卸载时清理定时器
 if (typeof window !== 'undefined') {
     window.addEventListener('beforeunload', () => {
-        stopCacheCleanup();
+        cleanup();
     });
 }
 

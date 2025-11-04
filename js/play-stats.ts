@@ -139,14 +139,40 @@ function loadStats() {
 function saveStats() {
     try {
         localStorage.setItem(STATS_CONFIG.STORAGE_KEY, JSON.stringify(currentStats));
-    } catch (error) {
+    } catch (error: any) {
         console.error('保存统计数据失败:', error);
+        
+        // 处理配额超限
+        if (error.name === 'QuotaExceededError' || error.code === 22) {
+            console.warn('localStorage配额已满，尝试清理旧数据');
+            try {
+                // 只保留播放次数最多的前50首歌
+                const topSongs = Object.values(currentStats.songs)
+                    .sort((a, b) => b.playCount - a.playCount)
+                    .slice(0, 50);
+                
+                const newSongsMap: { [key: string]: PlayRecord } = {};
+                topSongs.forEach(song => {
+                    newSongsMap[song.songId] = song;
+                });
+                
+                currentStats.songs = newSongsMap;
+                localStorage.setItem(STATS_CONFIG.STORAGE_KEY, JSON.stringify(currentStats));
+                showNotification('已清理部分统计数据以释放空间', 'info');
+            } catch (retryError) {
+                console.error('清理后仍然无法保存:', retryError);
+                showNotification('存储空间不足，统计数据未保存', 'warning');
+            }
+        }
     }
 }
 
 // 记录播放
 export function recordPlay(song: Song, duration: number = 0) {
     if (!song || !song.id) return;
+    
+    // 播放时长少于5秒不记录（可能是误点击或快速切歌）
+    if (duration < 5) return;
     
     const songId = song.id;
     const artist = Array.isArray(song.artist) ? song.artist.join(', ') : song.artist;

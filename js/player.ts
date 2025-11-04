@@ -21,6 +21,43 @@ let currentLyrics: LyricLine[] = []; // 存储当前歌曲的歌词
 let playStartTime: number = 0; // 记录播放开始时间
 let lastRecordedSong: Song | null = null; // 上一首记录统计的歌曲
 
+// 事件监听器管理 - 防止内存泄漏
+interface EventListenerRecord {
+    element: HTMLElement | Window | Document;
+    event: string;
+    handler: EventListener;
+}
+let eventListeners: EventListenerRecord[] = [];
+
+// 添加事件监听器并记录
+function addManagedEventListener(
+    element: HTMLElement | Window | Document,
+    event: string,
+    handler: EventListener
+): void {
+    element.addEventListener(event, handler);
+    eventListeners.push({ element, event, handler });
+}
+
+// 清理所有事件监听器
+export function cleanup(): void {
+    console.log('🧹 清理播放器事件监听器...');
+    
+    // 移除所有记录的事件监听器
+    eventListeners.forEach(({ element, event, handler }) => {
+        element.removeEventListener(event, handler);
+    });
+    eventListeners = [];
+    
+    // 清理音频播放器
+    if (audioPlayer) {
+        audioPlayer.pause();
+        audioPlayer.src = '';
+    }
+    
+    console.log('✅ 播放器清理完成');
+}
+
 // 老王修复：初始化播放器，确保获取到HTML中的audio元素并绑定事件
 function initAudioPlayer(): void {
     const audioElement = document.getElementById('audioPlayer') as HTMLAudioElement;
@@ -35,39 +72,44 @@ function initAudioPlayer(): void {
     }
 
     // 老王修复：在audioPlayer初始化后绑定事件监听器
-    audioPlayer.addEventListener('play', () => {
+    const playHandler = () => {
         console.log('🎵 播放事件触发');
         isPlaying = true;
         ui.updatePlayButton(true);
         document.getElementById('currentCover')?.classList.add('playing');
-    });
+    };
+    addManagedEventListener(audioPlayer as any, 'play', playHandler);
 
-    audioPlayer.addEventListener('pause', () => {
+    const pauseHandler = () => {
         console.log('⏸️ 暂停事件触发');
         isPlaying = false;
         ui.updatePlayButton(false);
         document.getElementById('currentCover')?.classList.remove('playing');
-    });
+    };
+    addManagedEventListener(audioPlayer as any, 'pause', pauseHandler);
     
     // 修复: 添加 playing 事件监听，确保状态同步
-    audioPlayer.addEventListener('playing', () => {
+    const playingHandler = () => {
         console.log('▶️ playing 事件触发（实际开始播放）');
         isPlaying = true;
         ui.updatePlayButton(true);
         document.getElementById('currentCover')?.classList.add('playing');
-    });
+    };
+    addManagedEventListener(audioPlayer as any, 'playing', playingHandler);
     
     // 修复: 添加 waiting 事件监听，显示缓冲状态
-    audioPlayer.addEventListener('waiting', () => {
+    const waitingHandler = () => {
         console.log('⏳ 缓冲中...');
-    });
+    };
+    addManagedEventListener(audioPlayer as any, 'waiting', waitingHandler);
     
     // 修复: 添加 canplay 事件监听
-    audioPlayer.addEventListener('canplay', () => {
+    const canplayHandler = () => {
         console.log('✅ 音频可以播放');
-    });
+    };
+    addManagedEventListener(audioPlayer as any, 'canplay', canplayHandler);
 
-    audioPlayer.addEventListener('ended', () => {
+    const endedHandler = () => {
         // 记录播放统计
         recordPlayStats();
         
@@ -76,9 +118,10 @@ function initAudioPlayer(): void {
         } else {
             nextSong();
         }
-    });
+    };
+    addManagedEventListener(audioPlayer as any, 'ended', endedHandler);
 
-    audioPlayer.addEventListener('timeupdate', () => {
+    const timeupdateHandler = () => {
         if (!audioPlayer.duration) return;
 
         const currentTime = audioPlayer.currentTime;
@@ -91,9 +134,10 @@ function initAudioPlayer(): void {
         if (currentLyrics.length > 0) {
             ui.updateLyrics(currentLyrics, currentTime);
         }
-    });
+    };
+    addManagedEventListener(audioPlayer as any, 'timeupdate', timeupdateHandler);
 
-    audioPlayer.addEventListener('error', (e) => {
+    const errorHandler = (e: Event) => {
         console.error('播放器错误:', e);
         ui.showNotification('播放失败，尝试下一首...', 'error');
 
@@ -104,7 +148,8 @@ function initAudioPlayer(): void {
             ui.showNotification('连续播放失败，请检查网络连接', 'error');
             consecutiveFailures = 0;
         }
-    });
+    };
+    addManagedEventListener(audioPlayer as any, 'error', errorHandler as EventListener);
 }
 
 // --- Playlist & Favorites State ---

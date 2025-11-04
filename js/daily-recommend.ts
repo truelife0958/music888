@@ -224,8 +224,22 @@ function cacheRecommend(songs: Song[]) {
     
     try {
         localStorage.setItem(DAILY_RECOMMEND_CONFIG.STORAGE_KEY, JSON.stringify(cache));
-    } catch (error) {
+    } catch (error: any) {
         console.error('缓存推荐失败:', error);
+        
+        // 处理配额超限
+        if (error.name === 'QuotaExceededError' || error.code === 22) {
+            console.warn('localStorage配额已满，尝试清理旧数据');
+            try {
+                // 清理旧的推荐缓存
+                localStorage.removeItem(DAILY_RECOMMEND_CONFIG.STORAGE_KEY);
+                // 重试
+                localStorage.setItem(DAILY_RECOMMEND_CONFIG.STORAGE_KEY, JSON.stringify(cache));
+            } catch (retryError) {
+                console.error('清理后仍然无法缓存:', retryError);
+                showNotification('缓存空间不足，推荐数据未保存', 'warning');
+            }
+        }
     }
 }
 

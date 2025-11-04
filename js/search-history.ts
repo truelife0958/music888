@@ -51,7 +51,7 @@ function createHistoryContainer() {
             <span class="search-history-title">
                 <i class="fas fa-history"></i> 搜索历史
             </span>
-            <button class="search-history-clear" onclick="window.clearAllSearchHistory()">
+            <button class="search-history-clear" id="clearAllHistoryBtn">
                 <i class="fas fa-trash-alt"></i> 清空
             </button>
         </div>
@@ -60,8 +60,11 @@ function createHistoryContainer() {
     
     searchContainer.appendChild(container);
     
-    // 全局函数
-    (window as any).clearAllSearchHistory = clearAllHistory;
+    // 绑定清空按钮事件
+    const clearBtn = container.querySelector('#clearAllHistoryBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearAllHistory);
+    }
 }
 
 // 显示历史容器
@@ -97,8 +100,21 @@ function loadSearchHistory() {
 function saveSearchHistory() {
     try {
         localStorage.setItem(SEARCH_HISTORY_CONFIG.STORAGE_KEY, JSON.stringify(searchHistory));
-    } catch (error) {
+    } catch (error: any) {
         console.error('保存搜索历史失败:', error);
+        
+        // 处理配额超限
+        if (error.name === 'QuotaExceededError' || error.code === 22) {
+            console.warn('localStorage配额已满，尝试清理旧数据');
+            try {
+                // 只保留最近5条历史
+                searchHistory = searchHistory.slice(0, 5);
+                localStorage.setItem(SEARCH_HISTORY_CONFIG.STORAGE_KEY, JSON.stringify(searchHistory));
+            } catch (retryError) {
+                console.error('清理后仍然无法保存:', retryError);
+                showNotification('存储空间不足', 'warning');
+            }
+        }
     }
 }
 
@@ -165,32 +181,51 @@ function updateHistoryDisplay() {
         return;
     }
     
-    tagsContainer.innerHTML = searchHistory.map(keyword => `
+    // 使用data属性代替内联onclick，避免XSS风险
+    tagsContainer.innerHTML = searchHistory.map((keyword, index) => `
         <div class="search-history-tag">
-            <span class="search-history-tag-text" onclick="window.searchFromHistory('${escapeHtml(keyword)}')">${escapeHtml(keyword)}</span>
-            <button class="search-history-tag-remove" onclick="window.removeSearchHistoryItem('${escapeHtml(keyword)}')" title="删除">
+            <span class="search-history-tag-text" data-keyword="${escapeHtml(keyword)}" data-index="${index}">${escapeHtml(keyword)}</span>
+            <button class="search-history-tag-remove" data-keyword="${escapeHtml(keyword)}" data-index="${index}" title="删除">
                 <i class="fas fa-times"></i>
             </button>
         </div>
     `).join('');
     
-    // 全局函数
-    (window as any).searchFromHistory = (keyword: string) => {
-        const searchInput = document.getElementById('searchInput') as HTMLInputElement;
-        if (searchInput) {
-            searchInput.value = keyword;
-            // 触发搜索
-            const searchBtn = document.querySelector('.search-btn') as HTMLButtonElement;
-            if (searchBtn) {
-                searchBtn.click();
+    // 使用事件委托处理点击事件
+    tagsContainer.querySelectorAll('.search-history-tag-text').forEach(element => {
+        element.addEventListener('click', (e) => {
+            const target = e.currentTarget as HTMLElement;
+            const keyword = target.dataset.keyword;
+            if (keyword) {
+                searchFromHistory(keyword);
             }
-        }
-        hideHistoryContainer();
-    };
+        });
+    });
     
-    (window as any).removeSearchHistoryItem = (keyword: string) => {
-        removeSearchHistory(keyword);
-    };
+    tagsContainer.querySelectorAll('.search-history-tag-remove').forEach(element => {
+        element.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const target = e.currentTarget as HTMLElement;
+            const keyword = target.dataset.keyword;
+            if (keyword) {
+                removeSearchHistory(keyword);
+            }
+        });
+    });
+}
+
+// 从历史记录搜索
+function searchFromHistory(keyword: string) {
+    const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+    if (searchInput) {
+        searchInput.value = keyword;
+        // 触发搜索
+        const searchBtn = document.querySelector('.search-btn') as HTMLButtonElement;
+        if (searchBtn) {
+            searchBtn.click();
+        }
+    }
+    hideHistoryContainer();
 }
 
 // HTML转义

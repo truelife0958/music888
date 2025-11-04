@@ -31,6 +31,10 @@ export class VirtualScroll<T> {
     private visibleRange: { start: number; end: number } = { start: 0, end: 0 };
     private scrollTop: number = 0;
     
+    // 保存绑定后的函数引用，以便正确移除监听器
+    private boundHandleScroll!: () => void;
+    private boundHandleClick!: (e: MouseEvent) => void;
+    
     constructor(options: VirtualScrollOptions<T>) {
         this.container = options.container;
         this.items = options.items;
@@ -38,6 +42,10 @@ export class VirtualScroll<T> {
         this.renderItem = options.renderItem;
         this.bufferSize = options.bufferSize || 5;
         this.onItemClick = options.onItemClick;
+        
+        // 提前绑定方法
+        this.boundHandleScroll = this.handleScroll.bind(this);
+        this.boundHandleClick = this.handleClick.bind(this);
         
         this.init();
     }
@@ -66,11 +74,11 @@ export class VirtualScroll<T> {
         this.container.appendChild(this.scrollContainer);
         
         // 绑定滚动事件
-        this.scrollContainer.addEventListener('scroll', this.handleScroll.bind(this));
+        this.scrollContainer.addEventListener('scroll', this.boundHandleScroll);
         
         // 绑定点击事件（事件委托）
         if (this.onItemClick) {
-            this.contentContainer.addEventListener('click', this.handleClick.bind(this));
+            this.contentContainer.addEventListener('click', this.boundHandleClick);
         }
         
         // 初始渲染
@@ -172,9 +180,10 @@ export class VirtualScroll<T> {
     
     // 销毁
     public destroy(): void {
-        this.scrollContainer.removeEventListener('scroll', this.handleScroll);
+        // 使用保存的绑定引用来正确移除监听器
+        this.scrollContainer.removeEventListener('scroll', this.boundHandleScroll);
         if (this.onItemClick) {
-            this.contentContainer.removeEventListener('click', this.handleClick);
+            this.contentContainer.removeEventListener('click', this.boundHandleClick);
         }
         this.container.innerHTML = '';
     }

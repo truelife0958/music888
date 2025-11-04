@@ -161,6 +161,45 @@ export const storage = {
             localStorage.setItem(key, JSON.stringify(value));
             return true;
         } catch (error) {
+            // 处理配额超出错误
+            if (error instanceof DOMException &&
+                (error.name === 'QuotaExceededError' ||
+                 error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+                console.warn(`localStorage配额已满，正在清理旧数据...`);
+                
+                // 清理策略: 删除最旧的缓存数据
+                try {
+                    const keys = Object.keys(localStorage);
+                    const cacheKeys = keys.filter(k =>
+                        k.startsWith('cache_') ||
+                        k.startsWith('cover_') ||
+                        k.startsWith('lyric_')
+                    );
+                    
+                    if (cacheKeys.length > 0) {
+                        // 删除最早的缓存项
+                        localStorage.removeItem(cacheKeys[0]);
+                        console.log(`已清理缓存: ${cacheKeys[0]}`);
+                        
+                        // 重试一次
+                        try {
+                            localStorage.setItem(key, JSON.stringify(value));
+                            console.log('清理后保存成功');
+                            return true;
+                        } catch (retryError) {
+                            console.error('清理后仍无法保存数据:', retryError);
+                            return false;
+                        }
+                    } else {
+                        console.warn('没有可清理的缓存数据');
+                        return false;
+                    }
+                } catch (cleanError) {
+                    console.error('清理缓存失败:', cleanError);
+                    return false;
+                }
+            }
+            
             console.warn(`写入 localStorage 失败 (${key}):`, error);
             return false;
         }

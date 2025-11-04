@@ -29,8 +29,8 @@
                 <i class="fas fa-chart-bar"></i>
             </button>
             <div class="api-status" id="apiStatus">
-                <span class="api-indicator api-local"></span>
-                <span class="api-name">正在检测...</span>
+                <span class="api-status-dot"></span>
+                <span class="api-status-text">正在检测...</span>
             </div>
             <div class="search-container">
                 <form class="search-wrapper" onsubmit="event.preventDefault(); return false;">
@@ -159,9 +159,9 @@
             <audio id="audioPlayer" preload="metadata"></audio>
         </div>
 
-        <div class="mobile-page-indicators">
-            <div class="page-indicator active" onclick="switchMobilePage(0)" ontouchend="event.preventDefault(); switchMobilePage(0)"></div>
-            <div class="page-indicator" onclick="switchMobilePage(1)" ontouchend="event.preventDefault(); switchMobilePage(1)"></div>
+        <div class="page-indicators">
+            <button class="page-indicator active" data-page="0"></button>
+            <button class="page-indicator" data-page="1"></button>
         </div>
     </div>
 
