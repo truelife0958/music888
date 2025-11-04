@@ -18,7 +18,7 @@
     padding: 15px;
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
+    display: flex !important; /* 确保桌面端显示 */
     flex-direction: column;
     height: calc(100vh - 180px);
     overflow-y: auto;
@@ -1000,9 +1000,9 @@
         width: 100%;
     }
 
-    /* 老王注释：移动端隐藏"我的"区域，避免在第一屏和第二屏显示 */
+    /* 老王注释：移动端三列布局改为单列，"我的"区域通过mobile-active控制显示 */
     .my-section {
-        display: none !important;
+        display: none;
     }
 
     .my-section.mobile-active {
