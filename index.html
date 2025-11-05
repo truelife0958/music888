@@ -85,12 +85,25 @@
             </div>
 
             <div id="rankTab" class="tab-content">
-                <div class="rank-tabs">
-                    <button class="rank-tab active" data-source="netease">网易云</button>
-                    <button class="rank-tab" data-source="tencent">QQ音乐</button>
-                    <button class="rank-tab" data-source="kugou">酷狗</button>
+                <div class="rank-selector-container">
+                    <div class="rank-select-group">
+                        <label for="rankSourceSelect">音乐平台</label>
+                        <select class="rank-source-select" id="rankSourceSelect">
+                            <option value="netease">网易云音乐</option>
+                            <option value="tencent">QQ音乐</option>
+                            <option value="kugou">酷狗音乐</option>
+                        </select>
+                    </div>
+                    <div class="rank-select-group">
+                        <label for="rankListSelect">选择榜单</label>
+                        <select class="rank-list-select" id="rankListSelect">
+                            <option value="">请选择榜单</option>
+                        </select>
+                    </div>
+                    <button class="rank-load-btn" id="rankLoadBtn">
+                        <i class="fas fa-play"></i> 加载榜单
+                    </button>
                 </div>
-                <div class="rank-lists" id="rankLists"></div>
                 <div class="rank-songs" id="rankSongs"></div>
             </div>
 

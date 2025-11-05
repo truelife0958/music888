@@ -39,52 +39,68 @@ export function initRank() {
 
 // 初始化排行榜标签页
 function initRankTab() {
-    // 绑定标签切换事件
-    const tabs = document.querySelectorAll('#rankTab .rank-tab');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const source = tab.getAttribute('data-source') || 'netease';
-            showRankLists(source);
-        });
+    const sourceSelect = document.getElementById('rankSourceSelect') as HTMLSelectElement;
+    const listSelect = document.getElementById('rankListSelect') as HTMLSelectElement;
+    const loadBtn = document.getElementById('rankLoadBtn') as HTMLButtonElement;
+
+    if (!sourceSelect || !listSelect || !loadBtn) {
+        console.error('排行榜选择器元素未找到');
+        return;
+    }
+
+    // 平台切换时更新榜单列表
+    sourceSelect.addEventListener('change', () => {
+        updateRankLists(sourceSelect.value);
     });
-    
-    // 默认显示网易云排行榜
-    showRankLists('netease');
+
+    // 榜单选择变化时启用/禁用加载按钮
+    listSelect.addEventListener('change', () => {
+        if (listSelect.value) {
+            loadBtn.disabled = false;
+        } else {
+            loadBtn.disabled = true;
+        }
+    });
+
+    // 加载按钮点击事件
+    loadBtn.addEventListener('click', async () => {
+        const rankId = listSelect.value;
+        const source = sourceSelect.value;
+        if (rankId) {
+            await loadRankSongs(rankId, source);
+        }
+    });
+
+    // 初始化榜单列表（默认网易云）
+    updateRankLists('netease');
+    loadBtn.disabled = true;
 }
 
+// 更新榜单下拉框选项
+function updateRankLists(source: string) {
+    const listSelect = document.getElementById('rankListSelect') as HTMLSelectElement;
+    if (!listSelect) return;
 
-// 显示指定平台的排行榜列表
-function showRankLists(source: string) {
-    const listsContainer = document.getElementById('rankLists');
-    const songsContainer = document.getElementById('rankSongs');
-    if (!listsContainer) return;
-    
+    const ranks = RANK_LISTS.filter(r => r.source === source);
+
+    listSelect.innerHTML = '<option value="">请选择榜单</option>' +
+        ranks.map(rank => `
+            <option value="${rank.id}" data-source="${rank.source}">
+                ${rank.icon} ${rank.name}
+            </option>
+        `).join('');
+
+    // 禁用加载按钮
+    const loadBtn = document.getElementById('rankLoadBtn') as HTMLButtonElement;
+    if (loadBtn) {
+        loadBtn.disabled = true;
+    }
+
     // 清空歌曲列表
+    const songsContainer = document.getElementById('rankSongs');
     if (songsContainer) {
         songsContainer.innerHTML = '';
     }
-    
-    const ranks = RANK_LISTS.filter(r => r.source === source);
-    
-    listsContainer.innerHTML = ranks.map(rank => `
-        <div class="rank-item" data-id="${rank.id}" data-source="${rank.source}">
-            <span class="rank-icon">${rank.icon}</span>
-            <span class="rank-name">${rank.name}</span>
-            <span class="rank-arrow">→</span>
-        </div>
-    `).join('');
-    
-    // 绑定点击事件
-    const items = listsContainer.querySelectorAll('.rank-item');
-    items.forEach(item => {
-        item.addEventListener('click', async () => {
-            const id = item.getAttribute('data-id') || '';
-            const source = item.getAttribute('data-source') || '';
-            await loadRankSongs(id, source);
-        });
-    });
 }
 
 // 加载排行榜歌曲

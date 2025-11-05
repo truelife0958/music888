@@ -13,6 +13,7 @@ interface DownloadTask {
 export class DownloadProgressManager {
     private tasks: Map<string, DownloadTask> = new Map();
     private container: HTMLElement | null = null;
+    private isCollapsed: boolean = false; // 折叠状态
 
     constructor() {
         this.createContainer();
@@ -22,15 +23,55 @@ export class DownloadProgressManager {
         this.container = document.createElement('div');
         this.container.id = 'downloadProgressContainer';
         this.container.className = 'download-progress-container';
-        this.container.innerHTML = '<div class="download-progress-header">下载任务</div>';
+        this.container.innerHTML = `
+            <div class="download-progress-header">
+                <span class="download-progress-title">下载任务</span>
+                <button class="download-progress-toggle" title="折叠/展开">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="download-progress-tasks"></div>
+        `;
+
+        // 绑定折叠/展开按钮
+        const toggleBtn = this.container.querySelector('.download-progress-toggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => this.toggleCollapse());
+        }
+
         document.body.appendChild(this.container);
+    }
+
+    private toggleCollapse(): void {
+        if (!this.container) return;
+
+        this.isCollapsed = !this.isCollapsed;
+
+        if (this.isCollapsed) {
+            this.container.classList.add('collapsed');
+        } else {
+            this.container.classList.remove('collapsed');
+        }
+
+        // 更新图标
+        const toggleIcon = this.container.querySelector('.download-progress-toggle i');
+        if (toggleIcon) {
+            if (this.isCollapsed) {
+                toggleIcon.className = 'fas fa-chevron-up';
+            } else {
+                toggleIcon.className = 'fas fa-chevron-down';
+            }
+        }
     }
 
     public startDownload(song: Song, downloadFn: () => Promise<void>): void {
         const taskId = `${song.source}_${song.id}_${Date.now()}`;
-        
+
         const taskElement = this.createTaskElement(song, taskId);
-        this.container?.appendChild(taskElement);
+        const tasksContainer = this.container?.querySelector('.download-progress-tasks');
+        if (tasksContainer) {
+            tasksContainer.appendChild(taskElement);
+        }
 
         const task: DownloadTask = {
             id: taskId,

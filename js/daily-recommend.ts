@@ -40,23 +40,18 @@ function initRecommendTab() {
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => loadDailyRecommend(true));
     }
-    
+
     // 绑定播放全部按钮
     const playAllBtn = document.getElementById('playAllRecommendBtn');
     if (playAllBtn) {
         playAllBtn.addEventListener('click', playAllRecommend);
     }
-    
-    // 监听标签页切换，只在显示时加载
-    const tabBtn = document.querySelector('.tab-btn[data-tab="recommend"]');
-    if (tabBtn) {
-        tabBtn.addEventListener('click', () => {
-            // 如果还没有加载过，则加载推荐
-            const songsContainer = document.getElementById('recommendSongs');
-            if (songsContainer && songsContainer.querySelector('.loading')) {
-                loadDailyRecommend();
-            }
-        });
+
+    // 立即检查并加载推荐（修复首次加载BUG）
+    const songsContainer = document.getElementById('recommendSongs');
+    if (songsContainer && songsContainer.querySelector('.loading')) {
+        // 模块初始化时立即加载推荐
+        loadDailyRecommend();
     }
 }
 
