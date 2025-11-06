@@ -29,6 +29,18 @@ const RANK_LISTS: RankList[] = [
     // 酷狗音乐排行榜 - 使用正确的歌单ID
     // { id: '8888', name: '酷狗TOP500', source: 'kugou', icon: '🏆' },
     // { id: '6666', name: '酷狗飙升榜', source: 'kugou', icon: '📈' }
+
+    // 老王新增：抖音热歌榜
+    { id: 'douyin_hot', name: '抖音热歌榜', source: 'douyin', icon: '🎵' },
+
+    // 老王新增：网易歌榜（新API）
+    { id: 'netease_chart_hot', name: '网易热歌榜(新)', source: 'netease_new', icon: '🔥' },
+    { id: 'netease_chart_new', name: '网易新歌榜(新)', source: 'netease_new', icon: '🆕' },
+    { id: 'netease_chart_rise', name: '网易飙升榜(新)', source: 'netease_new', icon: '🚀' },
+    { id: 'netease_chart_original', name: '网易原创榜(新)', source: 'netease_new', icon: '🎨' },
+
+    // 老王新增：网易精选歌单
+    { id: 'netease_playlist_7320301584', name: '网易精选歌单', source: 'netease_playlist', icon: '⭐' }
 ];
 
 let currentRankSongs: Song[] = [];
@@ -129,7 +141,60 @@ async function loadRankSongs(rankId: string, source: string) {
                 console.error('❌ QQ音乐每日推荐加载失败:', error);
                 throw new Error('QQ音乐每日推荐暂时不可用');
             }
-        } else {
+        }
+        // 老王新增：特殊处理抖音热歌榜
+        else if (rankId === 'douyin_hot' && source === 'douyin') {
+            console.log('📦 加载抖音热歌榜...');
+            try {
+                const { getDouyinHotSongs } = await import('./extra-api-adapter.js');
+                songs = await getDouyinHotSongs();
+                rankName = '抖音热歌榜';
+                console.log(`✅ 抖音热歌榜加载成功，共${songs.length}首`);
+            } catch (error) {
+                console.error('❌ 抖音热歌榜加载失败:', error);
+                throw new Error('抖音热歌榜暂时不可用');
+            }
+        }
+        // 老王新增：特殊处理网易歌榜（新API）
+        else if (rankId.startsWith('netease_chart_') && source === 'netease_new') {
+            console.log('📦 加载网易歌榜（新API）...');
+            try {
+                const { getNetEaseChart } = await import('./extra-api-adapter.js');
+
+                // 根据ID映射到榜单类型
+                const chartTypeMap: { [key: string]: string } = {
+                    'netease_chart_hot': '热歌榜',
+                    'netease_chart_new': '新歌榜',
+                    'netease_chart_rise': '飙升榜',
+                    'netease_chart_original': '原创榜'
+                };
+
+                const chartType = chartTypeMap[rankId] || '热歌榜';
+                songs = await getNetEaseChart(chartType);
+                rankName = `网易${chartType}`;
+                console.log(`✅ 网易${chartType}加载成功，共${songs.length}首`);
+            } catch (error) {
+                console.error('❌ 网易歌榜加载失败:', error);
+                throw new Error('网易歌榜暂时不可用');
+            }
+        }
+        // 老王新增：特殊处理网易歌单
+        else if (rankId.startsWith('netease_playlist_') && source === 'netease_playlist') {
+            console.log('📦 加载网易精选歌单...');
+            try {
+                const { getNetEaseUserPlaylist } = await import('./extra-api-adapter.js');
+
+                // 从rankId中提取uid
+                const uid = rankId.replace('netease_playlist_', '');
+                songs = await getNetEaseUserPlaylist(uid, 30);  // 获取30首歌曲
+                rankName = '网易精选歌单';
+                console.log(`✅ 网易精选歌单加载成功，共${songs.length}首`);
+            } catch (error) {
+                console.error('❌ 网易歌单加载失败:', error);
+                throw new Error('网易歌单暂时不可用');
+            }
+        }
+        else {
             // 使用标准API加载排行榜
             const result = await parsePlaylistAPI(rankId, source);
             songs = result.songs;

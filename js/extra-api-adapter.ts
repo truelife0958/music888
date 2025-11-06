@@ -41,6 +41,21 @@ export const EXTRA_API_SOURCES = {
     qqDaily: {
         name: 'QQ音乐每日推荐',
         daily: 'https://api.cenguigui.cn/api/qq/music/Daily30.php'
+    },
+    // 老王新增：抖音热歌榜API
+    douyinHot: {
+        name: '抖音热歌榜',
+        hot: 'https://api.cenguigui.cn/api/hotlist/dy/'
+    },
+    // 老王新增：网易歌榜API
+    neteaseChart: {
+        name: '网易歌榜',
+        chart: 'https://node.api.xfabe.com/api/wangyi/musicChart'
+    },
+    // 老王新增：网易歌单API
+    neteasePlaylist: {
+        name: '网易歌单',
+        userSongs: 'https://node.api.xfabe.com/api/wangyi/userSongs'
     }
 };
 
@@ -255,5 +270,116 @@ export async function aggregateSearch(keyword: string): Promise<Song[]> {
     } catch (error) {
         console.error('聚合搜索失败:', error);
         return results;
+    }
+}
+
+/**
+ * 老王新增：获取抖音热歌榜
+ */
+export async function getDouyinHotSongs(): Promise<Song[]> {
+    try {
+        const url = EXTRA_API_SOURCES.douyinHot.hot;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`API响应错误: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 老王注释：根据API返回格式适配数据结构
+        if (data && Array.isArray(data.data)) {
+            return data.data
+                .filter((song: any) => song && (song.id || song.songId))
+                .map((song: any) => ({
+                    id: song.id || song.songId || String(Date.now() + Math.random()),
+                    name: normalizeSongName(song.title || song.name || song.songName),
+                    artist: normalizeArtistField(song.author || song.singer || song.artist || '抖音热歌'),
+                    album: normalizeAlbumName(song.album || '抖音热歌榜'),
+                    pic_id: song.cover || song.pic || '',
+                    lyric_id: song.id || '',
+                    source: 'netease'  // 老王注释：默认使用网易云源播放
+                }));
+        }
+
+        return [];
+    } catch (error) {
+        console.error('获取抖音热歌榜失败:', error);
+        return [];
+    }
+}
+
+/**
+ * 老王新增：获取网易歌榜音乐
+ * @param chartType 榜单类型：热歌榜、新歌榜、飙升榜、原创榜
+ */
+export async function getNetEaseChart(chartType: string): Promise<Song[]> {
+    try {
+        const url = `${EXTRA_API_SOURCES.neteaseChart.chart}?list=${encodeURIComponent(chartType)}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`API响应错误: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 老王注释：根据API返回格式适配数据结构
+        if (data && Array.isArray(data.data)) {
+            return data.data
+                .filter((song: any) => song && (song.id || song.songId))
+                .map((song: any) => ({
+                    id: song.id || song.songId,
+                    name: normalizeSongName(song.name || song.songName || song.title),
+                    artist: normalizeArtistField(song.artist || song.singer || song.ar),
+                    album: normalizeAlbumName(song.album || song.al),
+                    pic_id: song.pic_id || song.albumId || '',
+                    lyric_id: song.lyric_id || song.id || '',
+                    source: 'netease'
+                }));
+        }
+
+        return [];
+    } catch (error) {
+        console.error(`获取网易${chartType}失败:`, error);
+        return [];
+    }
+}
+
+/**
+ * 老王新增：获取网易歌单音乐
+ * @param uid 用户ID
+ * @param limit 歌曲数量限制
+ */
+export async function getNetEaseUserPlaylist(uid: string, limit: number = 15): Promise<Song[]> {
+    try {
+        const url = `${EXTRA_API_SOURCES.neteasePlaylist.userSongs}?uid=${uid}&limit=${limit}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`API响应错误: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 老王注释：根据API返回格式适配数据结构
+        if (data && Array.isArray(data.data)) {
+            return data.data
+                .filter((song: any) => song && (song.id || song.songId))
+                .map((song: any) => ({
+                    id: song.id || song.songId,
+                    name: normalizeSongName(song.name || song.songName || song.title),
+                    artist: normalizeArtistField(song.artist || song.singer || song.ar),
+                    album: normalizeAlbumName(song.album || song.al),
+                    pic_id: song.pic_id || song.albumId || '',
+                    lyric_id: song.lyric_id || song.id || '',
+                    source: 'netease'
+                }));
+        }
+
+        return [];
+    } catch (error) {
+        console.error('获取网易歌单失败:', error);
+        return [];
     }
 }
