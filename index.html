@@ -206,6 +206,8 @@
             <div class="stats-tabs-inline">
                 <button class="stats-tab active" data-stats-tab="most-played">最多播放</button>
                 <button class="stats-tab" data-stats-tab="recent">最近播放</button>
+                <button class="stats-tab" data-stats-tab="favorites">收藏列表</button>
+                <button class="stats-tab" data-stats-tab="history">播放历史</button>
             </div>
             <div class="stats-content-inline" id="statsContentInline">
                 <div class="stats-tab-content active" id="mostPlayedContent">
@@ -216,6 +218,16 @@
                 <div class="stats-tab-content" id="recentContent">
                     <div class="stats-list" id="recentList">
                         <div class="stats-empty">暂无统计数据</div>
+                    </div>
+                </div>
+                <div class="stats-tab-content" id="favoritesContent">
+                    <div class="stats-list" id="favoritesList">
+                        <div class="stats-empty">暂无收藏</div>
+                    </div>
+                </div>
+                <div class="stats-tab-content" id="historyContent">
+                    <div class="stats-list" id="historyList">
+                        <div class="stats-empty">暂无播放历史</div>
                     </div>
                 </div>
             </div>
