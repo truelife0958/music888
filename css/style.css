@@ -1747,12 +1747,13 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* 老王修复BUG-UI-002：统一推荐区三个按钮样式 */
 .recommend-refresh-btn,
+.recommend-ai-btn,
 .recommend-play-all-btn {
     flex: 1;
     padding: 12px 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: none;
     border-radius: 10px;
     color: #fff;
     font-size: 14px;
@@ -1765,15 +1766,31 @@ body {
     gap: 8px;
 }
 
-.recommend-refresh-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-1px);
+/* 刷新推荐按钮 - 蓝色主题 */
+.recommend-refresh-btn {
+    background: linear-gradient(135deg, #4a90e2, #357abd);
 }
 
+.recommend-refresh-btn:hover {
+    background: linear-gradient(135deg, #357abd, #2868a8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);
+}
+
+/* AI推荐按钮 - 紫色主题 */
+.recommend-ai-btn {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.recommend-ai-btn:hover {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4);
+}
+
+/* 播放全部按钮 - 红色主题 */
 .recommend-play-all-btn {
     background: linear-gradient(135deg, #ff6b6b, #ff5252);
-    border: none;
 }
 
 .recommend-play-all-btn:hover {
