@@ -65,25 +65,38 @@ const MUSIC_SOURCES = [
 ];
 
 // 艺术家字段规范化函数 - 老王修复：统一处理各种artist数据格式
-function normalizeArtistField(artist: any): string[] {
-    // 如果是字符串数组，直接返回
+// 老王优化：导出此函数供其他模块使用，统一规范化逻辑
+export function normalizeArtistField(artist: any): string[] {
+    // 老王增强：过滤空值和空字符串
+    const filterEmpty = (arr: string[]) => arr.filter(s => s && s.trim()).map(s => s.trim());
+
+    // 如果是字符串数组，过滤空值后返回
     if (Array.isArray(artist) && artist.length > 0 && typeof artist[0] === 'string') {
-        return artist;
+        const filtered = filterEmpty(artist);
+        return filtered.length > 0 ? filtered : ['未知艺术家'];
     }
 
-    // 如果是对象数组，提取name字段
+    // 如果是对象数组，提取name字段并过滤空值
     if (Array.isArray(artist) && artist.length > 0 && typeof artist[0] === 'object') {
-        return artist.map((a: any) => a?.name || a?.artist || '未知艺术家').filter(Boolean);
+        const names = artist.map((a: any) => a?.name || a?.artist || '').filter(Boolean);
+        const filtered = filterEmpty(names);
+        return filtered.length > 0 ? filtered : ['未知艺术家'];
     }
 
-    // 如果是单个字符串，转换为数组
-    if (typeof artist === 'string' && artist.trim()) {
-        return [artist.trim()];
+    // 如果是单个字符串，处理分隔符并过滤空值
+    if (typeof artist === 'string') {
+        const trimmed = artist.trim();
+        if (!trimmed) return ['未知艺术家'];
+
+        // 处理"歌手1,歌手2"或"歌手1/歌手2"等格式
+        const parts = trimmed.split(/[,，、/／]/).map(s => s.trim()).filter(s => s);
+        return parts.length > 0 ? parts : ['未知艺术家'];
     }
 
     // 如果是单个对象，提取name字段
     if (typeof artist === 'object' && artist?.name) {
-        return [artist.name];
+        const trimmed = String(artist.name).trim();
+        return trimmed ? [trimmed] : ['未知艺术家'];
     }
 
     // 默认返回未知艺术家
@@ -91,20 +104,25 @@ function normalizeArtistField(artist: any): string[] {
 }
 
 // 歌曲名称规范化函数 - 老王修复：统一处理各种name数据格式
-function normalizeSongName(name: any): string {
+// 老王优化：导出此函数供其他模块使用，统一规范化逻辑
+export function normalizeSongName(name: any): string {
+    // 老王增强：更严格的空值检查
     // 如果是有效字符串，trim后返回
-    if (typeof name === 'string' && name.trim()) {
-        return name.trim();
+    if (typeof name === 'string') {
+        const trimmed = name.trim();
+        if (trimmed) return trimmed;
     }
 
     // 如果是对象且有name属性
-    if (typeof name === 'object' && name?.name && typeof name.name === 'string' && name.name.trim()) {
-        return name.name.trim();
+    if (typeof name === 'object' && name?.name && typeof name.name === 'string') {
+        const trimmed = name.name.trim();
+        if (trimmed) return trimmed;
     }
 
     // 如果是对象且有title属性
-    if (typeof name === 'object' && name?.title && typeof name.title === 'string' && name.title.trim()) {
-        return name.title.trim();
+    if (typeof name === 'object' && name?.title && typeof name.title === 'string') {
+        const trimmed = name.title.trim();
+        if (trimmed) return trimmed;
     }
 
     // 默认返回未知歌曲（只有真的没数据时才返回这个）
@@ -112,20 +130,25 @@ function normalizeSongName(name: any): string {
 }
 
 // 专辑名称规范化函数 - 老王修复：统一处理各种album数据格式
-function normalizeAlbumName(album: any): string {
+// 老王优化：导出此函数供其他模块使用，统一规范化逻辑
+export function normalizeAlbumName(album: any): string {
+    // 老王增强：更严格的空值检查
     // 如果是有效字符串，trim后返回
-    if (typeof album === 'string' && album.trim()) {
-        return album.trim();
+    if (typeof album === 'string') {
+        const trimmed = album.trim();
+        if (trimmed) return trimmed;
     }
 
     // 如果是对象且有name属性
-    if (typeof album === 'object' && album?.name && typeof album.name === 'string' && album.name.trim()) {
-        return album.name.trim();
+    if (typeof album === 'object' && album?.name && typeof album.name === 'string') {
+        const trimmed = album.name.trim();
+        if (trimmed) return trimmed;
     }
 
     // 如果是对象且有album属性（嵌套情况）
-    if (typeof album === 'object' && album?.album && typeof album.album === 'string' && album.album.trim()) {
-        return album.album.trim();
+    if (typeof album === 'object' && album?.album && typeof album.album === 'string') {
+        const trimmed = album.album.trim();
+        if (trimmed) return trimmed;
     }
 
     // 默认返回未知专辑（只有真的没数据时才返回这个）

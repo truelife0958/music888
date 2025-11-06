@@ -1,7 +1,7 @@
 // js/extra-api-adapter.ts - 额外API源适配器
 // 老王开发：支持多种不同格式的音乐API
 
-import { Song } from './api';
+import { Song, normalizeArtistField, normalizeSongName, normalizeAlbumName } from './api';
 
 // 额外API源配置
 export const EXTRA_API_SOURCES = {
@@ -59,14 +59,15 @@ export async function getQQDaily30(): Promise<Song[]> {
         const data = await response.json();
 
         // 老王修复BUG-API-001：过滤无效数据并规范化
+        // 老王优化BUG-API-003：使用api.ts统一规范化函数，杜绝重复造轮子
         if (data && Array.isArray(data.data)) {
             return data.data
                 .filter((song: any) => song && (song.id || song.songid || song.mid))  // 过滤空元素和无ID的歌曲
                 .map((song: any) => ({
                     id: song.id || song.songid || song.mid,
-                    name: song.name || song.songname || '未知歌曲',
-                    artist: parseMiguArtist(song.singer || song.artist),
-                    album: song.album || song.albumname || '未知专辑',
+                    name: normalizeSongName(song.name || song.songname),
+                    artist: normalizeArtistField(song.singer || song.artist),
+                    album: normalizeAlbumName(song.album || song.albumname),
                     pic_id: song.pic_id || song.albumid || '',
                     lyric_id: song.lyric_id || song.id || '',
                     source: 'tencent'
@@ -95,14 +96,15 @@ export async function searchMiguMusic(keyword: string, limit: number = 30): Prom
         const data = await response.json();
 
         // 老王修复BUG-API-001：过滤无效数据并规范化
+        // 老王优化BUG-API-003：使用api.ts统一规范化函数，杜绝重复造轮子
         if (data && data.code === 200 && Array.isArray(data.data)) {
             return data.data
                 .filter((song: any) => song && (song.id || song.songId))  // 过滤空元素和无ID的歌曲
                 .map((song: any) => ({
                     id: song.id || song.songId,
-                    name: song.title || song.name || '未知歌曲',
-                    artist: parseMiguArtist(song.singer || song.artist),
-                    album: song.album || '未知专辑',
+                    name: normalizeSongName(song.title || song.name),
+                    artist: normalizeArtistField(song.singer || song.artist),
+                    album: normalizeAlbumName(song.album),
                     pic_id: song.pic_id || '',
                     lyric_id: song.lyric_id || song.id || '',
                     source: 'migu'
@@ -131,14 +133,15 @@ export async function searchXimalayaMusic(keyword: string, limit: number = 20): 
         const data = await response.json();
 
         // 老王修复BUG-API-001：过滤无效数据并规范化
+        // 老王优化BUG-API-003：使用api.ts统一规范化函数，杜绝重复造轮子
         if (data && data.code === 200 && Array.isArray(data.data)) {
             return data.data
                 .filter((song: any) => song && (song.id || song.trackId))  // 过滤空元素和无ID的歌曲
                 .map((song: any) => ({
                     id: song.id || song.trackId,
-                    name: song.title || song.name || '未知歌曲',
-                    artist: [song.singer || song.artist || '喜马拉雅'],
-                    album: song.album || '喜马拉雅音频',
+                    name: normalizeSongName(song.title || song.name),
+                    artist: normalizeArtistField(song.singer || song.artist || '喜马拉雅'),
+                    album: normalizeAlbumName(song.album || '喜马拉雅音频'),
                     pic_id: song.pic_id || '',
                     lyric_id: song.lyric_id || song.id || '',
                     source: 'ximalaya'
@@ -167,14 +170,15 @@ export async function searchBilibiliMusic(keyword: string, page: number = 1): Pr
         const data = await response.json();
 
         // 老王修复BUG-API-001：过滤无效数据并规范化
+        // 老王优化BUG-API-003：使用api.ts统一规范化函数，杜绝重复造轮子
         if (data && data.code === 0 && Array.isArray(data.data)) {
             return data.data
                 .filter((song: any) => song && (song.id || song.bvid))  // 过滤空元素和无ID的歌曲
                 .map((song: any) => ({
                     id: song.id || song.bvid,
-                    name: song.title || song.name || '未知歌曲',
-                    artist: [song.author || song.up_name || 'Bilibili'],
-                    album: 'Bilibili音乐',
+                    name: normalizeSongName(song.title || song.name),
+                    artist: normalizeArtistField(song.author || song.up_name || 'Bilibili'),
+                    album: normalizeAlbumName('Bilibili音乐'),
                     pic_id: song.pic || song.cover || '',
                     lyric_id: song.id || '',
                     source: 'bilibili'
@@ -203,14 +207,15 @@ export async function getKugouPlaylist(playlistId: string, page: number = 1, lim
         const data = await response.json();
 
         // 老王修复BUG-API-001：过滤无效数据并规范化
+        // 老王优化BUG-API-003：使用api.ts统一规范化函数，杜绝重复造轮子
         if (data && data.code === 1 && Array.isArray(data.data)) {
             return data.data
                 .filter((song: any) => song && (song.hash || song.id))  // 过滤空元素和无ID的歌曲
                 .map((song: any) => ({
                     id: song.hash || song.id,
-                    name: song.name || song.songname || '未知歌曲',
-                    artist: parseMiguArtist(song.singername || song.artist),
-                    album: song.album_name || song.album || '未知专辑',
+                    name: normalizeSongName(song.name || song.songname),
+                    artist: normalizeArtistField(song.singername || song.artist),
+                    album: normalizeAlbumName(song.album_name || song.album),
                     pic_id: song.album_id || '',
                     lyric_id: song.hash || song.id || '',
                     source: 'kugou'
@@ -222,26 +227,6 @@ export async function getKugouPlaylist(playlistId: string, page: number = 1, lim
         console.error('酷狗歌单获取失败:', error);
         return [];
     }
-}
-
-/**
- * 解析艺术家字段（兼容多种格式）
- */
-function parseMiguArtist(artist: any): string[] {
-    if (Array.isArray(artist)) {
-        return artist.map(a => typeof a === 'string' ? a : (a?.name || '未知艺术家'));
-    }
-
-    if (typeof artist === 'string') {
-        // 处理"歌手1,歌手2"格式
-        return artist.split(/[,，、]/).map(a => a.trim()).filter(a => a);
-    }
-
-    if (typeof artist === 'object' && artist?.name) {
-        return [artist.name];
-    }
-
-    return ['未知艺术家'];
 }
 
 /**
