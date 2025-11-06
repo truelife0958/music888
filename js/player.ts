@@ -275,12 +275,17 @@ export async function playSong(index: number, playlist: Song[], containerId: str
             addToPlayHistory(song);
 
             const lyricsData = await api.getLyrics(song);
+            console.log('🎵 [歌词] API返回数据:', { hasLyric: !!lyricsData?.lyric, length: lyricsData?.lyric?.length });
+
             // 优化: 使用 Web Worker 解析歌词，避免阻塞主线程
             const lyrics = lyricsData.lyric
                 ? await lyricsWorkerManager.parseLyric(lyricsData.lyric)
                 : [];
+            console.log('📝 [歌词] 解析结果:', { count: lyrics.length, sample: lyrics[0] });
+
             currentLyrics = lyrics; // 保存当前歌词
             ui.updateLyrics(lyrics, 0);
+            console.log('✅ [歌词] 已调用ui.updateLyrics');
 
             // 触发播放事件（用于 Wake Lock 和 Media Session）
             window.dispatchEvent(new CustomEvent('songPlaying', {

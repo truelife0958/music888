@@ -67,7 +67,15 @@ if (typeof window !== 'undefined') {
 export function init(): void {
     // 修复：添加安全检查，防止元素不存在导致崩溃
     const lyricsContainer = document.getElementById('lyricsContainerInline');
-    
+
+    // 老王修复BUG-LYRICS-001：确保歌词容器存在且已挂载到DOM
+    if (!lyricsContainer) {
+        console.error('❌ [UI.init] 致命错误：找不到歌词容器 #lyricsContainerInline');
+        console.error('❌ [UI.init] 歌词功能将无法正常工作！');
+    } else {
+        console.log('✅ [UI.init] 歌词容器初始化成功');
+    }
+
     DOM = {
         searchResults: document.getElementById('searchResults')!,
         parseResults: document.getElementById('parseResults')!,
@@ -83,11 +91,6 @@ export function init(): void {
         downloadSongBtn: document.getElementById('downloadSongBtn') as HTMLButtonElement,
         downloadLyricBtn: document.getElementById('downloadLyricBtn') as HTMLButtonElement,
     };
-    
-    // 如果歌词容器不存在，添加警告
-    if (!lyricsContainer) {
-        console.warn('⚠️ 歌词容器 #lyricsContainerInline 不存在，歌词功能可能无法正常工作');
-    }
 }
 
 // --- UI Functions ---
@@ -287,6 +290,8 @@ let lastActiveLyricIndex = -1;
 let lastRenderedLyrics: LyricLine[] = [];
 
 export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
+    console.log('🔧 [UI.updateLyrics] 开始更新歌词', { lyricsCount: lyrics.length, currentTime, hasDOM: !!DOM.lyricsContainer, hasParent: !!DOM.lyricsContainer?.parentNode });
+
     // 修复：增强安全检查
     if (!DOM.lyricsContainer || !DOM.lyricsContainer.parentNode) {
         console.warn('⚠️ 歌词容器不可用，跳过更新');
