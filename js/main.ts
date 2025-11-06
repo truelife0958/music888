@@ -202,9 +202,9 @@ async function initializeApp(): Promise<void> {
     // 初始化播放列表弹窗
     initPlaylistModal();
 
-    // 初始tab状态
-    switchTab('search');
-    
+    // 老王优化：初始tab改为"发现音乐"（合并了搜索和解析）
+    switchTab('discover');
+
     // 移动端页面指示器事件绑定
     initMobilePageIndicators();
 }

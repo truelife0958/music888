@@ -40,9 +40,10 @@
     
     <div class="main-container">
         <div class="content-section">
+            <!-- 老王优化：将4个标签整合成3个，合并"搜索"和"解析"为"发现音乐" -->
             <div class="tabs">
-                <button class="tab-btn active" data-tab="search">
-                    <i class="fas fa-search"></i> 搜索结果
+                <button class="tab-btn active" data-tab="discover">
+                    <i class="fas fa-search"></i> 发现音乐
                 </button>
                 <button class="tab-btn" data-tab="rank">
                     <i class="fas fa-chart-line"></i> 音乐排行榜
@@ -50,21 +51,11 @@
                 <button class="tab-btn" data-tab="recommend">
                     <i class="fas fa-dice"></i> 每日推荐
                 </button>
-                <button class="tab-btn" data-tab="parse">
-                    <i class="fas fa-cloud-download-alt"></i> 解析歌单
-                </button>
             </div>
 
-            <div id="searchTab" class="tab-content active">
-                <div class="search-results" id="searchResults">
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <div>在上方搜索框输入关键词开始搜索音乐</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="parseTab" class="tab-content">
+            <!-- 发现音乐标签页：合并搜索和解析功能 -->
+            <div id="discoverTab" class="tab-content active">
+                <!-- 解析歌单区域 -->
                 <div class="playlist-input-container">
                     <select class="playlist-source-select" id="playlistSourceSelect" style="margin-bottom: 10px;">
                         <option value="netease">网易云音乐</option>
@@ -72,14 +63,21 @@
                     </select>
                     <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入歌单ID (如: 60198) 或链接...">
                     <button class="playlist-btn">
-                        <i class="fas fa-download"></i> 解析
+                        <i class="fas fa-download"></i> 解析歌单
                     </button>
                 </div>
-                <div class="search-results" id="parseResults">
+
+                <!-- 搜索结果区域 -->
+                <div class="search-results" id="searchResults">
                     <div class="empty-state">
-                        <i class="fas fa-cloud-download-alt"></i>
-                        <div>输入歌单ID或链接后点击解析按钮</div>
+                        <i class="fas fa-search"></i>
+                        <div>在上方搜索框输入关键词搜索音乐，或解析歌单链接</div>
                     </div>
+                </div>
+
+                <!-- 解析结果区域（共享搜索结果容器或单独容器） -->
+                <div class="search-results" id="parseResults" style="display: none;">
+                    <!-- 解析结果将显示在这里 -->
                 </div>
             </div>
 
