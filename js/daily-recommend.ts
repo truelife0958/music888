@@ -3,12 +3,14 @@
 import { parsePlaylistAPI, type Song } from './api';
 import { playSong } from './player';
 import { showNotification } from './ui';
+// 老王优化：改为动态导入，优化代码分割
 
 // 每日推荐配置
 const DAILY_RECOMMEND_CONFIG = {
     STORAGE_KEY: 'daily_recommend',
     SONGS_COUNT: 30, // 每日推荐歌曲数量
     CACHE_DURATION: 24 * 60 * 60 * 1000, // 缓存时长24小时
+    USE_QQ_DAILY: true,  // 老王添加：是否优先使用QQ音乐每日推荐
 };
 
 // 推荐源配置
@@ -60,9 +62,9 @@ function initRecommendTab() {
 async function loadDailyRecommend(forceRefresh: boolean = false) {
     const songsContainer = document.getElementById('recommendSongs');
     const dateElement = document.getElementById('recommendDate');
-    
+
     if (!songsContainer) return;
-    
+
     try {
         // 检查缓存
         if (!forceRefresh) {
@@ -76,12 +78,44 @@ async function loadDailyRecommend(forceRefresh: boolean = false) {
                 return;
             }
         }
-        
+
         songsContainer.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> 正在生成推荐...</div>';
-        
-        // 从多个榜单获取歌曲
+
+        // 老王添加：优先尝试QQ音乐每日30首推荐
+        if (DAILY_RECOMMEND_CONFIG.USE_QQ_DAILY) {
+            try {
+                console.log('📦 尝试使用QQ音乐每日推荐...');
+                const { getQQDaily30 } = await import('./extra-api-adapter.js');
+                const qqDailySongs = await getQQDaily30();
+
+                if (qqDailySongs && qqDailySongs.length > 0) {
+                    console.log(`✅ QQ音乐每日推荐获取成功，共${qqDailySongs.length}首`);
+                    currentRecommendSongs = qqDailySongs;
+
+                    // 缓存推荐
+                    cacheRecommend(qqDailySongs);
+
+                    // 显示推荐
+                    displayRecommendSongs(qqDailySongs);
+
+                    // 更新日期
+                    if (dateElement) {
+                        const today = new Date().toLocaleDateString('zh-CN');
+                        dateElement.textContent = `QQ音乐每日推荐 - 更新时间: ${today}`;
+                    }
+
+                    showNotification(`QQ音乐为你推荐${qqDailySongs.length}首歌曲`, 'success');
+                    return;
+                }
+            } catch (qqError) {
+                console.warn('⚠️ QQ音乐每日推荐获取失败，使用默认推荐方式:', qqError);
+                // 继续执行下面的默认推荐逻辑
+            }
+        }
+
+        // 默认推荐方式：从多个榜单获取歌曲
         const allSongs: Song[] = [];
-        
+
         for (const source of RECOMMEND_SOURCES) {
             try {
                 const result = await parsePlaylistAPI(source.id, source.source);
@@ -92,31 +126,31 @@ async function loadDailyRecommend(forceRefresh: boolean = false) {
                 console.error(`获取榜单 ${source.id} 失败:`, error);
             }
         }
-        
+
         if (allSongs.length === 0) {
             songsContainer.innerHTML = '<div class="error">获取推荐失败，请稍后重试</div>';
             showNotification('获取推荐失败', 'error');
             return;
         }
-        
+
         // 随机打乱并取指定数量
         const recommendSongs = shuffleArray(allSongs).slice(0, DAILY_RECOMMEND_CONFIG.SONGS_COUNT);
         currentRecommendSongs = recommendSongs;
-        
+
         // 缓存推荐
         cacheRecommend(recommendSongs);
-        
+
         // 显示推荐
         displayRecommendSongs(recommendSongs);
-        
+
         // 更新日期
         if (dateElement) {
             const today = new Date().toLocaleDateString('zh-CN');
             dateElement.textContent = `更新时间: ${today}`;
         }
-        
+
         showNotification(`已为你推荐${recommendSongs.length}首歌曲`, 'success');
-        
+
     } catch (error) {
         console.error('加载每日推荐失败:', error);
         songsContainer.innerHTML = '<div class="error">加载失败，请重试</div>';

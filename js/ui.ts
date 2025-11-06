@@ -479,11 +479,21 @@ export function updateActiveItem(currentIndex: number, containerId: string): voi
 }
 
 export function showLoading(containerId: string = 'searchResults'): void {
-    const container = document.getElementById(containerId)!;
+    // 老王修复BUG-UI-001：添加容器存在性检查
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`❌ 找不到容器元素: ${containerId}`);
+        return;
+    }
     container.innerHTML = `<div class="loading"><i class="fas fa-spinner"></i><div>正在加载...</div></div>`;
 }
 
 export function showError(message: string, containerId: string = 'searchResults'): void {
-    const container = document.getElementById(containerId)!;
-    container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i><div>${message}</div></div>`;
+    // 老王修复BUG-UI-001：添加容器存在性检查
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`❌ 找不到容器元素: ${containerId}`);
+        return;
+    }
+    container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i><div>${escapeHtml(message)}</div></div>`;
 }

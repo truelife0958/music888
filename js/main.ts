@@ -16,6 +16,7 @@ let playStatsModule: any = null;
 let imageLazyLoader: any = null;
 let downloadProgressManager: any = null;
 let themeManager: ThemeManager | null = null;
+let aiRecommendModule: any = null;  // 老王添加：AI推荐模块
 
 // 防止重复初始化的全局标志
 let appInitialized = false;
@@ -27,7 +28,8 @@ const moduleLoadStatus = {
     searchHistory: false,
     playStats: false,
     imageLoader: false,
-    downloadProgress: false
+    downloadProgress: false,
+    aiRecommend: false  // 老王添加：AI推荐模块状态
 };
 
 // Tab切换逻辑
@@ -45,10 +47,16 @@ export function switchTab(tabName: string): void {
         (selectedTabContent as HTMLElement).style.display = 'flex';
         selectedTabContent.classList.add('active');
     }
-    
+
     const selectedTabButton = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
     if (selectedTabButton) {
         selectedTabButton.classList.add('active');
+    }
+
+    // 老王添加：按需加载各标签页对应的模块
+    if (tabName === 'recommend') {
+        loadDailyRecommendModule();
+        loadAIRecommendModule();  // 推荐标签页同时加载AI推荐模块
     }
 }
 
@@ -151,48 +159,9 @@ async function initializeApp(): Promise<void> {
     document.getElementById('playModeBtn')!.addEventListener('click', player.togglePlayMode);
     document.getElementById('volumeSlider')!.addEventListener('input', (e) => player.setVolume((e.target as HTMLInputElement).value));
     document.querySelector('.progress-bar')!.addEventListener('click', (e) => player.seekTo(e as MouseEvent));
-    
-    // 主题切换按钮
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
-    if (themeToggleBtn && themeManager) {
-        themeToggleBtn.addEventListener('click', () => {
-            themeManager!.toggleTheme();
-        });
-        
-        // 监听主题变化事件以更新按钮图标
-        themeManager.on('themeChanged', (theme: string) => {
-            const icon = themeToggleBtn.querySelector('i');
-            if (icon) {
-                if (theme === 'dark') {
-                    icon.className = 'fas fa-moon';
-                    themeToggleBtn.title = '切换到亮色模式';
-                } else if (theme === 'light') {
-                    icon.className = 'fas fa-sun';
-                    themeToggleBtn.title = '切换到暗色模式';
-                } else {
-                    icon.className = 'fas fa-adjust';
-                    themeToggleBtn.title = '自动主题';
-                }
-            }
-        });
-        
-        // 初始化按钮状态
-        const currentTheme = themeManager.getCurrentTheme();
-        const icon = themeToggleBtn.querySelector('i');
-        if (icon) {
-            if (currentTheme === 'dark') {
-                icon.className = 'fas fa-moon';
-                themeToggleBtn.title = '切换到亮色模式';
-            } else if (currentTheme === 'light') {
-                icon.className = 'fas fa-sun';
-                themeToggleBtn.title = '切换到暗色模式';
-            } else {
-                icon.className = 'fas fa-adjust';
-                themeToggleBtn.title = '自动主题';
-            }
-        }
-    }
-    
+
+    // 老王修复：主题切换按钮已删除，不再需要绑定事件
+
     // 下载按钮
     document.getElementById('downloadSongBtn')!.addEventListener('click', () => {
         const currentSong = player.getCurrentSong();
@@ -302,7 +271,7 @@ async function loadSearchHistoryModule(): Promise<void> {
 // 优化: 按需加载播放统计模块
 async function loadPlayStatsModule(): Promise<void> {
     if (moduleLoadStatus.playStats) return;
-    
+
     try {
         console.log('📦 加载播放统计模块...');
         playStatsModule = await import('./play-stats.js');
@@ -312,6 +281,83 @@ async function loadPlayStatsModule(): Promise<void> {
     } catch (error) {
         console.error('❌ 播放统计模块加载失败:', error);
     }
+}
+
+// 老王添加：AI推荐模块加载
+async function loadAIRecommendModule(): Promise<void> {
+    if (moduleLoadStatus.aiRecommend) return;
+
+    try {
+        console.log('📦 加载AI推荐模块...');
+        aiRecommendModule = await import('./ai-recommend.js');
+
+        // 绑定AI推荐按钮事件
+        const aiRecommendBtn = document.getElementById('aiRecommendBtn');
+        if (aiRecommendBtn) {
+            aiRecommendBtn.addEventListener('click', async () => {
+                try {
+                    const recommendations = await aiRecommendModule.getAIRecommendations();
+                    if (recommendations.length > 0) {
+                        // 显示推荐歌曲
+                        dailyRecommendModule?.displayAIRecommendations?.(recommendations);
+
+                        // 如果daily-recommend模块没有displayAIRecommendations方法，
+                        // 我们直接调用显示推荐的方法
+                        const songsContainer = document.getElementById('recommendSongs');
+                        if (songsContainer && !dailyRecommendModule?.displayAIRecommendations) {
+                            displayAIRecommendSongs(recommendations, songsContainer);
+                        }
+                    }
+                } catch (error) {
+                    console.error('AI推荐失败:', error);
+                    ui.showNotification('AI推荐失败，请稍后再试', 'error');
+                }
+            });
+        }
+
+        moduleLoadStatus.aiRecommend = true;
+        console.log('✅ AI推荐模块加载完成');
+    } catch (error) {
+        console.error('❌ AI推荐模块加载失败:', error);
+    }
+}
+
+// 老王添加：显示AI推荐歌曲
+function displayAIRecommendSongs(songs: any[], container: HTMLElement): void {
+    container.innerHTML = `
+        <div class="ai-recommend-header">
+            <h4><i class="fas fa-brain"></i> AI为您精选推荐</h4>
+        </div>
+        <div class="recommend-songs-list">
+            ${songs.map((song, index) => `
+                <div class="recommend-song-item" data-index="${index}">
+                    <span class="recommend-number">${index + 1}</span>
+                    <div class="recommend-song-info">
+                        <div class="recommend-song-name">${song.name}</div>
+                        <div class="recommend-song-artist">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}</div>
+                    </div>
+                    <button class="recommend-play-btn" title="播放">▶</button>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    // 绑定播放按钮事件
+    const playBtns = container.querySelectorAll('.recommend-play-btn');
+    playBtns.forEach((btn, index) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            player.playSong(index, songs, 'recommendSongs');
+        });
+    });
+
+    // 绑定歌曲项点击事件
+    const songItems = container.querySelectorAll('.recommend-song-item');
+    songItems.forEach((item, index) => {
+        item.addEventListener('click', () => {
+            player.playSong(index, songs, 'recommendSongs');
+        });
+    });
 }
 
 // 初始化移动端页面指示器
@@ -327,26 +373,57 @@ function initMobilePageIndicators(): void {
 async function handleSearch(): Promise<void> {
     const keyword = (document.getElementById('searchInput') as HTMLInputElement).value;
     const source = (document.getElementById('sourceSelect') as HTMLSelectElement).value;
-    
+
     if (!keyword.trim()) {
         ui.showNotification('请输入搜索关键词', 'warning');
         return;
     }
-    
+
     // 确保搜索历史模块已加载
     if (!moduleLoadStatus.searchHistory) {
         await loadSearchHistoryModule();
     }
-    
+
     // 添加到搜索历史
     if (searchHistoryModule && searchHistoryModule.addSearchHistory) {
         searchHistoryModule.addSearchHistory(keyword.trim());
     }
-    
+
     ui.showLoading('searchResults');
 
     try {
-        const songs = await api.searchMusicAPI(keyword, source);
+        // 老王优化：先尝试主API搜索
+        let songs = await api.searchMusicAPI(keyword, source);
+
+        // 老王优化：如果主API结果少于10首，尝试聚合搜索补充
+        if (songs.length < 10) {
+            console.log(`⚠️ 主API仅返回${songs.length}首，尝试聚合搜索补充...`);
+            try {
+                const { aggregateSearch } = await import('./extra-api-adapter.js');
+                const extraSongs = await aggregateSearch(keyword);
+
+                if (extraSongs.length > 0) {
+                    console.log(`✅ 聚合搜索找到${extraSongs.length}首歌曲`);
+
+                    // 合并结果并去重（基于歌曲名+艺术家）
+                    const existingSongKeys = new Set(
+                        songs.map(s => `${s.name}_${Array.isArray(s.artist) ? s.artist.join(',') : s.artist}`)
+                    );
+
+                    const uniqueExtraSongs = extraSongs.filter(s => {
+                        const key = `${s.name}_${Array.isArray(s.artist) ? s.artist.join(',') : s.artist}`;
+                        return !existingSongKeys.has(key);
+                    });
+
+                    songs = [...songs, ...uniqueExtraSongs];
+                    console.log(`✅ 合并后共${songs.length}首歌曲`);
+                }
+            } catch (aggregateError) {
+                console.warn('⚠️ 聚合搜索失败:', aggregateError);
+                // 继续使用主API结果
+            }
+        }
+
         if (songs.length > 0) {
             ui.displaySearchResults(songs, 'searchResults', songs);
             ui.showNotification(`找到 ${songs.length} 首歌曲`, 'success');

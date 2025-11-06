@@ -195,9 +195,9 @@ export async function playSong(index: number, playlist: Song[], containerId: str
     try {
         ui.showNotification('正在加载音乐...', 'info');
 
-        // 品质降级队列：按优先级尝试
+        // 老王修复BUG-PLAYER-001：品质选择器可能不存在
         const qualitySelect = document.getElementById('qualitySelect') as HTMLSelectElement;
-        const preferredQuality = qualitySelect.value;
+        const preferredQuality = qualitySelect ? qualitySelect.value : '320';
 
         // 确保首选品质在队列首位
         const qualityQueue = [preferredQuality, ...QUALITY_FALLBACK.filter(q => q !== preferredQuality)];
@@ -247,11 +247,19 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                 );
             }
 
-            // 启用下载按钮
+            // 老王修复BUG-PLAYER-002：下载按钮可能不存在
             const downloadSongBtn = document.getElementById('downloadSongBtn') as HTMLButtonElement;
             const downloadLyricBtn = document.getElementById('downloadLyricBtn') as HTMLButtonElement;
-            if (downloadSongBtn) downloadSongBtn.disabled = false;
-            if (downloadLyricBtn) downloadLyricBtn.disabled = false;
+            if (downloadSongBtn) {
+                downloadSongBtn.disabled = false;
+            } else {
+                console.warn('⚠️ 下载歌曲按钮未找到');
+            }
+            if (downloadLyricBtn) {
+                downloadLyricBtn.disabled = false;
+            } else {
+                console.warn('⚠️ 下载歌词按钮未找到');
+            }
 
             // Bilibili 音乐源使用代理服务
             if (song.source === 'bilibili') {

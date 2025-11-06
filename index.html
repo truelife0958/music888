@@ -9,6 +9,8 @@
     <link rel="icon" type="image/x-icon" href="ytmusic.ico">
     <link rel="manifest" href="/manifest.json">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 老王修复：添加实际的CSS样式表引入 -->
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="bg-animation"></div>
@@ -19,9 +21,6 @@
                 <i class="fas fa-music"></i>
                 <span>沄听</span>
             </div>
-            <button class="control-btn small" id="themeToggleBtn" title="切换主题" style="margin-right: 20px;">
-                <i class="fas fa-moon"></i>
-            </button>
             <div class="search-container">
                 <form class="search-wrapper" onsubmit="event.preventDefault(); return false;">
                     <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput" required>
@@ -116,6 +115,9 @@
                     <button class="recommend-refresh-btn" id="refreshRecommendBtn">
                         <i class="fas fa-sync-alt"></i> 刷新推荐
                     </button>
+                    <button class="recommend-ai-btn" id="aiRecommendBtn" title="基于您的播放历史和收藏智能推荐">
+                        <i class="fas fa-brain"></i> AI推荐
+                    </button>
                     <button class="recommend-play-all-btn" id="playAllRecommendBtn">
                         <i class="fas fa-play"></i> 播放全部
                     </button>
@@ -202,22 +204,6 @@
         <div class="stats-section-sidebar">
             <div class="stats-header-inline">
                 <h3><i class="fas fa-chart-bar"></i> 播放统计</h3>
-            </div>
-            <div class="stats-overview">
-                <div class="stats-card">
-                    <div class="stats-card-icon">🎵</div>
-                    <div class="stats-card-info">
-                        <div class="stats-card-value" id="totalPlaysCount">0</div>
-                        <div class="stats-card-label">总播放次数</div>
-                    </div>
-                </div>
-                <div class="stats-card">
-                    <div class="stats-card-icon">🎧</div>
-                    <div class="stats-card-info">
-                        <div class="stats-card-value" id="uniqueSongsCount">0</div>
-                        <div class="stats-card-label">不同歌曲</div>
-                    </div>
-                </div>
             </div>
             <div class="stats-tabs-inline">
                 <button class="stats-tab active" data-stats-tab="most-played">最多播放</button>

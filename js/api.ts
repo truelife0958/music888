@@ -46,6 +46,10 @@ const API_SOURCES: ApiSource[] = [
     {
         name: 'GDStudio 备用API',
         url: 'https://music-api.gdstudio.org/api.php'
+    },
+    {
+        name: 'Meting音乐API',
+        url: 'https://api.injahow.cn/meting/'
     }
 ];
 
@@ -59,6 +63,74 @@ const MUSIC_SOURCES = [
     { id: 'kugou', name: '酷狗音乐' },
     { id: 'kuwo', name: '酷我音乐' }
 ];
+
+// 艺术家字段规范化函数 - 老王修复：统一处理各种artist数据格式
+function normalizeArtistField(artist: any): string[] {
+    // 如果是字符串数组，直接返回
+    if (Array.isArray(artist) && artist.length > 0 && typeof artist[0] === 'string') {
+        return artist;
+    }
+
+    // 如果是对象数组，提取name字段
+    if (Array.isArray(artist) && artist.length > 0 && typeof artist[0] === 'object') {
+        return artist.map((a: any) => a?.name || a?.artist || '未知艺术家').filter(Boolean);
+    }
+
+    // 如果是单个字符串，转换为数组
+    if (typeof artist === 'string' && artist.trim()) {
+        return [artist.trim()];
+    }
+
+    // 如果是单个对象，提取name字段
+    if (typeof artist === 'object' && artist?.name) {
+        return [artist.name];
+    }
+
+    // 默认返回未知艺术家
+    return ['未知艺术家'];
+}
+
+// 歌曲名称规范化函数 - 老王修复：统一处理各种name数据格式
+function normalizeSongName(name: any): string {
+    // 如果是有效字符串，trim后返回
+    if (typeof name === 'string' && name.trim()) {
+        return name.trim();
+    }
+
+    // 如果是对象且有name属性
+    if (typeof name === 'object' && name?.name && typeof name.name === 'string' && name.name.trim()) {
+        return name.name.trim();
+    }
+
+    // 如果是对象且有title属性
+    if (typeof name === 'object' && name?.title && typeof name.title === 'string' && name.title.trim()) {
+        return name.title.trim();
+    }
+
+    // 默认返回未知歌曲（只有真的没数据时才返回这个）
+    return '未知歌曲';
+}
+
+// 专辑名称规范化函数 - 老王修复：统一处理各种album数据格式
+function normalizeAlbumName(album: any): string {
+    // 如果是有效字符串，trim后返回
+    if (typeof album === 'string' && album.trim()) {
+        return album.trim();
+    }
+
+    // 如果是对象且有name属性
+    if (typeof album === 'object' && album?.name && typeof album.name === 'string' && album.name.trim()) {
+        return album.name.trim();
+    }
+
+    // 如果是对象且有album属性（嵌套情况）
+    if (typeof album === 'object' && album?.album && typeof album.album === 'string' && album.album.trim()) {
+        return album.album.trim();
+    }
+
+    // 默认返回未知专辑（只有真的没数据时才返回这个）
+    return '未知专辑';
+}
 
 // 改进的LRU缓存 - 提升性能
 interface CacheEntry<T> {
@@ -568,14 +640,18 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
         }
         
         // 过滤和规范化数据
-        songs = songs.filter(song => 
-            song && song.name && song.name.trim() !== ''
+        songs = songs.filter(song =>
+            song && (song.name || song.title) // 只要有名称就保留
         ).map(song => ({
             ...song,
-            id: song.id || song.url_id || song.lyric_id || `${source}_${Date.now()}_${Math.random()}`
+            id: song.id || song.url_id || song.lyric_id || `${source}_${Date.now()}_${Math.random()}`,
+            source: source,
+            name: normalizeSongName(song.name || song.title),
+            artist: normalizeArtistField(song.artist),
+            album: normalizeAlbumName(song.album)
         }));
-        
-        return songs.map((song: any) => ({ ...song, source: source }));
+
+        return songs;
         } catch (error) {
             console.error('搜索失败:', error);
             throw error;
@@ -680,13 +756,13 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
         
         // 规范化数据
         songs = songs
-            .filter(song => song && song.id && song.name)
+            .filter(song => song && song.id && (song.name || song.title)) // 只要有ID和名称就保留
             .map((song: any) => ({
                 ...song,
                 source: source,
-                name: song.name || '未知歌曲',
-                artist: song.artist || ['未知艺术家'],
-                album: song.album || '未知专辑'
+                name: normalizeSongName(song.name || song.title),
+                artist: normalizeArtistField(song.artist),
+                album: normalizeAlbumName(song.album)
             }));
         
         return {

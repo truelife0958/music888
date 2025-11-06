@@ -18,11 +18,12 @@ const RANK_LISTS: RankList[] = [
     { id: '3779629', name: '新歌榜', source: 'netease', icon: '🆕' },
     { id: '19723756', name: '热歌榜', source: 'netease', icon: '🔥' },
     { id: '2884035', name: '说唱榜', source: 'netease', icon: '🎤' },
-    
-    // QQ音乐排行榜 - 使用正确的歌单ID
+
+    // QQ音乐排行榜 - 老王优化：添加每日推荐作为特殊榜单
+    { id: 'qq_daily_30', name: 'QQ每日推荐', source: 'tencent', icon: '🎁' },
     { id: '3812895', name: 'QQ流行榜', source: 'tencent', icon: '⭐' },
     { id: '3885842924', name: 'QQ热歌榜', source: 'tencent', icon: '🎵' },
-    
+
     // 酷狗音乐排行榜 - 使用正确的歌单ID
     { id: '8888', name: '酷狗TOP500', source: 'kugou', icon: '🏆' },
     { id: '6666', name: '酷狗飙升榜', source: 'kugou', icon: '📈' }
@@ -107,22 +108,43 @@ function updateRankLists(source: string) {
 async function loadRankSongs(rankId: string, source: string) {
     const songsContainer = document.getElementById('rankSongs');
     if (!songsContainer) return;
-    
+
     try {
         songsContainer.innerHTML = '<div class="loading">加载中...</div>';
-        
-        const result = await parsePlaylistAPI(rankId, source);
-        currentRankSongs = result.songs;
-        
+
+        let songs: Song[] = [];
+        let rankName = '排行榜';
+
+        // 老王优化：特殊处理QQ音乐每日推荐
+        if (rankId === 'qq_daily_30' && source === 'tencent') {
+            console.log('📦 加载QQ音乐每日推荐...');
+            try {
+                const { getQQDaily30 } = await import('./extra-api-adapter.js');
+                songs = await getQQDaily30();
+                rankName = 'QQ音乐每日推荐';
+                console.log(`✅ QQ音乐每日推荐加载成功，共${songs.length}首`);
+            } catch (error) {
+                console.error('❌ QQ音乐每日推荐加载失败:', error);
+                throw new Error('QQ音乐每日推荐暂时不可用');
+            }
+        } else {
+            // 使用标准API加载排行榜
+            const result = await parsePlaylistAPI(rankId, source);
+            songs = result.songs;
+            rankName = result.name || '排行榜';
+        }
+
+        currentRankSongs = songs;
+
         if (currentRankSongs.length === 0) {
             songsContainer.innerHTML = '<div class="no-data">暂无数据</div>';
             return;
         }
-        
+
         // 显示歌曲列表
         songsContainer.innerHTML = `
             <div class="rank-songs-header">
-                <h4>${result.name || '排行榜'}</h4>
+                <h4>${rankName}</h4>
                 <button class="play-all-btn" onclick="window.playAllRankSongs()">
                     ▶ 播放全部
                 </button>
@@ -140,7 +162,7 @@ async function loadRankSongs(rankId: string, source: string) {
                 `).join('')}
             </div>
         `;
-        
+
         // 绑定播放按钮事件
         const playBtns = songsContainer.querySelectorAll('.rank-play-btn');
         playBtns.forEach((btn, index) => {
@@ -149,7 +171,7 @@ async function loadRankSongs(rankId: string, source: string) {
                 playSong(index, currentRankSongs, 'rankSongs');
             });
         });
-        
+
         // 绑定歌曲项点击事件
         const songItems = songsContainer.querySelectorAll('.rank-song-item');
         songItems.forEach((item, index) => {
@@ -157,7 +179,7 @@ async function loadRankSongs(rankId: string, source: string) {
                 playSong(index, currentRankSongs, 'rankSongs');
             });
         });
-        
+
         // 全局播放全部函数
         (window as any).playAllRankSongs = () => {
             if (currentRankSongs.length > 0) {
@@ -165,7 +187,7 @@ async function loadRankSongs(rankId: string, source: string) {
                 showNotification('开始播放排行榜', 'success');
             }
         };
-        
+
     } catch (error) {
         console.error('加载排行榜失败:', error);
         songsContainer.innerHTML = '<div class="error">加载失败，请重试</div>';
