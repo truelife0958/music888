@@ -170,17 +170,17 @@ function saveStats() {
 // 记录播放
 export function recordPlay(song: Song, duration: number = 0) {
     if (!song || !song.id) return;
-    
+
     // 播放时长少于5秒不记录（可能是误点击或快速切歌）
     if (duration < 5) return;
-    
+
     const songId = song.id;
     const artist = Array.isArray(song.artist) ? song.artist.join(', ') : song.artist;
-    
+
     // 更新总统计
     currentStats.totalPlays++;
     currentStats.totalDuration += duration;
-    
+
     // 更新歌曲统计
     if (!currentStats.songs[songId]) {
         currentStats.songs[songId] = {
@@ -192,12 +192,17 @@ export function recordPlay(song: Song, duration: number = 0) {
             lastPlayTime: Date.now()
         };
     }
-    
+
     currentStats.songs[songId].playCount++;
     currentStats.songs[songId].totalDuration += duration;
     currentStats.songs[songId].lastPlayTime = Date.now();
-    
+
     saveStats();
+
+    // 老王修复BUG-STATS-001：统计面板打开时实时更新显示
+    if (isStatsVisible) {
+        updateStatsDisplay();
+    }
 }
 
 // 更新统计显示
