@@ -354,19 +354,25 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
 
 // 优化: 渲染歌词列表 - 增强安全检查
 function renderLyricsList(lyrics: LyricLine[]): void {
-    const lyricsHTML = lyrics.map((line, index) =>
-        `<div class="lyric-line" data-time="${escapeHtml(String(line.time))}" data-index="${escapeHtml(String(index))}">${escapeHtml(line.text)}</div>`
-    ).join('');
+    // 老王修复BUG-LYRICS-002：不要破坏三行歌词容器的固定结构！
+    // 三行歌词容器只有3个固定div，不应该被替换成所有歌词的列表
+    console.log('📋 [renderLyricsList] 渲染歌词列表，共', lyrics.length, '行');
 
-    // 修复：检查元素是否存在且已挂载到DOM
+    // 对于标准歌词容器（如果有的话），渲染完整列表
     if (DOM.lyricsContainer && DOM.lyricsContainer.parentNode) {
-        DOM.lyricsContainer.innerHTML = lyricsHTML;
+        const containerId = DOM.lyricsContainer.id;
+        // 只有非三行歌词容器才渲染完整列表
+        if (containerId !== 'lyricsContainerInline') {
+            const lyricsHTML = lyrics.map((line, index) =>
+                `<div class="lyric-line" data-time="${escapeHtml(String(line.time))}" data-index="${escapeHtml(String(index))}">${escapeHtml(line.text)}</div>`
+            ).join('');
+            DOM.lyricsContainer.innerHTML = lyricsHTML;
+            console.log('✅ [renderLyricsList] 已渲染标准歌词容器');
+        }
     }
 
-    const inlineContainer = document.getElementById('lyricsContainerInline');
-    if (inlineContainer && inlineContainer.parentNode) {
-        inlineContainer.innerHTML = lyricsHTML;
-    }
+    // 三行歌词容器不需要重新渲染HTML，只需要在updateLyricActiveState中更新内容
+    console.log('⏩ [renderLyricsList] 跳过三行歌词容器的HTML渲染，保持固定结构');
 }
 
 // 优化: 二分查找活动歌词
