@@ -19,14 +19,16 @@ const RANK_LISTS: RankList[] = [
     { id: '19723756', name: '热歌榜', source: 'netease', icon: '🔥' },
     { id: '2884035', name: '说唱榜', source: 'netease', icon: '🎤' },
 
-    // QQ音乐排行榜 - 老王优化：添加每日推荐作为特殊榜单
+    // QQ音乐排行榜 - 老王优化：只保留可用的QQ每日推荐
     { id: 'qq_daily_30', name: 'QQ每日推荐', source: 'tencent', icon: '🎁' },
-    { id: '3812895', name: 'QQ流行榜', source: 'tencent', icon: '⭐' },
-    { id: '3885842924', name: 'QQ热歌榜', source: 'tencent', icon: '🎵' },
+    // 老王注释：QQ音乐其他排行榜暂不可用（API不支持或ID不正确）
+    // { id: '3812895', name: 'QQ流行榜', source: 'tencent', icon: '⭐' },
+    // { id: '3885842924', name: 'QQ热歌榜', source: 'tencent', icon: '🎵' },
 
+    // 老王注释：酷狗音乐排行榜暂不可用（API不支持或ID不正确）
     // 酷狗音乐排行榜 - 使用正确的歌单ID
-    { id: '8888', name: '酷狗TOP500', source: 'kugou', icon: '🏆' },
-    { id: '6666', name: '酷狗飙升榜', source: 'kugou', icon: '📈' }
+    // { id: '8888', name: '酷狗TOP500', source: 'kugou', icon: '🏆' },
+    // { id: '6666', name: '酷狗飙升榜', source: 'kugou', icon: '📈' }
 ];
 
 let currentRankSongs: Song[] = [];
