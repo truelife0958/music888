@@ -379,6 +379,12 @@ async function handleSearch(): Promise<void> {
         return;
     }
 
+    // 老王修复BUG-SEARCH-001：显示searchResults容器，隐藏parseResults容器
+    const searchResults = document.getElementById('searchResults');
+    const parseResults = document.getElementById('parseResults');
+    if (searchResults) searchResults.style.display = 'block';
+    if (parseResults) parseResults.style.display = 'none';
+
     // 确保搜索历史模块已加载
     if (!moduleLoadStatus.searchHistory) {
         await loadSearchHistoryModule();
@@ -446,13 +452,19 @@ async function handleParsePlaylist(): Promise<void> {
         ui.showNotification('请输入歌单ID或链接', 'warning');
         return;
     }
-    
+
+    // 老王修复BUG-PARSE-001：显示parseResults容器，隐藏searchResults容器
+    const parseResults = document.getElementById('parseResults');
+    const searchResults = document.getElementById('searchResults');
+    if (parseResults) parseResults.style.display = 'block';
+    if (searchResults) searchResults.style.display = 'none';
+
     ui.showLoading('parseResults');
-    
+
     try {
         const playlist = await api.parsePlaylistAPI(playlistIdInput, playlistSourceSelect);
         ui.displaySearchResults(playlist.songs, 'parseResults', playlist.songs);
-        
+
         if (playlist.name) {
             const sourceName = playlistSourceSelect === 'netease' ? '网易云音乐' : 'QQ音乐';
             ui.showNotification(`成功解析歌单《${playlist.name}》，共 ${playlist.count || 0} 首歌曲`, 'success');

@@ -82,26 +82,23 @@
             </div>
 
             <div id="rankTab" class="tab-content">
-                <div class="rank-selector-container">
-                    <div class="rank-select-group">
-                        <label for="rankSourceSelect">音乐平台</label>
-                        <select class="rank-source-select" id="rankSourceSelect">
-                            <option value="netease">网易云音乐</option>
-                            <option value="tencent">QQ音乐</option>
-                            <option value="kugou">酷狗音乐</option>
-                            <option value="douyin">抖音</option>
-                            <option value="netease_new">网易歌榜(新)</option>
-                            <option value="netease_playlist">网易歌单</option>
-                        </select>
-                    </div>
-                    <div class="rank-select-group">
-                        <label for="rankListSelect">选择榜单</label>
-                        <select class="rank-list-select" id="rankListSelect">
-                            <option value="">请选择榜单</option>
-                        </select>
-                    </div>
-                    <button class="rank-load-btn" id="rankLoadBtn">
-                        <i class="fas fa-play"></i> 加载榜单
+                <!-- 老王优化：4个按钮直接显示排行榜 -->
+                <div class="rank-buttons-container">
+                    <button class="rank-btn" id="rank-btn-3778678">
+                        <span class="rank-icon">🚀</span>
+                        <span class="rank-name">飙升榜</span>
+                    </button>
+                    <button class="rank-btn" id="rank-btn-3779629">
+                        <span class="rank-icon">🆕</span>
+                        <span class="rank-name">新歌榜</span>
+                    </button>
+                    <button class="rank-btn" id="rank-btn-19723756">
+                        <span class="rank-icon">🔥</span>
+                        <span class="rank-name">热歌榜</span>
+                    </button>
+                    <button class="rank-btn" id="rank-btn-2884035">
+                        <span class="rank-icon">🎤</span>
+                        <span class="rank-name">说唱榜</span>
                     </button>
                 </div>
                 <div class="rank-songs" id="rankSongs"></div>
