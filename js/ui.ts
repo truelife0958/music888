@@ -397,34 +397,50 @@ function findActiveLyricIndex(lyrics: LyricLine[], currentTime: number): number 
 
 // 优化: 只更新激活状态，不重新渲染 - 支持三行歌词显示
 function updateLyricActiveState(container: HTMLElement | null, activeIndex: number): void {
-    if (!container) return;
-    
+    if (!container) {
+        console.warn('⚠️ [updateLyricActiveState] 容器为空');
+        return;
+    }
+
     const lines = container.querySelectorAll('.lyric-line');
-    if (lines.length === 0) return;
-    
+    console.log('🎯 [updateLyricActiveState]', {
+        containerId: container.id,
+        linesCount: lines.length,
+        activeIndex,
+        allLyricsCount: lastRenderedLyrics.length
+    });
+
+    if (lines.length === 0) {
+        console.warn('⚠️ [updateLyricActiveState] 没有找到歌词行元素');
+        return;
+    }
+
     // 检查是否是内联三行歌词容器
     const isInlineContainer = container.id === 'lyricsContainerInline';
-    
+
     if (isInlineContainer && lines.length >= 3) {
+        console.log('✨ [updateLyricActiveState] 三行歌词模式');
+
         // 三行歌词模式：上一句、当前句、下一句
         const prevLine = lines[0] as HTMLElement;
         const currentLine = lines[1] as HTMLElement;
         const nextLine = lines[2] as HTMLElement;
-        
+
         // 清除所有类名
         prevLine.className = 'lyric-line lyric-prev';
         currentLine.className = 'lyric-line lyric-current active';
         nextLine.className = 'lyric-line lyric-next';
-        
+
         // 获取歌词数组
         const allLyrics = lastRenderedLyrics;
         if (allLyrics.length === 0) {
             prevLine.textContent = '';
             currentLine.textContent = '暂无歌词';
             nextLine.textContent = '';
+            console.log('⚠️ [updateLyricActiveState] 歌词数组为空');
             return;
         }
-        
+
         // 更新三行歌词内容
         if (activeIndex >= 0 && activeIndex < allLyrics.length) {
             // 上一句
@@ -433,36 +449,45 @@ function updateLyricActiveState(container: HTMLElement | null, activeIndex: numb
             } else {
                 prevLine.textContent = '';
             }
-            
+
             // 当前句
             currentLine.textContent = allLyrics[activeIndex].text;
-            
+
             // 下一句
             if (activeIndex < allLyrics.length - 1) {
                 nextLine.textContent = allLyrics[activeIndex + 1].text;
             } else {
                 nextLine.textContent = '';
             }
+
+            console.log('✅ [updateLyricActiveState] 三行歌词已更新', {
+                prev: prevLine.textContent,
+                current: currentLine.textContent,
+                next: nextLine.textContent
+            });
         } else {
             prevLine.textContent = '';
             currentLine.textContent = '暂无歌词';
             nextLine.textContent = '';
+            console.warn('⚠️ [updateLyricActiveState] activeIndex超出范围');
         }
     } else {
+        console.log('📜 [updateLyricActiveState] 标准歌词模式');
+
         // 标准歌词容器：滚动模式
         // 移除之前的激活状态
         const previousActive = container.querySelector('.lyric-line.active');
         if (previousActive) {
             previousActive.classList.remove('active');
         }
-        
+
         // 添加新的激活状态
         if (activeIndex >= 0 && activeIndex < lines.length) {
             const activeLine = lines[activeIndex];
-            
+
             if (activeLine) {
                 activeLine.classList.add('active');
-                
+
                 // 优化: 使用 requestAnimationFrame 优化滚动
                 requestAnimationFrame(() => {
                     activeLine.scrollIntoView({
