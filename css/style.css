@@ -483,6 +483,58 @@ body {
     }
 }
 
+/* 每日推荐按钮区域样式 */
+.daily-recommend-section {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: var(--bg-glass-light);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+
+.daily-recommend-btn,
+.refresh-recommend-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: white;
+    font-size: var(--font-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-normal) ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.daily-recommend-btn {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #667eea 100%);
+}
+
+.refresh-recommend-btn {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.daily-recommend-btn:hover,
+.refresh-recommend-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.daily-recommend-btn:active,
+.refresh-recommend-btn:active {
+    transform: translateY(0);
+}
+
+.daily-recommend-btn i,
+.refresh-recommend-btn i {
+    font-size: 16px;
+}
+
 /* 搜索结果列表 */
 .search-results {
     flex: 1;
