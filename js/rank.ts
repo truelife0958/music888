@@ -2,7 +2,7 @@
 
 import { parsePlaylistAPI, type Song } from './api';
 import { playSong } from './player';
-import { showNotification } from './ui';
+import { showNotification, displaySearchResults, showLoading, showError } from './ui';
 
 // 排行榜配置
 interface RankList {
@@ -54,9 +54,10 @@ async function loadRankSongs(rankId: string, source: string) {
     if (!songsContainer) return;
 
     try {
-        songsContainer.innerHTML = '<div class="loading">加载中...</div>';
+        // 显示加载状态
+        showLoading('rankSongs');
 
-        // 老王优化：直接使用标准API加载排行榜
+        // 直接使用标准API加载排行榜
         const result = await parsePlaylistAPI(rankId, source);
         const songs = result.songs;
         const rankName = result.name || '排行榜';
@@ -64,60 +65,33 @@ async function loadRankSongs(rankId: string, source: string) {
         currentRankSongs = songs;
 
         if (currentRankSongs.length === 0) {
-            songsContainer.innerHTML = '<div class="no-data">暂无数据</div>';
+            showError('暂无数据', 'rankSongs');
             return;
         }
 
-        // 显示歌曲列表
-        songsContainer.innerHTML = `
+        // 添加榜单标题
+        const headerHtml = `
             <div class="rank-songs-header">
                 <h4>${rankName}</h4>
-                <button class="play-all-btn" onclick="window.playAllRankSongs()">
-                    ▶ 播放全部
-                </button>
-            </div>
-            <div class="rank-songs-list">
-                ${currentRankSongs.map((song, index) => `
-                    <div class="rank-song-item" data-index="${index}">
-                        <span class="rank-number">${index + 1}</span>
-                        <div class="rank-song-info">
-                            <div class="rank-song-name">${song.name}</div>
-                            <div class="rank-song-artist">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}</div>
-                        </div>
-                        <button class="rank-play-btn" title="播放">▶</button>
-                    </div>
-                `).join('')}
             </div>
         `;
+        songsContainer.innerHTML = headerHtml;
 
-        // 绑定播放按钮事件
-        const playBtns = songsContainer.querySelectorAll('.rank-play-btn');
-        playBtns.forEach((btn, index) => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                playSong(index, currentRankSongs, 'rankSongs');
-            });
-        });
+        // 使用displaySearchResults显示歌曲列表（自动包含批量操作功能）
+        // 创建一个临时容器来承载歌曲列表
+        const listContainer = document.createElement('div');
+        listContainer.id = 'rankSongsList';
+        listContainer.className = 'rank-songs-list';
+        songsContainer.appendChild(listContainer);
 
-        // 绑定歌曲项点击事件
-        const songItems = songsContainer.querySelectorAll('.rank-song-item');
-        songItems.forEach((item, index) => {
-            item.addEventListener('click', () => {
-                playSong(index, currentRankSongs, 'rankSongs');
-            });
-        });
+        // 使用UI模块的displaySearchResults函数，自动获得批量操作功能
+        displaySearchResults(currentRankSongs, 'rankSongsList', currentRankSongs);
 
-        // 全局播放全部函数
-        (window as any).playAllRankSongs = () => {
-            if (currentRankSongs.length > 0) {
-                playSong(0, currentRankSongs, 'rankSongs');
-                showNotification('开始播放排行榜', 'success');
-            }
-        };
+        showNotification(`已加载 ${rankName}，共 ${songs.length} 首歌曲`, 'success');
 
     } catch (error) {
         console.error('加载排行榜失败:', error);
-        songsContainer.innerHTML = '<div class="error">加载失败，请重试</div>';
+        showError('加载失败，请重试', 'rankSongs');
         showNotification('加载排行榜失败', 'error');
     }
 }

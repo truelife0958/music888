@@ -16,7 +16,6 @@ let playStatsModule: any = null;
 let imageLazyLoader: any = null;
 let downloadProgressManager: any = null;
 let themeManager: ThemeManager | null = null;
-let aiRecommendModule: any = null;  // 老王添加：AI推荐模块
 
 // 防止重复初始化的全局标志
 let appInitialized = false;
@@ -28,8 +27,7 @@ const moduleLoadStatus = {
     searchHistory: false,
     playStats: false,
     imageLoader: false,
-    downloadProgress: false,
-    aiRecommend: false  // 老王添加：AI推荐模块状态
+    downloadProgress: false
 };
 
 // Tab切换逻辑
@@ -242,6 +240,50 @@ async function initializeApp(): Promise<void> {
     // 歌单解析
     document.querySelector('.playlist-btn')!.addEventListener('click', handleParsePlaylist);
 
+    // 每日推荐按钮
+    const dailyRecommendBtn = document.getElementById('dailyRecommendBtn');
+    const refreshRecommendBtn = document.getElementById('refreshRecommendBtn');
+    
+    if (dailyRecommendBtn) {
+        dailyRecommendBtn.addEventListener('click', async () => {
+            console.log('🔘 每日推荐按钮被点击');
+            try {
+                await loadDailyRecommendModule();
+                if (dailyRecommendModule && dailyRecommendModule.loadDailyRecommendInSearch) {
+                    console.log('✅ 开始加载每日推荐...');
+                    await dailyRecommendModule.loadDailyRecommendInSearch();
+                } else {
+                    console.error('❌ 每日推荐模块或函数未找到', dailyRecommendModule);
+                }
+            } catch (error) {
+                console.error('❌ 每日推荐加载失败:', error);
+            }
+        });
+        console.log('✅ 每日推荐按钮事件已绑定');
+    } else {
+        console.error('❌ 每日推荐按钮未找到');
+    }
+    
+    if (refreshRecommendBtn) {
+        refreshRecommendBtn.addEventListener('click', async () => {
+            console.log('🔘 刷新推荐按钮被点击');
+            try {
+                await loadDailyRecommendModule();
+                if (dailyRecommendModule && dailyRecommendModule.loadDailyRecommendInSearch) {
+                    console.log('✅ 开始刷新推荐...');
+                    await dailyRecommendModule.loadDailyRecommendInSearch(true);
+                } else {
+                    console.error('❌ 每日推荐模块或函数未找到', dailyRecommendModule);
+                }
+            } catch (error) {
+                console.error('❌ 刷新推荐失败:', error);
+            }
+        });
+        console.log('✅ 刷新推荐按钮事件已绑定');
+    } else {
+        console.error('❌ 刷新推荐按钮未找到');
+    }
+
     // 初始化播放列表弹窗
     initPlaylistModal();
 
@@ -283,7 +325,7 @@ async function loadRankModule(): Promise<void> {
 
 // 优化: 按需加载每日推荐模块
 async function loadDailyRecommendModule(): Promise<void> {
-    if (moduleLoadStatus.dailyRecommend) return;
+    if (moduleLoadStatus.dailyRecommend && dailyRecommendModule) return;
     
     try {
         console.log('📦 加载每日推荐模块...');
@@ -293,6 +335,8 @@ async function loadDailyRecommendModule(): Promise<void> {
         console.log('✅ 每日推荐模块加载完成');
     } catch (error) {
         console.error('❌ 每日推荐模块加载失败:', error);
+        moduleLoadStatus.dailyRecommend = false;
+        dailyRecommendModule = null;
     }
 }
 

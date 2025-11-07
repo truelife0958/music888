@@ -53,8 +53,17 @@
                 </button>
             </div>
 
-            <!-- 搜索结果标签页 -->
+            <!-- 搜索结果标签页 - 包含每日推荐和刷新推荐 -->
             <div id="searchTab" class="tab-content active">
+                <!-- 每日推荐和刷新按钮 -->
+                <div class="daily-recommend-section">
+                    <button class="daily-recommend-btn" id="dailyRecommendBtn">
+                        <i class="fas fa-calendar-day"></i> 每日推荐
+                    </button>
+                    <button class="refresh-recommend-btn" id="refreshRecommendBtn">
+                        <i class="fas fa-sync-alt"></i> 刷新推荐
+                    </button>
+                </div>
                 <!-- 搜索结果显示区域 -->
                 <div class="search-results" id="searchResults">
                     <div class="empty-state">
@@ -64,8 +73,8 @@
                 </div>
             </div>
 
+            <!-- 排行榜标签页 - 4个榜单按钮紧凑排列 -->
             <div id="rankTab" class="tab-content">
-                <!-- 老王优化：4个按钮直接显示排行榜 -->
                 <div class="rank-buttons-container">
                     <button class="rank-btn" id="rank-btn-3778678">
                         <span class="rank-icon">🚀</span>
@@ -117,22 +126,6 @@
                 <!-- 解析结果显示区 -->
                 <div class="search-results" id="parseResults" style="display: none;">
                     <!-- 解析结果将显示在这里 -->
-                </div>
-            </div>
-
-            <!-- 每日推荐标签页（保留但改为第四个，隐藏） -->
-            <div id="recommendTab" class="tab-content" style="display: none;">
-                <div class="recommend-info">
-                    <p>每天为你推荐30首精选音乐</p>
-                    <p class="recommend-date" id="recommendDate"></p>
-                </div>
-                <div class="recommend-actions">
-                    <button class="recommend-refresh-btn" id="refreshRecommendBtn">
-                        <i class="fas fa-sync-alt"></i> 刷新推荐
-                    </button>
-                </div>
-                <div class="recommend-songs" id="recommendSongs">
-                    <div class="loading">加载中...</div>
                 </div>
             </div>
         </div>

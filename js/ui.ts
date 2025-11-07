@@ -142,12 +142,13 @@ function createSongElement(song: Song, index: number, playlistForPlayback: Song[
     const favoriteIconColor = isFavorite ? 'color: #ff6b6b;' : '';
 
     // 老王新增：添加复选框，用于批量选择
+    const albumText = song.album && song.album.trim() ? ` · ${escapeHtml(song.album)}` : '';
     songItem.innerHTML = `
         <input type="checkbox" class="song-checkbox" data-song-index="${index}" />
         <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
         <div class="song-info">
             <div class="song-name">${escapeHtml(song.name)}</div>
-            <div class="song-artist">${escapeHtml(formatArtist(song.artist))} · ${escapeHtml(song.album || '未知专辑')}</div>
+            <div class="song-artist">${escapeHtml(formatArtist(song.artist))}${albumText}</div>
         </div>
         <div class="song-actions">
             <button class="action-btn favorite-btn" title="添加到我的喜欢" data-action="favorite">
@@ -327,7 +328,8 @@ export function updatePlayButton(isPlaying: boolean): void {
 
 export function updateCurrentSongInfo(song: Song, coverUrl: string): void {
     DOM.currentTitle.textContent = song.name;
-    DOM.currentArtist.textContent = `${formatArtist(song.artist)} · ${song.album || '未知专辑'}`;
+    const albumText = song.album && song.album.trim() ? ` · ${song.album}` : '';
+    DOM.currentArtist.textContent = `${formatArtist(song.artist)}${albumText}`;
     
     // 优化: 使用图片懒加载
     const coverImg = DOM.currentCover as HTMLImageElement;

@@ -160,6 +160,7 @@ function updateSidebarFavorites() {
     });
 }
 
+
 // 更新右侧边栏-播放历史
 function updateSidebarHistory() {
     const container = document.getElementById('historyList');
@@ -172,21 +173,25 @@ function updateSidebarHistory() {
         return;
     }
 
-    // 只显示最近播放的10首
-    const recentHistory = history.slice(0, 10);
+    // 只显示最近播放的15首
+    const recentHistory = history.slice(0, 15);
 
-    container.innerHTML = recentHistory.map((song, index) => `
-        <div class="stats-song-item clickable" data-song-index="${index}">
-            <div class="stats-song-rank">${index + 1}</div>
-            <div class="stats-song-info">
-                <div class="stats-song-name">${song.name}</div>
-                <div class="stats-song-meta">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}</div>
+    container.innerHTML = recentHistory.map((song, index) => {
+        // 从song对象中安全地获取timestamp
+        const timestamp = (song as any).timestamp || Date.now();
+        return `
+            <div class="stats-song-item clickable" data-song-index="${index}">
+                <div class="stats-song-rank">${index + 1}</div>
+                <div class="stats-song-info">
+                    <div class="stats-song-name">${song.name}</div>
+                    <div class="stats-song-meta">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist} • ${formatRelativeTime(timestamp)}</div>
+                </div>
+                <button class="stats-play-btn" title="播放">
+                    <i class="fas fa-play"></i>
+                </button>
             </div>
-            <button class="stats-play-btn" title="播放">
-                <i class="fas fa-play"></i>
-            </button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     // 绑定播放事件
     container.querySelectorAll('.stats-song-item').forEach((item, index) => {
@@ -223,10 +228,10 @@ function formatRelativeTime(timestamp: number): string {
     } else if (days < 7) {
         return `${days}天前`;
     } else {
-        return new Date(timestamp).toLocaleDateString('zh-CN');
+        const date = new Date(timestamp);
+        return `${date.getMonth() + 1}/${date.getDate()}`;
     }
 }
-
 
 // 创建统计面板
 function createStatsPanel() {

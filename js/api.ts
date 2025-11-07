@@ -67,92 +67,139 @@ const MUSIC_SOURCES = [
 // 艺术家字段规范化函数 - 老王修复：统一处理各种artist数据格式
 // 老王优化：导出此函数供其他模块使用，统一规范化逻辑
 export function normalizeArtistField(artist: any): string[] {
-    // 老王增强：过滤空值和空字符串
-    const filterEmpty = (arr: string[]) => arr.filter(s => s && s.trim()).map(s => s.trim());
+    // 定义需要过滤的无效值（中英文）
+    const invalidValues = [
+        '未知艺术家', '未知歌手', '未知',
+        'Unknown', 'Unknown Artist', 'unknown',
+        'Various Artists', 'various artists',
+        'N/A', 'n/a', '', ' '
+    ];
+    
+    // 检查字符串是否为无效值
+    const isInvalid = (str: string): boolean => {
+        const trimmed = str.trim().toLowerCase();
+        return !trimmed || invalidValues.some(invalid =>
+            invalid.toLowerCase() === trimmed
+        );
+    };
+    
+    // 过滤并清理字符串数组
+    const filterAndClean = (arr: string[]): string[] => {
+        return arr
+            .map(s => s.trim())
+            .filter(s => s && !isInvalid(s));
+    };
 
-    // 如果是字符串数组，过滤空值后返回
+    // 如果是字符串数组
     if (Array.isArray(artist) && artist.length > 0 && typeof artist[0] === 'string') {
-        const filtered = filterEmpty(artist);
-        return filtered.length > 0 ? filtered : ['未知艺术家'];
+        const cleaned = filterAndClean(artist);
+        return cleaned.length > 0 ? cleaned : ['群星'];
     }
 
-    // 如果是对象数组，提取name字段并过滤空值
+    // 如果是对象数组，提取name字段
     if (Array.isArray(artist) && artist.length > 0 && typeof artist[0] === 'object') {
         const names = artist.map((a: any) => a?.name || a?.artist || '').filter(Boolean);
-        const filtered = filterEmpty(names);
-        return filtered.length > 0 ? filtered : ['未知艺术家'];
+        const cleaned = filterAndClean(names);
+        return cleaned.length > 0 ? cleaned : ['群星'];
     }
 
-    // 如果是单个字符串，处理分隔符并过滤空值
+    // 如果是单个字符串
     if (typeof artist === 'string') {
         const trimmed = artist.trim();
-        if (!trimmed) return ['未知艺术家'];
+        if (!trimmed || isInvalid(trimmed)) return ['群星'];
 
         // 处理"歌手1,歌手2"或"歌手1/歌手2"等格式
-        const parts = trimmed.split(/[,，、/／]/).map(s => s.trim()).filter(s => s);
-        return parts.length > 0 ? parts : ['未知艺术家'];
+        const parts = trimmed.split(/[,，、/／]/).map(s => s.trim()).filter(s => s && !isInvalid(s));
+        return parts.length > 0 ? parts : ['群星'];
     }
 
     // 如果是单个对象，提取name字段
     if (typeof artist === 'object' && artist?.name) {
         const trimmed = String(artist.name).trim();
-        return trimmed ? [trimmed] : ['未知艺术家'];
+        if (trimmed && !isInvalid(trimmed)) return [trimmed];
     }
 
-    // 默认返回未知艺术家
-    return ['未知艺术家'];
+    // 默认返回群星
+    return ['群星'];
 }
 
 // 歌曲名称规范化函数 - 老王修复：统一处理各种name数据格式
 // 老王优化：导出此函数供其他模块使用，统一规范化逻辑
 export function normalizeSongName(name: any): string {
-    // 老王增强：更严格的空值检查
+    // 定义需要过滤的无效值
+    const invalidValues = [
+        '未知歌曲', '未知', 'Unknown', 'unknown',
+        'Untitled', 'untitled', 'N/A', 'n/a'
+    ];
+    
+    // 检查字符串是否为无效值
+    const isInvalid = (str: string): boolean => {
+        const trimmed = str.trim().toLowerCase();
+        return !trimmed || invalidValues.some(invalid =>
+            invalid.toLowerCase() === trimmed
+        );
+    };
+    
     // 如果是有效字符串，trim后返回
     if (typeof name === 'string') {
         const trimmed = name.trim();
-        if (trimmed) return trimmed;
+        if (trimmed && !isInvalid(trimmed)) return trimmed;
     }
 
     // 如果是对象且有name属性
     if (typeof name === 'object' && name?.name && typeof name.name === 'string') {
         const trimmed = name.name.trim();
-        if (trimmed) return trimmed;
+        if (trimmed && !isInvalid(trimmed)) return trimmed;
     }
 
     // 如果是对象且有title属性
     if (typeof name === 'object' && name?.title && typeof name.title === 'string') {
         const trimmed = name.title.trim();
-        if (trimmed) return trimmed;
+        if (trimmed && !isInvalid(trimmed)) return trimmed;
     }
 
-    // 默认返回未知歌曲（只有真的没数据时才返回这个）
-    return '未知歌曲';
+    // 默认返回空字符串（避免显示"未知歌曲"）
+    return '无标题';
 }
 
 // 专辑名称规范化函数 - 老王修复：统一处理各种album数据格式
 // 老王优化：导出此函数供其他模块使用，统一规范化逻辑
 export function normalizeAlbumName(album: any): string {
-    // 老王增强：更严格的空值检查
+    // 定义需要过滤的无效值
+    const invalidValues = [
+        '未知专辑', '未知', 'Unknown', 'unknown',
+        'Unknown Album', 'unknown album',
+        'N/A', 'n/a', '', ' '
+    ];
+    
+    // 检查字符串是否为无效值
+    const isInvalid = (str: string): boolean => {
+        const trimmed = str.trim().toLowerCase();
+        return !trimmed || invalidValues.some(invalid =>
+            invalid.toLowerCase() === trimmed
+        );
+    };
+    
     // 如果是有效字符串，trim后返回
     if (typeof album === 'string') {
         const trimmed = album.trim();
-        if (trimmed) return trimmed;
+        if (trimmed && !isInvalid(trimmed)) return trimmed;
     }
 
     // 如果是对象且有name属性
     if (typeof album === 'object' && album?.name && typeof album.name === 'string') {
         const trimmed = album.name.trim();
-        if (trimmed) return trimmed;
+        if (trimmed && !isInvalid(trimmed)) return trimmed;
     }
 
     // 如果是对象且有album属性（嵌套情况）
     if (typeof album === 'object' && album?.album && typeof album.album === 'string') {
         const trimmed = album.album.trim();
-        if (trimmed) return trimmed;
+        if (trimmed && !isInvalid(trimmed)) return trimmed;
     }
 
-    // 默认返回未知专辑（只有真的没数据时才返回这个）
-    return '未知专辑';
+    // 默认返回空字符串（避免显示"未知专辑"）
+    return '';
 }
 
 // 改进的LRU缓存 - 提升性能
@@ -845,7 +892,7 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
         
         // 规范化数据
         songs = songs
-            .filter(song => song && song.id && (song.name || song.title)) // 只要有ID和名称就保留
+            .filter((song: any) => song && song.id && (song.name || song.title)) // 只要有ID和名称就保留
             .map((song: any) => ({
                 ...song,
                 source: source,
