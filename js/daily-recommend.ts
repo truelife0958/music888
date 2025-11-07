@@ -158,42 +158,16 @@ export async function loadDailyRecommend(forceRefresh: boolean = false) {
     }
 }
 
-// 显示推荐歌曲
-function displayRecommendSongs(songs: Song[]) {
+// 显示推荐歌曲 - 老王修复：使用displaySearchResults统一显示，支持批量操作
+async function displayRecommendSongs(songs: Song[]) {
     const songsContainer = document.getElementById('recommendSongs');
     if (!songsContainer) return;
     
-    songsContainer.innerHTML = `
-        <div class="recommend-songs-list">
-            ${songs.map((song, index) => `
-                <div class="recommend-song-item" data-index="${index}">
-                    <span class="recommend-number">${index + 1}</span>
-                    <div class="recommend-song-info">
-                        <div class="recommend-song-name">${song.name}</div>
-                        <div class="recommend-song-artist">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}</div>
-                    </div>
-                    <button class="recommend-play-btn" title="播放">▶</button>
-                </div>
-            `).join('')}
-        </div>
-    `;
+    // 动态导入UI模块
+    const { displaySearchResults } = await import('./ui.js');
     
-    // 绑定播放按钮事件
-    const playBtns = songsContainer.querySelectorAll('.recommend-play-btn');
-    playBtns.forEach((btn, index) => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            playSong(index, currentRecommendSongs, 'recommendSongs');
-        });
-    });
-    
-    // 绑定歌曲项点击事件
-    const songItems = songsContainer.querySelectorAll('.recommend-song-item');
-    songItems.forEach((item, index) => {
-        item.addEventListener('click', () => {
-            playSong(index, currentRecommendSongs, 'recommendSongs');
-        });
-    });
+    // 使用统一的显示方法，自动包含批量操作功能
+    displaySearchResults(songs, 'recommendSongs', songs);
 }
 
 // 播放全部推荐
