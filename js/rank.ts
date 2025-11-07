@@ -55,7 +55,7 @@ async function loadRankSongs(rankId: string, source: string) {
 
     try {
         // 显示加载状态
-        showLoading('rankSongs');
+        songsContainer.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>正在加载...</div></div>';
 
         // 直接使用标准API加载排行榜
         const result = await parsePlaylistAPI(rankId, source);
@@ -65,33 +65,30 @@ async function loadRankSongs(rankId: string, source: string) {
         currentRankSongs = songs;
 
         if (currentRankSongs.length === 0) {
-            showError('暂无数据', 'rankSongs');
+            songsContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>暂无数据</div></div>';
             return;
         }
 
-        // 添加榜单标题
-        const headerHtml = `
+        // 清空容器并添加标题
+        songsContainer.innerHTML = `
             <div class="rank-songs-header">
                 <h4>${rankName}</h4>
             </div>
         `;
-        songsContainer.innerHTML = headerHtml;
 
-        // 使用displaySearchResults显示歌曲列表（自动包含批量操作功能）
-        // 创建一个临时容器来承载歌曲列表
+        // 创建列表容器并添加到主容器
         const listContainer = document.createElement('div');
         listContainer.id = 'rankSongsList';
-        listContainer.className = 'rank-songs-list';
         songsContainer.appendChild(listContainer);
 
-        // 使用UI模块的displaySearchResults函数，自动获得批量操作功能
+        // 使用displaySearchResults显示歌曲列表（自动包含批量操作功能）
         displaySearchResults(currentRankSongs, 'rankSongsList', currentRankSongs);
 
         showNotification(`已加载 ${rankName}，共 ${songs.length} 首歌曲`, 'success');
 
     } catch (error) {
         console.error('加载排行榜失败:', error);
-        showError('加载失败，请重试', 'rankSongs');
+        songsContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请重试</div></div>';
         showNotification('加载排行榜失败', 'error');
     }
 }
