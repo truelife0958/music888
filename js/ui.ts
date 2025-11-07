@@ -193,8 +193,9 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
         container.removeEventListener('click', oldListener);
     }
 
-    // 判断是否需要使用虚拟滚动（超过50首歌曲时启用）
-    const USE_VIRTUAL_SCROLL_THRESHOLD = 50;
+    // 判断是否需要使用虚拟滚动（超过1000首歌曲时启用）
+    // 老王修改：提高阈值以确保排行榜等功能也能使用批量操作
+    const USE_VIRTUAL_SCROLL_THRESHOLD = 1000;
 
     if (songs.length > USE_VIRTUAL_SCROLL_THRESHOLD) {
         // 使用虚拟滚动优化性能

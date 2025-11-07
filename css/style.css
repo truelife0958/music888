@@ -253,13 +253,13 @@ body {
 }
 
 /* 主容器 - 三栏布局 */
-/* 老王优化V2：重新调整三栏布局比例，适配不同分辨率 */
+/* 老王优化V4：等比例三分布局 + 移动端水平滑动 */
 .main-container {
     max-width: 1800px;
     margin: 0 auto;
     padding: 20px;
     display: grid;
-    grid-template-columns: minmax(400px, 1fr) 420px 320px; /* 老王调整：左栏自适应（最小400px），播放器420px，统计栏320px */
+    grid-template-columns: 1fr 1fr 1fr; /* 等比例三分 */
     gap: 20px;
     min-height: calc(100vh - 200px);
 }
@@ -1295,30 +1295,58 @@ body {
 }
 
 /* 响应式设计 */
-/* 老王优化V2：更精细的响应式断点 */
-@media (max-width: 1600px) {
-    .main-container {
-        grid-template-columns: minmax(400px, 1fr) 400px 300px; /* 播放器缩小到400px */
-        max-width: 1400px;
-    }
-}
-
+/* 老王优化V4：保持等比例或合理调整 */
 @media (max-width: 1400px) {
     .main-container {
-        grid-template-columns: minmax(380px, 1fr) 380px 280px; /* 进一步缩小 */
+        grid-template-columns: 1fr 1fr 1fr; /* 继续保持三等分 */
         max-width: 1200px;
     }
 }
 
-/* 老王优化：中等屏幕 - 隐藏统计栏，两栏布局 */
-@media (max-width: 1200px) {
+/* 中等屏幕 - 两栏布局（隐藏统计栏） */
+@media (max-width: 1024px) {
     .main-container {
-        grid-template-columns: minmax(360px, 1fr) 380px; /* 只保留左中两栏 */
-        max-width: 1000px;
+        grid-template-columns: 1fr 1fr; /* 左右两栏等分 */
+        max-width: 900px;
     }
 
     .stats-section-sidebar {
         display: none;
+    }
+}
+
+/* 移动端 - 三栏水平滑动，禁止上下滚动 */
+@media (max-width: 768px) {
+    .main-container {
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden; /* 禁止上下滚动 */
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        padding: 10px;
+        gap: 0;
+        min-height: calc(100vh - 140px);
+        max-width: 100vw;
+    }
+
+    .content-section,
+    .player-section,
+    .stats-section-sidebar {
+        flex: 0 0 100vw; /* 每栏占满整个视口宽度 */
+        min-width: 100vw;
+        max-width: 100vw;
+        scroll-snap-align: start;
+        padding: 0 10px;
+        overflow-y: auto; /* 每栏内部可以上下滚动 */
+        overflow-x: hidden;
+        max-height: calc(100vh - 140px);
+    }
+
+    /* 移动端显示统计栏 */
+    .stats-section-sidebar {
+        display: block !important;
     }
 }
 
