@@ -1,6 +1,6 @@
 {
   "name": "music888",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "简洁的在线音乐播放器 - 核心功能版",
   "main": "index.js",
   "scripts": {
@@ -21,6 +21,6 @@
   "type": "module",
   "devDependencies": {
     "typescript": "^5.9.3",
-    "vite": "^7.1.10"
+    "vite": "^5.4.11"
   }
 }
