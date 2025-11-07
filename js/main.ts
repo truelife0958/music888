@@ -53,10 +53,11 @@ export function switchTab(tabName: string): void {
         selectedTabButton.classList.add('active');
     }
 
-    // 老王添加：按需加载各标签页对应的模块
-    if (tabName === 'recommend') {
-        loadDailyRecommendModule();
-        loadAIRecommendModule();  // 推荐标签页同时加载AI推荐模块
+    // 按需加载各标签页对应的模块
+    if (tabName === 'rank') {
+        loadRankModule();
+    } else if (tabName === 'playlist') {
+        loadPlaylistModule();
     }
 }
 
@@ -125,32 +126,74 @@ async function initializeApp(): Promise<void> {
     // 搜索功能 - 修复BUG-004: 添加防抖，提升性能
     const searchBtn = document.querySelector('.search-btn');
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+    const searchForm = document.querySelector('.search-wrapper') as HTMLFormElement;
+    
+    console.log('🔍 [搜索功能初始化] 元素检查:', {
+        searchBtn: searchBtn,
+        searchBtnExists: !!searchBtn,
+        searchInput: searchInput,
+        searchInputExists: !!searchInput,
+        searchForm: searchForm,
+        searchFormExists: !!searchForm
+    });
+    
+    if (!searchBtn) {
+        console.error('❌ 搜索按钮未找到！选择器: .search-btn');
+    }
+    
+    if (!searchInput) {
+        console.error('❌ 搜索输入框未找到！选择器: #searchInput');
+    }
     
     if (searchBtn && searchInput) {
-        searchBtn.addEventListener('click', handleSearch);
+        console.log('✅ 开始绑定搜索事件监听器...');
+        
+        // 修复：阻止表单默认提交行为
+        if (searchForm) {
+            searchForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                console.log('📝 [表单提交] 触发搜索', e);
+                handleSearch();
+            });
+            console.log('✅ 表单submit事件已绑定');
+        }
+        
+        // 搜索按钮点击
+        searchBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('🔘 [搜索按钮] 点击触发', e);
+            handleSearch();
+        });
+        console.log('✅ 搜索按钮click事件已绑定');
         
         // 回车键搜索
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
+                console.log('⌨️ [回车键] 触发搜索', e);
                 handleSearch();
             }
         });
-        
-        // 实时搜索防抖（可选功能，默认禁用）
-        // 如需启用实时搜索，取消下面的注释
-        /*
-        const debouncedSearch = debounce(() => {
-            if (searchInput.value.trim()) {
-                handleSearch();
-            }
-        }, 500);
-        
+        console.log('✅ 回车键事件已绑定');
+    } else {
+        console.error('❌ 搜索功能初始化失败：缺少必要元素');
+    }
+    
+    // 实时搜索防抖（可选功能，默认禁用）
+    // 如需启用实时搜索，取消下面的注释
+    /*
+    const debouncedSearch = debounce(() => {
+        if (searchInput && searchInput.value.trim()) {
+            handleSearch();
+        }
+    }, 500);
+    
+    if (searchInput) {
         searchInput.addEventListener('input', () => {
             debouncedSearch();
         });
-        */
     }
+    */
 
     // 播放器控制 - 使用ID选择器更安全
     document.getElementById('playBtn')!.addEventListener('click', player.togglePlay);
@@ -188,8 +231,8 @@ async function initializeApp(): Promise<void> {
             // 根据tab类型按需加载模块
             if (tab === 'rank' && !moduleLoadStatus.rank) {
                 await loadRankModule();
-            } else if (tab === 'recommend' && !moduleLoadStatus.dailyRecommend) {
-                await loadDailyRecommendModule();
+            } else if (tab === 'playlist') {
+                await loadPlaylistModule();
             }
             
             switchTab(tab);
@@ -202,8 +245,8 @@ async function initializeApp(): Promise<void> {
     // 初始化播放列表弹窗
     initPlaylistModal();
 
-    // 老王优化：初始tab改为"发现音乐"（合并了搜索和解析）
-    switchTab('discover');
+    // 初始tab改为"搜索结果"
+    switchTab('search');
 
     // 移动端页面指示器事件绑定
     initMobilePageIndicators();
@@ -283,81 +326,67 @@ async function loadPlayStatsModule(): Promise<void> {
     }
 }
 
-// 老王添加：AI推荐模块加载
-async function loadAIRecommendModule(): Promise<void> {
-    if (moduleLoadStatus.aiRecommend) return;
-
+// 加载歌单模块（热门歌单展示）
+async function loadPlaylistModule(): Promise<void> {
     try {
-        console.log('📦 加载AI推荐模块...');
-        aiRecommendModule = await import('./ai-recommend.js');
-
-        // 绑定AI推荐按钮事件
-        const aiRecommendBtn = document.getElementById('aiRecommendBtn');
-        if (aiRecommendBtn) {
-            aiRecommendBtn.addEventListener('click', async () => {
-                try {
-                    const recommendations = await aiRecommendModule.getAIRecommendations();
-                    if (recommendations.length > 0) {
-                        // 显示推荐歌曲
-                        dailyRecommendModule?.displayAIRecommendations?.(recommendations);
-
-                        // 如果daily-recommend模块没有displayAIRecommendations方法，
-                        // 我们直接调用显示推荐的方法
-                        const songsContainer = document.getElementById('recommendSongs');
-                        if (songsContainer && !dailyRecommendModule?.displayAIRecommendations) {
-                            displayAIRecommendSongs(recommendations, songsContainer);
-                        }
-                    }
-                } catch (error) {
-                    console.error('AI推荐失败:', error);
-                    ui.showNotification('AI推荐失败，请稍后再试', 'error');
-                }
-            });
+        console.log('📦 加载歌单模块...');
+        
+        // 加载网易热门歌单
+        const hotPlaylistsGrid = document.getElementById('hotPlaylistsGrid');
+        if (hotPlaylistsGrid && hotPlaylistsGrid.querySelector('.loading')) {
+            await loadHotPlaylists();
         }
-
-        moduleLoadStatus.aiRecommend = true;
-        console.log('✅ AI推荐模块加载完成');
+        
+        console.log('✅ 歌单模块加载完成');
     } catch (error) {
-        console.error('❌ AI推荐模块加载失败:', error);
+        console.error('❌ 歌单模块加载失败:', error);
     }
 }
 
-// 老王添加：显示AI推荐歌曲
-function displayAIRecommendSongs(songs: any[], container: HTMLElement): void {
-    container.innerHTML = `
-        <div class="ai-recommend-header">
-            <h4><i class="fas fa-brain"></i> AI为您精选推荐</h4>
-        </div>
-        <div class="recommend-songs-list">
-            ${songs.map((song, index) => `
-                <div class="recommend-song-item" data-index="${index}">
-                    <span class="recommend-number">${index + 1}</span>
-                    <div class="recommend-song-info">
-                        <div class="recommend-song-name">${song.name}</div>
-                        <div class="recommend-song-artist">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}</div>
-                    </div>
-                    <button class="recommend-play-btn" title="播放">▶</button>
-                </div>
-            `).join('')}
-        </div>
-    `;
+// 加载网易热门歌单
+async function loadHotPlaylists(): Promise<void> {
+    const hotPlaylistsGrid = document.getElementById('hotPlaylistsGrid');
+    if (!hotPlaylistsGrid) return;
 
-    // 绑定播放按钮事件
-    const playBtns = container.querySelectorAll('.recommend-play-btn');
-    playBtns.forEach((btn, index) => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            player.playSong(index, songs, 'recommendSongs');
-        });
-    });
+    try {
+        // 精选热门歌单ID列表
+        const hotPlaylists = [
+            { id: '3778678', name: '飙升榜', icon: '🚀' },
+            { id: '19723756', name: '热歌榜', icon: '🔥' },
+            { id: '3779629', name: '新歌榜', icon: '🆕' },
+            { id: '2884035', name: '说唱榜', icon: '🎤' },
+            { id: '60198', name: '经典', icon: '🎵' },
+            { id: '180106', name: '粤语', icon: '🎤' }
+        ];
 
-    // 绑定歌曲项点击事件
-    const songItems = container.querySelectorAll('.recommend-song-item');
-    songItems.forEach((item, index) => {
-        item.addEventListener('click', () => {
-            player.playSong(index, songs, 'recommendSongs');
+        hotPlaylistsGrid.innerHTML = hotPlaylists.map(playlist => `
+            <div class="hot-playlist-card" data-playlist-id="${playlist.id}">
+                <div class="hot-playlist-icon">${playlist.icon}</div>
+                <div class="hot-playlist-name">${playlist.name}</div>
+            </div>
+        `).join('');
+
+        // 绑定点击事件
+        hotPlaylistsGrid.querySelectorAll('.hot-playlist-card').forEach(card => {
+            card.addEventListener('click', async () => {
+                const playlistId = (card as HTMLElement).dataset.playlistId;
+                if (playlistId) {
+                    const playlistInput = document.getElementById('playlistIdInput') as HTMLInputElement;
+                    if (playlistInput) {
+                        playlistInput.value = playlistId;
+                        await handleParsePlaylist();
+                    }
+                }
+            });
         });
-    });
+
+        console.log('✅ 热门歌单加载完成');
+    } catch (error) {
+        console.error('❌ 加载热门歌单失败:', error);
+        if (hotPlaylistsGrid) {
+            hotPlaylistsGrid.innerHTML = '<div class="error">加载失败，请重试</div>';
+        }
+    }
 }
 
 // 初始化移动端页面指示器
@@ -370,6 +399,32 @@ function initMobilePageIndicators(): void {
     });
 }
 
+/**
+ * 修复BUG-006: 统一的结果容器切换函数
+ * 确保每次只显示一个容器，避免状态混乱
+ */
+function switchResultsContainer(activeContainer: 'search' | 'parse'): void {
+    const searchResults = document.getElementById('searchResults');
+    const parseResults = document.getElementById('parseResults');
+    
+    if (!searchResults || !parseResults) {
+        console.error('❌ 结果容器元素缺失');
+        return;
+    }
+    
+    if (activeContainer === 'search') {
+        // 确保在搜索结果标签页
+        switchTab('search');
+        searchResults.style.display = 'block';
+        console.log('✅ 已切换到搜索结果容器');
+    } else {
+        // 确保在歌单标签页
+        switchTab('playlist');
+        parseResults.style.display = 'block';
+        console.log('✅ 已切换到解析结果容器');
+    }
+}
+
 async function handleSearch(): Promise<void> {
     const keyword = (document.getElementById('searchInput') as HTMLInputElement).value;
     const source = (document.getElementById('sourceSelect') as HTMLSelectElement).value;
@@ -379,11 +434,8 @@ async function handleSearch(): Promise<void> {
         return;
     }
 
-    // 老王修复BUG-SEARCH-001：显示searchResults容器，隐藏parseResults容器
-    const searchResults = document.getElementById('searchResults');
-    const parseResults = document.getElementById('parseResults');
-    if (searchResults) searchResults.style.display = 'block';
-    if (parseResults) parseResults.style.display = 'none';
+    // 修复BUG-006: 使用统一的容器切换函数
+    switchResultsContainer('search');
 
     // 确保搜索历史模块已加载
     if (!moduleLoadStatus.searchHistory) {
@@ -453,11 +505,8 @@ async function handleParsePlaylist(): Promise<void> {
         return;
     }
 
-    // 老王修复BUG-PARSE-001：显示parseResults容器，隐藏searchResults容器
-    const parseResults = document.getElementById('parseResults');
-    const searchResults = document.getElementById('searchResults');
-    if (parseResults) parseResults.style.display = 'block';
-    if (searchResults) searchResults.style.display = 'none';
+    // 修复BUG-006: 使用统一的容器切换函数
+    switchResultsContainer('parse');
 
     ui.showLoading('parseResults');
 

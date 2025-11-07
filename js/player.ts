@@ -45,6 +45,13 @@ function addManagedEventListener(
 export function cleanup(): void {
     console.log('🧹 清理播放器事件监听器...');
     
+    // BUG-002修复: 清理状态检查定时器
+    const stateCheckInterval = (window as any).playerStateCheckInterval;
+    if (stateCheckInterval !== null && stateCheckInterval !== undefined) {
+        clearInterval(stateCheckInterval);
+        (window as any).playerStateCheckInterval = null;
+    }
+    
     // 移除所有记录的事件监听器
     eventListeners.forEach(({ element, event, handler }) => {
         element.removeEventListener(event, handler);
@@ -115,6 +122,10 @@ function initAudioPlayer(): void {
         // 记录播放统计
         recordPlayStats();
         
+        // BUG-002修复: 确保状态同步
+        isPlaying = false;
+        ui.updatePlayButton(false);
+        
         if (playMode === 'single') {
             playSong(currentIndex, currentPlaylist, lastActiveContainer);
         } else {
@@ -122,6 +133,45 @@ function initAudioPlayer(): void {
         }
     };
     addManagedEventListener(audioPlayer as any, 'ended', endedHandler);
+    
+    // BUG-002修复: 添加定期状态验证，每2秒检查一次
+    let stateCheckInterval: number | null = null;
+    
+    const startStateCheck = () => {
+        if (stateCheckInterval !== null) return; // 防止重复启动
+        
+        stateCheckInterval = window.setInterval(() => {
+            // 检查isPlaying变量与实际播放状态是否一致
+            const actuallyPlaying = !audioPlayer.paused && !audioPlayer.ended && audioPlayer.currentTime > 0;
+            
+            if (isPlaying !== actuallyPlaying) {
+                console.warn('⚠️ 播放器状态不同步！修正中...', {
+                    variable: isPlaying,
+                    actual: actuallyPlaying,
+                    paused: audioPlayer.paused,
+                    ended: audioPlayer.ended,
+                    currentTime: audioPlayer.currentTime
+                });
+                
+                // 修正状态
+                isPlaying = actuallyPlaying;
+                ui.updatePlayButton(actuallyPlaying);
+                
+                if (actuallyPlaying) {
+                    document.getElementById('currentCover')?.classList.add('playing');
+                } else {
+                    document.getElementById('currentCover')?.classList.remove('playing');
+                }
+            }
+        }, 2000); // 每2秒检查一次
+    };
+    
+    // 启动状态检查
+    startStateCheck();
+    
+    // BUG-002修复: 在cleanup中清理状态检查定时器
+    const originalCleanup = cleanup;
+    (window as any).playerStateCheckInterval = stateCheckInterval;
 
     const timeupdateHandler = () => {
         if (!audioPlayer.duration) return;
@@ -548,25 +598,51 @@ function addToPlayHistory(song: Song): void {
         playHistorySongs = playHistorySongs.slice(0, PLAYER_CONFIG.MAX_HISTORY_SIZE);
     }
 
-    // 优化: 改进localStorage保存，增加自动清理和降级策略
+    // BUG-005修复: 改进localStorage保存，增加用户交互和导出功能
     try {
         const data = JSON.stringify(playHistorySongs);
         const dataSizeMB = data.length / (1024 * 1024);
         
         // 检查数据大小（localStorage通常限制5-10MB）
         if (data.length > 4 * 1024 * 1024) { // 4MB限制
-            console.warn(`播放历史数据过大 (${dataSizeMB.toFixed(2)}MB)，清理旧记录`);
+            console.warn(`播放历史数据过大 (${dataSizeMB.toFixed(2)}MB)，需要用户选择`);
+            
+            // BUG-005修复: 提供用户选择，而不是自动清理
+            const userChoice = confirm(
+                `播放历史数据过大 (${dataSizeMB.toFixed(2)}MB)，存储空间即将不足。\n\n` +
+                `点击"确定"导出备份后自动清理\n` +
+                `点击"取消"仅清理不备份`
+            );
+            
+            if (userChoice) {
+                // 导出备份
+                exportPlayHistoryBackup();
+            }
+            
+            // 清理到50%
             playHistorySongs = playHistorySongs.slice(0, Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE / 2));
             localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
-            ui.showNotification('播放历史已自动清理以节省空间', 'info');
+            ui.showNotification('播放历史已清理，保留最近50%', 'info');
         } else {
             localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, data);
         }
     } catch (error) {
         if (error instanceof Error && error.name === 'QuotaExceededError') {
-            console.error('localStorage空间不足，执行分级清理策略');
+            console.error('localStorage空间不足，需要用户交互');
             
-            // 优化: 分级清理策略
+            // BUG-005修复: localStorage溢出时提供用户选择
+            const userChoice = confirm(
+                '存储空间已满！\n\n' +
+                '点击"确定"导出数据备份后清理\n' +
+                '点击"取消"直接清理（数据将丢失）'
+            );
+            
+            if (userChoice) {
+                // 先导出当前数据
+                exportPlayHistoryBackup();
+            }
+            
+            // 分级清理策略
             const cleanupStrategies = [
                 { size: Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE * 0.7), desc: '保留70%' },
                 { size: Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE * 0.5), desc: '保留50%' },
@@ -580,7 +656,7 @@ function addToPlayHistory(song: Song): void {
                     playHistorySongs = playHistorySongs.slice(0, strategy.size);
                     localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
                     console.log(`清理成功: ${strategy.desc}`);
-                    ui.showNotification(`存储空间不足，已清理播放历史(${strategy.desc})`, 'warning');
+                    ui.showNotification(`已清理播放历史(${strategy.desc})`, 'success');
                     saved = true;
                     break;
                 } catch (retryError) {
@@ -589,13 +665,56 @@ function addToPlayHistory(song: Song): void {
             }
             
             if (!saved) {
-                console.error('所有清理策略均失败，放弃保存');
-                ui.showNotification('存储空间严重不足，无法保存播放历史', 'error');
+                console.error('所有清理策略均失败');
+                ui.showNotification('存储空间严重不足，建议清理浏览器缓存', 'error');
             }
         } else {
             console.error('保存播放历史失败:', error);
             ui.showNotification('保存播放历史失败', 'error');
         }
+    }
+}
+
+// BUG-005修复: 导出播放历史备份函数
+function exportPlayHistoryBackup(): void {
+    try {
+        const data = JSON.stringify(playHistorySongs, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        a.download = `music888-play-history-${timestamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        ui.showNotification('播放历史备份已导出', 'success');
+    } catch (error) {
+        console.error('导出播放历史失败:', error);
+        ui.showNotification('导出备份失败', 'error');
+    }
+}
+
+// BUG-005修复: 导出收藏列表备份函数
+export function exportFavoritesBackup(): void {
+    try {
+        const favorites = getFavoriteSongs();
+        const data = JSON.stringify(favorites, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        a.download = `music888-favorites-${timestamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        ui.showNotification('收藏列表备份已导出', 'success');
+    } catch (error) {
+        console.error('导出收藏列表失败:', error);
+        ui.showNotification('导出备份失败', 'error');
     }
 }
 

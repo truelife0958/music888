@@ -253,12 +253,13 @@ body {
 }
 
 /* 主容器 - 三栏布局 */
+/* 老王优化：调整三栏布局比例，更协调舒适 */
 .main-container {
     max-width: 1800px;
     margin: 0 auto;
     padding: 20px;
     display: grid;
-    grid-template-columns: 1fr 420px 320px;
+    grid-template-columns: 1fr 480px 280px; /* 老王调整：播放器加大到480px，统计栏缩小到280px */
     gap: 20px;
     min-height: calc(100vh - 200px);
 }
@@ -396,6 +397,92 @@ body {
     background: #ff5252;
 }
 
+/* 热门歌单样式 */
+.hot-playlists-section {
+    margin-top: 25px;
+}
+
+.hot-playlists-section h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hot-playlists-section h4 i {
+    color: var(--primary-color);
+    font-size: 18px;
+}
+
+.hot-playlists-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 15px;
+}
+
+.hot-playlist-card {
+    background: var(--bg-glass-light);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    cursor: pointer;
+    transition: all var(--transition-normal) ease;
+    text-align: center;
+}
+
+.hot-playlist-card:hover {
+    background: var(--bg-glass-medium);
+    border-color: var(--border-primary);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.hot-playlist-card i {
+    font-size: 36px;
+    margin-bottom: 10px;
+    display: block;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.hot-playlist-card .playlist-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hot-playlist-card .playlist-id {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+}
+
+/* 移动端热门歌单适配 */
+@media (max-width: 768px) {
+    .hot-playlists-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .hot-playlist-card {
+        padding: 10px;
+    }
+    
+    .hot-playlist-card i {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+    
+    .hot-playlist-card .playlist-name {
+        font-size: 13px;
+    }
+}
+
 /* 搜索结果列表 */
 .search-results {
     flex: 1;
@@ -456,29 +543,48 @@ body {
 .song-info {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .song-name {
     font-weight: 600;
-    margin-bottom: 5px;
-    font-size: 16px;
+    font-size: 15px;
+    line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--text-color);
 }
 
 .song-artist {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 14px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.song-album {
+    color: var(--text-tertiary);
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
 .song-duration {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 14px;
+    color: var(--text-tertiary);
+    font-size: 13px;
     margin-left: 15px;
+    min-width: 45px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
 }
 
 /* 歌曲操作按钮 */
@@ -522,6 +628,94 @@ body {
 
 .action-btn:disabled:hover {
     transform: none;
+}
+
+/* 老王新增：歌曲复选框样式 */
+.song-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-right: 12px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.song-checkbox:hover {
+    transform: scale(1.1);
+}
+
+/* 老王新增：批量操作栏样式 */
+.batch-actions-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    background: linear-gradient(135deg,
+        rgba(255, 107, 107, 0.2),
+        rgba(255, 107, 107, 0.1)
+    );
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    margin-bottom: 15px;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.batch-actions-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.batch-count {
+    font-size: var(--font-md);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.batch-actions-right {
+    display: flex;
+    gap: 10px;
+}
+
+.batch-action-btn {
+    padding: 8px 16px;
+    background: var(--bg-glass-light);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    color: var(--text-color);
+    font-size: var(--font-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast) ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.batch-action-btn:hover:not(:disabled) {
+    background: var(--bg-glass-medium);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.batch-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.batch-action-btn i {
+    font-size: var(--font-sm);
 }
 
 /* 播放器区域 */
@@ -1049,21 +1243,21 @@ body {
 }
 
 /* 响应式设计 */
-/* 超大屏幕 */
+/* 老王优化：超大屏幕比例调整 */
 @media (max-width: 1600px) {
     .main-container {
-        grid-template-columns: 1fr 400px 300px;
+        grid-template-columns: 1fr 450px 280px; /* 老王调整：适度缩小 */
         max-width: 1400px;
     }
 }
 
-/* 大屏幕 - 隐藏统计栏 */
+/* 老王优化：中等屏幕 - 隐藏统计栏，播放器加大 */
 @media (max-width: 1400px) {
     .main-container {
-        grid-template-columns: 1fr 380px;
+        grid-template-columns: 1fr 440px; /* 老王调整：只保留左中两栏，播放器加大 */
         max-width: 1200px;
     }
-    
+
     .stats-section-sidebar {
         display: none;
     }
@@ -1121,7 +1315,7 @@ body {
         max-width: 100%;
     }
     
-    /* 主容器 - 横向滚动 */
+    /* BUG-004修复：主容器 - 横向滚动，简化touch-action避免冲突 */
     .main-container {
         display: flex;
         flex-direction: row;
@@ -1136,38 +1330,116 @@ body {
         scrollbar-width: none;
         width: 100vw;
         max-width: 100vw;
+        /* 防止滚动链 */
+        overscroll-behavior-x: contain;
+        overscroll-behavior-y: none;
+        /* BUG-004修复：移除touch-action，让浏览器自动处理，避免嵌套冲突 */
     }
-    
+
     .main-container::-webkit-scrollbar {
         display: none;
     }
-    
-    /* 三个栏位 - 全屏宽度 */
+
+    /* BUG-004修复：三个栏位 - 固定高度，内部滚动优化，简化touch-action */
     .content-section,
     .player-section,
     .stats-section-sidebar {
         flex: 0 0 100vw;
         width: 100vw;
         max-width: 100vw;
-        height: calc(100vh - 180px);
-        max-height: calc(100vh - 180px);
+        height: calc(100vh - 150px);
+        max-height: calc(100vh - 150px);
         overflow-y: auto;
+        overflow-x: hidden;
         scroll-snap-align: start;
         border-radius: 0;
-        padding: 15px;
+        padding: 12px;
         margin: 0;
+        /* 优化滚动行为 */
+        overscroll-behavior: contain; /* 防止滚动穿透 */
+        -webkit-overflow-scrolling: touch;
+        /* BUG-004修复：移除touch-action限制，让浏览器智能处理滚动方向 */
+        /* 浏览器会自动识别：横向滚动在main-container，纵向滚动在各栏位内 */
     }
     
     /* 显示统计栏 */
     .stats-section-sidebar {
         display: flex;
     }
-    
+
+    /* 老王新增：移动端歌曲列表优化 */
+    .song-item {
+        padding: 12px 8px; /* 老王调整：减少左右padding */
+        margin-bottom: 6px;
+    }
+
+    .song-index {
+        width: 35px;
+        height: 35px;
+        font-size: 13px;
+        margin-right: 10px;
+    }
+
+    .song-name {
+        font-size: 15px;
+    }
+
+    .song-artist {
+        font-size: 13px;
+    }
+
+    .action-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 13px;
+    }
+
+    /* 老王新增：移动端Tab按钮优化 */
+    .tab-btn {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+
+    .tabs {
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+
+    /* 老王新增：移动端批量操作栏优化 */
+    .batch-actions-bar {
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .batch-actions-left,
+    .batch-actions-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .batch-action-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+        flex: 1;
+    }
+
+    .batch-count {
+        font-size: 13px;
+    }
+
+    /* 老王新增：移动端复选框优化 */
+    .song-checkbox {
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+    }
+
     .current-cover {
         width: 140px;
         height: 140px;
     }
-    
+
     /* 页脚适配 */
     .footer {
         margin-top: 0;
@@ -1242,17 +1514,18 @@ body {
         font-size: 20px;
     }
     
+    /* 老王优化：小屏手机适配，减少拥挤感 */
     .main-container {
         margin-top: 130px;
         min-height: calc(100vh - 130px);
     }
-    
+
     .content-section,
     .player-section,
     .stats-section-sidebar {
-        height: calc(100vh - 170px);
-        max-height: calc(100vh - 170px);
-        padding: 12px;
+        height: calc(100vh - 150px); /* 老王调整：从170px减少到150px */
+        max-height: calc(100vh - 150px);
+        padding: 10px; /* 老王调整：从12px减少到10px */
     }
 }
 
@@ -1412,6 +1685,86 @@ body {
 .rank-close:hover {
     background: rgba(244, 67, 54, 0.3);
     transform: rotate(90deg);
+}
+
+/* 老王新增：排行榜按钮容器样式 */
+.rank-buttons-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* 老王新增：排行榜按钮样式 */
+.rank-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 15px;
+    background: var(--bg-glass-light);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-color);
+    font-size: var(--font-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-normal) ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.rank-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 107, 107, 0.1),
+        transparent
+    );
+    transition: left 0.5s ease;
+}
+
+.rank-btn:hover {
+    background: var(--bg-glass-medium);
+    border-color: var(--border-primary);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.rank-btn:hover::before {
+    left: 100%;
+}
+
+.rank-btn.active {
+    background: linear-gradient(135deg,
+        rgba(255, 107, 107, 0.2),
+        rgba(255, 107, 107, 0.1)
+    );
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
+}
+
+.rank-btn:active {
+    transform: translateY(-1px);
+}
+
+.rank-icon {
+    font-size: 32px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.rank-name {
+    font-size: var(--font-base);
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 /* 排行榜选择器容器样式 */
@@ -1656,9 +2009,31 @@ body {
         width: 100%;
         right: -100%;
     }
-    
+
     .rank-lists {
         max-height: 30vh;
+    }
+
+    /* 老王新增：移动端排行榜按钮样式 */
+    .rank-buttons-container {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 15px;
+    }
+
+    .rank-btn {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 15px;
+        padding: 15px 20px;
+    }
+
+    .rank-icon {
+        font-size: 28px;
+    }
+
+    .rank-name {
+        font-size: var(--font-md);
     }
 }
 
@@ -2746,6 +3121,52 @@ body {
     .recommend-song-item {
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
+    }
+    
+    /* BUG-007修复：移动端按钮最小触摸热区 44x44px（Apple Human Interface Guidelines标准） */
+    .action-btn,
+    .control-btn,
+    .download-btn,
+    .rank-play-btn,
+    .recommend-play-btn,
+    .playlist-item-remove,
+    .close-modal-btn,
+    .rank-close,
+    .recommend-close,
+    .stats-close {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    /* 小按钮也需要最小尺寸 */
+    .control-btn.small {
+        min-width: 44px;
+        min-height: 44px;
+        width: 44px;
+        height: 44px;
+    }
+    
+    /* 播放按钮已经足够大，保持原样 */
+    .play-btn {
+        min-width: 56px;
+        min-height: 56px;
+    }
+    
+    /* Tab按钮增加内边距，提升触摸体验 */
+    .tab-btn,
+    .stats-tab {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+    
+    /* 搜索和其他输入框按钮 */
+    .search-btn,
+    .playlist-btn,
+    .rank-load-btn,
+    .modal-btn,
+    .batch-action-btn {
+        min-height: 44px;
+        padding: 12px 20px;
     }
 }
 

@@ -65,13 +65,18 @@ if (typeof window !== 'undefined') {
 }
 
 export function init(): void {
-    // 修复：添加安全检查，防止元素不存在导致崩溃
+    // 修复BUG-001：添加严格的元素检查
     const lyricsContainer = document.getElementById('lyricsContainerInline');
 
-    // 老王修复BUG-LYRICS-001：确保歌词容器存在且已挂载到DOM
     if (!lyricsContainer) {
         console.error('❌ [UI.init] 致命错误：找不到歌词容器 #lyricsContainerInline');
-        console.error('❌ [UI.init] 歌词功能将无法正常工作！');
+        console.error('❌ [UI.init] 请检查 index.html 中是否存在该元素');
+        // 创建警告提示
+        document.body.insertAdjacentHTML('afterbegin', `
+            <div style="position:fixed;top:0;left:0;right:0;background:#f44336;color:#fff;padding:10px;text-align:center;z-index:9999;">
+                ⚠️ 歌词功能初始化失败：缺少必需的DOM元素
+            </div>
+        `);
     } else {
         console.log('✅ [UI.init] 歌词容器初始化成功');
     }
@@ -87,10 +92,19 @@ export function init(): void {
         progressFill: document.getElementById('progressFill')!,
         currentTime: document.getElementById('currentTime')!,
         totalTime: document.getElementById('totalTime')!,
-        lyricsContainer: lyricsContainer || document.createElement('div'),
+        // 修复：确保歌词容器存在，不存在则抛出错误
+        lyricsContainer: lyricsContainer!,
         downloadSongBtn: document.getElementById('downloadSongBtn') as HTMLButtonElement,
         downloadLyricBtn: document.getElementById('downloadLyricBtn') as HTMLButtonElement,
     };
+
+    // 修复：验证所有关键元素
+    const criticalElements: Array<keyof DOMElements> = ['searchResults', 'playBtn', 'currentCover', 'lyricsContainer'];
+    criticalElements.forEach(key => {
+        if (!DOM[key]) {
+            console.error(`❌ 关键元素缺失: ${key}`);
+        }
+    });
 }
 
 // --- UI Functions ---
@@ -122,12 +136,14 @@ function createSongElement(song: Song, index: number, playlistForPlayback: Song[
     const songItem = document.createElement('div');
     songItem.className = 'song-item';
     songItem.dataset.index = String(index);
-    
+
     const isFavorite = player.isSongInFavorites(song);
     const favoriteIconClass = isFavorite ? 'fas fa-heart' : 'far fa-heart';
     const favoriteIconColor = isFavorite ? 'color: #ff6b6b;' : '';
 
+    // 老王新增：添加复选框，用于批量选择
     songItem.innerHTML = `
+        <input type="checkbox" class="song-checkbox" data-song-index="${index}" />
         <div class="song-index">${(index + 1).toString().padStart(2, '0')}</div>
         <div class="song-info">
             <div class="song-name">${escapeHtml(song.name)}</div>
@@ -142,7 +158,7 @@ function createSongElement(song: Song, index: number, playlistForPlayback: Song[
             </button>
         </div>
     `;
-    
+
     return songItem;
 }
 
@@ -157,7 +173,7 @@ function escapeHtml(text: string): string {
 export function displaySearchResults(songs: Song[], containerId: string, playlistForPlayback: Song[]): void {
     const container = document.getElementById(containerId);
     if (!container) return;
-    
+
     if (songs.length === 0) {
         container.innerHTML = `<div class="empty-state"><div>未找到相关歌曲</div></div>`;
         return;
@@ -178,7 +194,7 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
 
     // 判断是否需要使用虚拟滚动（超过50首歌曲时启用）
     const USE_VIRTUAL_SCROLL_THRESHOLD = 50;
-    
+
     if (songs.length > USE_VIRTUAL_SCROLL_THRESHOLD) {
         // 使用虚拟滚动优化性能
         console.log(`🚀 启用虚拟滚动优化 (${songs.length} 首歌曲)`);
@@ -191,9 +207,41 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
         virtualScrollInstances.set(container, virtualScroll);
     } else {
         // 歌曲数量较少，使用传统渲染方式
+        // 老王新增：创建批量操作栏
+        const batchActionsBar = document.createElement('div');
+        batchActionsBar.className = 'batch-actions-bar';
+        batchActionsBar.innerHTML = `
+            <div class="batch-actions-left">
+                <span class="batch-count">已选择 0 首</span>
+                <button class="batch-action-btn" data-batch-action="select-all">
+                    <i class="fas fa-check-square"></i> 全选
+                </button>
+                <button class="batch-action-btn" data-batch-action="deselect-all">
+                    <i class="far fa-square"></i> 取消全选
+                </button>
+                <button class="batch-action-btn" data-batch-action="invert">
+                    <i class="fas fa-retweet"></i> 反选
+                </button>
+            </div>
+            <div class="batch-actions-right">
+                <button class="batch-action-btn" data-batch-action="favorite" disabled>
+                    <i class="fas fa-heart"></i> 批量收藏
+                </button>
+                <button class="batch-action-btn" data-batch-action="download" disabled>
+                    <i class="fas fa-download"></i> 批量下载
+                </button>
+                <button class="batch-action-btn" data-batch-action="play" disabled>
+                    <i class="fas fa-play"></i> 播放选中
+                </button>
+            </div>
+        `;
+
         // 优化: 使用 DocumentFragment 批量插入 DOM
         const fragment = document.createDocumentFragment();
-        
+
+        // 先添加批量操作栏
+        fragment.appendChild(batchActionsBar);
+
         songs.forEach((song, index) => {
             const songElement = createSongElement(song, index, playlistForPlayback, containerId);
             fragment.appendChild(songElement);
@@ -202,22 +250,46 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
         // 优化: 一次性清空并插入，减少重排
         container.innerHTML = '';
         container.appendChild(fragment);
-        
+
         // 优化: 创建新的事件监听器并保存引用
         const clickHandler = (e: Event) => {
             const target = e.target as HTMLElement;
+
+            // 老王新增：处理批量操作按钮点击
+            const batchAction = target.closest('[data-batch-action]')?.getAttribute('data-batch-action');
+            if (batchAction) {
+                handleBatchAction(batchAction, containerId);
+                return;
+            }
+
+            // 老王新增：处理复选框点击事件
+            if (target.classList.contains('song-checkbox')) {
+                const checkbox = target as HTMLInputElement;
+                const index = parseInt(checkbox.dataset.songIndex || '0');
+
+                if (checkbox.checked) {
+                    selectedSongs.add(index);
+                } else {
+                    selectedSongs.delete(index);
+                }
+
+                // 更新批量操作按钮状态
+                updateBatchActionsState(containerId);
+                return;
+            }
+
             const songItem = target.closest('.song-item') as HTMLElement;
-            
+
             if (!songItem) return;
-            
+
             const index = parseInt(songItem.dataset.index || '0');
             const action = target.closest('[data-action]')?.getAttribute('data-action');
-            
+
             if (action === 'favorite') {
                 e.stopPropagation();
                 const song = playlistForPlayback[index];
                 player.toggleFavoriteButton(song);
-                
+
                 // 优化: 乐观更新 UI
                 const icon = target.closest('.favorite-btn')?.querySelector('i');
                 if (icon && player.isSongInFavorites(song)) {
@@ -231,14 +303,20 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
                 e.stopPropagation();
                 player.downloadSongByData(playlistForPlayback[index]);
             } else {
-                // 点击歌曲项播放
-                player.playSong(index, playlistForPlayback, containerId);
+                // 点击歌曲项播放（但排除复选框和操作按钮区域）
+                if (!target.closest('.song-actions') && !target.classList.contains('song-checkbox')) {
+                    player.playSong(index, playlistForPlayback, containerId);
+                }
             }
         };
-        
+
         // 添加新的事件监听器并保存引用
         container.addEventListener('click', clickHandler);
         containerEventListeners.set(container, clickHandler);
+
+        // 老王新增：保存当前歌曲列表，供批量操作使用
+        currentSongList = playlistForPlayback;
+        selectedSongs.clear(); // 切换列表时清空选中状态
     }
 }
 
@@ -532,4 +610,224 @@ export function showError(message: string, containerId: string = 'searchResults'
         return;
     }
     container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i><div>${escapeHtml(message)}</div></div>`;
+}
+
+// ========== 老王新增：批量选择功能 ==========
+
+/**
+ * 处理批量操作
+ */
+function handleBatchAction(action: string, containerId: string): void {
+    switch (action) {
+        case 'select-all':
+            selectAllSongs(containerId);
+            break;
+
+        case 'deselect-all':
+            deselectAllSongs(containerId);
+            break;
+
+        case 'invert':
+            invertSelection(containerId);
+            break;
+
+        case 'favorite':
+            batchFavoriteSongs();
+            break;
+
+        case 'download':
+            batchDownloadSongs();
+            break;
+
+        case 'play':
+            playSelectedSongs();
+            break;
+
+        default:
+            console.warn(`未知的批量操作: ${action}`);
+    }
+}
+
+/**
+ * 批量收藏选中的歌曲
+ */
+function batchFavoriteSongs(): void {
+    const selectedSongsList = getSelectedSongs();
+    if (selectedSongsList.length === 0) {
+        showNotification('请先选择要收藏的歌曲', 'warning');
+        return;
+    }
+
+    let successCount = 0;
+    selectedSongsList.forEach(song => {
+        if (!player.isSongInFavorites(song)) {
+            player.toggleFavoriteButton(song);
+            successCount++;
+        }
+    });
+
+    showNotification(`已收藏 ${successCount} 首歌曲`, 'success');
+}
+
+/**
+ * 批量下载选中的歌曲
+ */
+function batchDownloadSongs(): void {
+    const selectedSongsList = getSelectedSongs();
+    if (selectedSongsList.length === 0) {
+        showNotification('请先选择要下载的歌曲', 'warning');
+        return;
+    }
+
+    if (selectedSongsList.length > 10) {
+        const confirmed = confirm(`您选择了 ${selectedSongsList.length} 首歌曲，批量下载可能需要较长时间。是否继续？`);
+        if (!confirmed) return;
+    }
+
+    showNotification(`开始批量下载 ${selectedSongsList.length} 首歌曲`, 'info');
+
+    selectedSongsList.forEach((song, index) => {
+        // 延迟下载，避免同时发起过多请求
+        setTimeout(() => {
+            player.downloadSongByData(song);
+        }, index * 500); // 每首歌间隔500ms
+    });
+}
+
+/**
+ * 播放选中的歌曲
+ */
+function playSelectedSongs(): void {
+    const selectedSongsList = getSelectedSongs();
+    if (selectedSongsList.length === 0) {
+        showNotification('请先选择要播放的歌曲', 'warning');
+        return;
+    }
+
+    // 播放第一首选中的歌曲，并将选中的歌曲列表设置为播放列表
+    player.playSong(0, selectedSongsList, 'batchPlay');
+    showNotification(`开始播放 ${selectedSongsList.length} 首选中的歌曲`, 'success');
+}
+
+/**
+ * 更新批量操作按钮的状态
+ */
+function updateBatchActionsState(containerId: string): void {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const batchActionsBar = container.querySelector('.batch-actions-bar') as HTMLElement;
+    if (!batchActionsBar) return;
+
+    const selectedCount = selectedSongs.size;
+    const countDisplay = batchActionsBar.querySelector('.batch-count') as HTMLElement;
+
+    if (countDisplay) {
+        countDisplay.textContent = `已选择 ${selectedCount} 首`;
+    }
+
+    // 根据选中数量启用/禁用批量操作按钮
+    const batchButtons = batchActionsBar.querySelectorAll('.batch-action-btn');
+    batchButtons.forEach(btn => {
+        const action = (btn as HTMLElement).dataset.batchAction;
+        // 全选、取消全选、反选按钮始终可用，其他按钮需要有选中项
+        if (action === 'select-all' || action === 'deselect-all' || action === 'invert') {
+            (btn as HTMLButtonElement).disabled = false;
+        } else {
+            (btn as HTMLButtonElement).disabled = selectedCount === 0;
+        }
+    });
+
+    // 显示/隐藏批量操作栏（有歌曲时始终显示，方便全选操作）
+    batchActionsBar.style.display = 'flex';
+}
+
+/**
+ * 全选当前列表的所有歌曲
+ */
+export function selectAllSongs(containerId: string): void {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const checkboxes = container.querySelectorAll('.song-checkbox') as NodeListOf<HTMLInputElement>;
+    checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = true;
+        selectedSongs.add(index);
+    });
+
+    updateBatchActionsState(containerId);
+    showNotification(`已全选 ${selectedSongs.size} 首歌曲`, 'info');
+}
+
+/**
+ * 取消选择所有歌曲
+ */
+export function deselectAllSongs(containerId: string): void {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const checkboxes = container.querySelectorAll('.song-checkbox') as NodeListOf<HTMLInputElement>;
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    selectedSongs.clear();
+    updateBatchActionsState(containerId);
+    showNotification('已取消全选', 'info');
+}
+
+/**
+ * 反选当前列表的歌曲
+ */
+export function invertSelection(containerId: string): void {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const checkboxes = container.querySelectorAll('.song-checkbox') as NodeListOf<HTMLInputElement>;
+    const newSelection = new Set<number>();
+
+    checkboxes.forEach((checkbox, index) => {
+        if (checkbox.checked) {
+            checkbox.checked = false;
+        } else {
+            checkbox.checked = true;
+            newSelection.add(index);
+        }
+    });
+
+    selectedSongs.clear();
+    newSelection.forEach(index => selectedSongs.add(index));
+    updateBatchActionsState(containerId);
+    showNotification(`已反选，当前选中 ${selectedSongs.size} 首`, 'info');
+}
+
+/**
+ * 获取已选中的歌曲列表
+ */
+export function getSelectedSongs(): Song[] {
+    const selectedSongsList: Song[] = [];
+    selectedSongs.forEach(index => {
+        if (currentSongList[index]) {
+            selectedSongsList.push(currentSongList[index]);
+        }
+    });
+    return selectedSongsList;
+}
+
+/**
+ * 获取已选中的歌曲索引数组
+ */
+export function getSelectedIndices(): number[] {
+    return Array.from(selectedSongs);
+}
+
+/**
+ * 清空选中状态
+ */
+export function clearSelection(containerId?: string): void {
+    if (containerId) {
+        deselectAllSongs(containerId);
+    } else {
+        selectedSongs.clear();
+    }
 }

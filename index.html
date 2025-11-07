@@ -22,7 +22,7 @@
                 <span>沄听</span>
             </div>
             <div class="search-container">
-                <form class="search-wrapper" onsubmit="event.preventDefault(); return false;">
+                <form class="search-wrapper">
                     <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑..." id="searchInput" required>
                     <select class="source-select" id="sourceSelect">
                         <option value="netease">网易云音乐</option>
@@ -40,44 +40,27 @@
     
     <div class="main-container">
         <div class="content-section">
-            <!-- 老王优化：将4个标签整合成3个，合并"搜索"和"解析"为"发现音乐" -->
+            <!-- 标签页：搜索结果、排行榜、歌单 -->
             <div class="tabs">
-                <button class="tab-btn active" data-tab="discover">
-                    <i class="fas fa-search"></i> 发现音乐
+                <button class="tab-btn active" data-tab="search">
+                    <i class="fas fa-search"></i> 搜索结果
                 </button>
                 <button class="tab-btn" data-tab="rank">
-                    <i class="fas fa-chart-line"></i> 音乐排行榜
+                    <i class="fas fa-chart-line"></i> 排行榜
                 </button>
-                <button class="tab-btn" data-tab="recommend">
-                    <i class="fas fa-dice"></i> 每日推荐
+                <button class="tab-btn" data-tab="playlist">
+                    <i class="fas fa-list-music"></i> 歌单
                 </button>
             </div>
 
-            <!-- 发现音乐标签页：合并搜索和解析功能 -->
-            <div id="discoverTab" class="tab-content active">
-                <!-- 解析歌单区域 -->
-                <div class="playlist-input-container">
-                    <select class="playlist-source-select" id="playlistSourceSelect" style="margin-bottom: 10px;">
-                        <option value="netease">网易云音乐</option>
-                        <option value="tencent">QQ音乐</option>
-                    </select>
-                    <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入歌单ID (如: 60198) 或链接...">
-                    <button class="playlist-btn">
-                        <i class="fas fa-download"></i> 解析歌单
-                    </button>
-                </div>
-
-                <!-- 搜索结果区域 -->
+            <!-- 搜索结果标签页 -->
+            <div id="searchTab" class="tab-content active">
+                <!-- 搜索结果显示区域 -->
                 <div class="search-results" id="searchResults">
                     <div class="empty-state">
                         <i class="fas fa-search"></i>
-                        <div>在上方搜索框输入关键词搜索音乐，或解析歌单链接</div>
+                        <div>在上方搜索框输入关键词搜索音乐</div>
                     </div>
-                </div>
-
-                <!-- 解析结果区域（共享搜索结果容器或单独容器） -->
-                <div class="search-results" id="parseResults" style="display: none;">
-                    <!-- 解析结果将显示在这里 -->
                 </div>
             </div>
 
@@ -104,7 +87,41 @@
                 <div class="rank-songs" id="rankSongs"></div>
             </div>
 
-            <div id="recommendTab" class="tab-content">
+            <!-- 歌单标签页 -->
+            <div id="playlistTab" class="tab-content">
+                <!-- 歌单解析输入区 -->
+                <div class="playlist-input-container">
+                    <select class="playlist-source-select" id="playlistSourceSelect">
+                        <option value="netease">网易云音乐</option>
+                        <option value="tencent">QQ音乐</option>
+                    </select>
+                    <input type="text" id="playlistIdInput" class="playlist-input" placeholder="输入歌单ID (如: 60198) 或链接...">
+                    <button class="playlist-btn">
+                        <i class="fas fa-download"></i> 解析歌单
+                    </button>
+                </div>
+
+                <!-- 网易热门歌单推荐 -->
+                <div class="hot-playlists-section" id="hotPlaylistsSection">
+                    <h4 style="color: rgba(255,255,255,0.9); font-size: 16px; margin: 20px 0 15px 0; padding-left: 10px; border-left: 3px solid #ff6b6b;">
+                        <i class="fas fa-fire"></i> 网易热门歌单
+                    </h4>
+                    <div class="hot-playlists-grid" id="hotPlaylistsGrid">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <div>正在加载热门歌单...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 解析结果显示区 -->
+                <div class="search-results" id="parseResults" style="display: none;">
+                    <!-- 解析结果将显示在这里 -->
+                </div>
+            </div>
+
+            <!-- 每日推荐标签页（保留但改为第四个，隐藏） -->
+            <div id="recommendTab" class="tab-content" style="display: none;">
                 <div class="recommend-info">
                     <p>每天为你推荐30首精选音乐</p>
                     <p class="recommend-date" id="recommendDate"></p>
@@ -112,12 +129,6 @@
                 <div class="recommend-actions">
                     <button class="recommend-refresh-btn" id="refreshRecommendBtn">
                         <i class="fas fa-sync-alt"></i> 刷新推荐
-                    </button>
-                    <button class="recommend-ai-btn" id="aiRecommendBtn" title="基于您的播放历史和收藏智能推荐">
-                        <i class="fas fa-brain"></i> AI推荐
-                    </button>
-                    <button class="recommend-play-all-btn" id="playAllRecommendBtn">
-                        <i class="fas fa-play"></i> 播放全部
                     </button>
                 </div>
                 <div class="recommend-songs" id="recommendSongs">
@@ -205,9 +216,8 @@
             </div>
             <div class="stats-tabs-inline">
                 <button class="stats-tab active" data-stats-tab="most-played">最多播放</button>
-                <button class="stats-tab" data-stats-tab="recent">最近播放</button>
-                <button class="stats-tab" data-stats-tab="favorites">收藏列表</button>
                 <button class="stats-tab" data-stats-tab="history">播放历史</button>
+                <button class="stats-tab" data-stats-tab="favorites">收藏列表</button>
             </div>
             <div class="stats-content-inline" id="statsContentInline">
                 <div class="stats-tab-content active" id="mostPlayedContent">
@@ -215,19 +225,14 @@
                         <div class="stats-empty">暂无统计数据</div>
                     </div>
                 </div>
-                <div class="stats-tab-content" id="recentContent">
-                    <div class="stats-list" id="recentList">
-                        <div class="stats-empty">暂无统计数据</div>
+                <div class="stats-tab-content" id="historyContent">
+                    <div class="stats-list" id="historyList">
+                        <div class="stats-empty">暂无播放历史</div>
                     </div>
                 </div>
                 <div class="stats-tab-content" id="favoritesContent">
                     <div class="stats-list" id="favoritesList">
                         <div class="stats-empty">暂无收藏</div>
-                    </div>
-                </div>
-                <div class="stats-tab-content" id="historyContent">
-                    <div class="stats-list" id="historyList">
-                        <div class="stats-empty">暂无播放历史</div>
                     </div>
                 </div>
             </div>

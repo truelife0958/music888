@@ -398,6 +398,72 @@ async function fetchWithRetry(
     throw lastError || new ApiError(ApiErrorType.UNKNOWN, '所有请求尝试均失败');
 }
 
+// BUG-008修复: 统一的API错误处理器
+export class ApiErrorHandler {
+    // 获取用户友好的错误消息
+    static getUserFriendlyMessage(error: unknown): string {
+        if (error instanceof ApiError) {
+            switch (error.type) {
+                case ApiErrorType.NETWORK:
+                    return '网络连接失败，请检查您的网络设置';
+                case ApiErrorType.TIMEOUT:
+                    return '请求超时，请稍后重试';
+                case ApiErrorType.SERVER:
+                    if (error.statusCode === 429) {
+                        return '请求过于频繁，请稍后再试';
+                    } else if (error.statusCode && error.statusCode >= 500) {
+                        return '服务器错误，请稍后重试';
+                    }
+                    return `服务器响应异常 (${error.statusCode || '未知'})`;
+                case ApiErrorType.PARSE:
+                    return '数据解析失败，请重试';
+                default:
+                    return error.message || '未知错误';
+            }
+        }
+        
+        if (error instanceof Error) {
+            return error.message;
+        }
+        
+        return '操作失败，请重试';
+    }
+    
+    // 判断是否需要显示重试按钮
+    static shouldShowRetry(error: unknown): boolean {
+        if (error instanceof ApiError) {
+            return error.retryable;
+        }
+        return true; // 默认允许重试
+    }
+    
+    // 获取错误类型的图标
+    static getErrorIcon(error: unknown): string {
+        if (error instanceof ApiError) {
+            switch (error.type) {
+                case ApiErrorType.NETWORK:
+                    return '🌐';
+                case ApiErrorType.TIMEOUT:
+                    return '⏱️';
+                case ApiErrorType.SERVER:
+                    return '🔧';
+                case ApiErrorType.PARSE:
+                    return '📋';
+                default:
+                    return '⚠️';
+            }
+        }
+        return '❌';
+    }
+    
+    // 记录错误日志
+    static logError(error: unknown, context: string): void {
+        const timestamp = new Date().toISOString();
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[${timestamp}] [${context}] ${errorMsg}`, error);
+    }
+}
+
 // 优化: 新增错误规范化函数
 function normalizeError(error: unknown): ApiError {
     // 超时错误
