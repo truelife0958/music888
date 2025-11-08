@@ -3,6 +3,7 @@
 import { showNotification } from './ui';
 import type { Song } from './api';
 import { getFavoriteSongs, getPlayHistory, playSong } from './player';
+import { getAlbumCoverUrl } from './api';
 
 // 统计配置
 const STATS_CONFIG = {
@@ -107,12 +108,53 @@ function updateSidebarMostPlayed() {
     container.innerHTML = topSongs.map((song, index) => `
         <div class="stats-song-item" data-song-id="${song.songId}">
             <div class="stats-song-rank">${index + 1}</div>
+            <div class="stats-song-cover">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yMCAxMkwyOCAyMEgyNFYzMkgxNlYyMEgxMkwyMCAxMloiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSIvPgo8L3N2Zz4K" alt="封面" class="stats-cover-img" loading="lazy">
+            </div>
             <div class="stats-song-info">
                 <div class="stats-song-name">${song.songName}</div>
                 <div class="stats-song-meta">${song.artist} • ${song.playCount}次</div>
             </div>
         </div>
     `).join('');
+
+    // 异步加载封面
+    topSongs.forEach(async (song, index) => {
+        try {
+            // 尝试从当前播放列表中获取歌曲信息以获取封面
+            const coverUrl = await getSongCoverFromStats(song);
+            if (coverUrl) {
+                const coverElement = container.querySelector(`.stats-song-item:nth-child(${index + 1}) .stats-cover-img`);
+                if (coverElement) {
+                    coverElement.src = coverUrl;
+                }
+            }
+        } catch (error) {
+            console.warn(`加载歌曲封面失败: ${song.songName}`, error);
+        }
+    });
+}
+
+// 从统计数据获取歌曲封面
+async function getSongCoverFromStats(playRecord: PlayRecord): Promise<string | null> {
+    try {
+        // 构造一个简单的Song对象来获取封面
+        const song: Song = {
+            id: playRecord.songId,
+            name: playRecord.songName,
+            artist: playRecord.artist.split(','),
+            album: '未知专辑',
+            pic_id: playRecord.songId, // 使用歌曲ID作为pic_id
+            lyric_id: playRecord.songId,
+            source: 'netease' // 默认使用网易云
+        };
+
+        const coverUrl = await getAlbumCoverUrl(song, 40); // 小尺寸封面
+        return coverUrl;
+    } catch (error) {
+        console.warn(`获取歌曲封面失败: ${playRecord.songName}`, error);
+        return null;
+    }
 }
 
 // 更新右侧边栏-收藏列表
@@ -133,6 +175,9 @@ function updateSidebarFavorites() {
     container.innerHTML = recentFavorites.map((song, index) => `
         <div class="stats-song-item clickable" data-song-index="${index}">
             <div class="stats-song-rank">${index + 1}</div>
+            <div class="stats-song-cover">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yMCAxMkwyOCAyMEgyNFYzMkgxNlYyMEgxMkwyMCAxMloiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSIvPgo8L3N2Zz4K" alt="封面" class="stats-cover-img" loading="lazy">
+            </div>
             <div class="stats-song-info">
                 <div class="stats-song-name">${song.name}</div>
                 <div class="stats-song-meta">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}</div>
@@ -142,6 +187,21 @@ function updateSidebarFavorites() {
             </button>
         </div>
     `).join('');
+
+    // 异步加载封面
+    recentFavorites.forEach(async (song, index) => {
+        try {
+            const coverUrl = await getAlbumCoverUrl(song, 40);
+            if (coverUrl) {
+                const coverElement = container.querySelector(`.stats-song-item:nth-child(${index + 1}) .stats-cover-img`);
+                if (coverElement) {
+                    coverElement.src = coverUrl;
+                }
+            }
+        } catch (error) {
+            console.warn(`加载收藏歌曲封面失败: ${song.name}`, error);
+        }
+    });
 
     // 绑定播放事件
     container.querySelectorAll('.stats-song-item').forEach((item, index) => {
@@ -182,6 +242,9 @@ function updateSidebarHistory() {
         return `
             <div class="stats-song-item clickable" data-song-index="${index}">
                 <div class="stats-song-rank">${index + 1}</div>
+                <div class="stats-song-cover">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yMCAxMkwyOCAyMEgyNFYzMkgxNlYyMEgxMkwyMCAxMloiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSIvPgo8L3N2Zz4K" alt="封面" class="stats-cover-img" loading="lazy">
+                </div>
                 <div class="stats-song-info">
                     <div class="stats-song-name">${song.name}</div>
                     <div class="stats-song-meta">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist} • ${formatRelativeTime(timestamp)}</div>
@@ -192,6 +255,21 @@ function updateSidebarHistory() {
             </div>
         `;
     }).join('');
+
+    // 异步加载封面
+    recentHistory.forEach(async (song, index) => {
+        try {
+            const coverUrl = await getAlbumCoverUrl(song, 40);
+            if (coverUrl) {
+                const coverElement = container.querySelector(`.stats-song-item:nth-child(${index + 1}) .stats-cover-img`);
+                if (coverElement) {
+                    coverElement.src = coverUrl;
+                }
+            }
+        } catch (error) {
+            console.warn(`加载历史歌曲封面失败: ${song.name}`, error);
+        }
+    });
 
     // 绑定播放事件
     container.querySelectorAll('.stats-song-item').forEach((item, index) => {

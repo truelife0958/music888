@@ -3387,72 +3387,165 @@ body {
     color: rgba(255, 107, 107, 0.8);
 }
 
-/* 老王新增：播放统计区歌曲列表样式 - 与排行榜保持一致 */
+/* 老王新增：播放统计区歌曲列表样式 - 现代化设计 */
 .stats-song-item {
     display: flex;
     align-items: center;
-    padding: 12px 15px;
-    border-radius: 10px;
+    padding: 14px 16px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    margin-bottom: 8px;
-    background: var(--bg-glass-light);
-    border: 1px solid transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-song-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.6s ease;
+}
+
+.stats-song-item:hover::before {
+    left: 100%;
 }
 
 .stats-song-item:hover {
-    background: var(--bg-glass-medium);
-    border-color: var(--border-primary);
-    transform: translateX(3px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+    border-color: rgba(255, 107, 107, 0.3);
+    transform: translateY(-2px) translateX(4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 107, 107, 0.1);
 }
 
 .stats-song-item.clickable:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 107, 107, 0.05) 100%);
+    border-color: rgba(255, 107, 107, 0.4);
 }
 
 .stats-song-rank {
-    min-width: 32px;
-    height: 32px;
+    min-width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 13px;
-    margin-right: 12px;
-    color: rgba(255, 255, 255, 0.7);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    margin-right: 14px;
+    color: rgba(255, 255, 255, 0.9);
     flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-song-rank::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stats-song-item:hover .stats-song-rank::after {
+    opacity: 1;
+}
+
+/* 播放统计封面样式 */
+.stats-song-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-right: 12px;
+}
+
+.stats-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.stats-song-item:hover .stats-cover-img {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+.stats-song-item.playing .stats-song-cover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(29, 185, 84, 0.4);
+}
+
+.stats-song-item.playing .stats-cover-img {
+    animation: rotateCover 20s linear infinite;
+}
+
+@keyframes rotateCover {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .stats-song-info {
     flex: 1;
     min-width: 0;
-    margin-right: 10px;
+    margin-right: 12px;
 }
 
 .stats-song-name {
     font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 4px;
+    font-size: 15px;
+    margin-bottom: 5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--text-color);
+    letter-spacing: 0.3px;
 }
 
 .stats-song-meta {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.65);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stats-song-meta::before {
+    content: '•';
+    color: rgba(255, 107, 107, 0.6);
+    font-size: 10px;
 }
 
 .stats-play-btn {
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 107, 107, 0.2);
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 107, 107, 0.1) 100%);
     border: 1px solid rgba(255, 107, 107, 0.3);
     border-radius: 50%;
     color: var(--primary-color);
@@ -3461,14 +3554,137 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-play-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, var(--primary-color) 0%, transparent 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.4s ease;
+    z-index: 0;
+}
+
+.stats-play-btn i {
+    position: relative;
+    z-index: 1;
+    transition: transform 0.3s ease;
 }
 
 .stats-play-btn:hover {
-    background: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, rgba(255, 107, 107, 0.8) 100%);
+    color: white;
+    transform: scale(1.15);
+    border-color: var(--primary-color);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4), 0 0 0 1px rgba(255, 107, 107, 0.2);
+}
+
+.stats-play-btn:hover::before {
+    width: 120%;
+    height: 120%;
+}
+
+.stats-play-btn:hover i {
+    transform: scale(1.1);
+}
+
+/* 添加播放状态样式 */
+.stats-song-item.playing {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(255, 107, 107, 0.08) 100%);
+    border-color: rgba(255, 107, 107, 0.4);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.2);
+}
+
+.stats-song-item.playing .stats-song-rank {
+    background: linear-gradient(135deg, var(--primary-color) 0%, rgba(255, 107, 107, 0.8) 100%);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.stats-song-item.playing .stats-play-btn {
+    background: linear-gradient(135deg, var(--primary-color) 0%, rgba(255, 107, 107, 0.8) 100%);
     color: white;
     transform: scale(1.1);
+}
+
+/* 空状态样式优化 */
+.stats-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border-radius: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    margin: 20px 0;
+}
+
+.stats-empty::before {
+    content: '📭';
+    display: block;
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+/* 动画效果 */
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(255, 107, 107, 0);
+    }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    .stats-song-item {
+        padding: 12px 14px;
+        margin-bottom: 8px;
+        border-radius: 10px;
+    }
+
+    .stats-song-rank {
+        min-width: 32px;
+        height: 32px;
+        font-size: 13px;
+        margin-right: 12px;
+    }
+
+    .stats-song-name {
+        font-size: 14px;
+        margin-bottom: 3px;
+    }
+
+    .stats-song-meta {
+        font-size: 11px;
+    }
+
+    .stats-play-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 11px;
+    }
+
+    .stats-empty {
+        padding: 30px 15px;
+        font-size: 13px;
+    }
+
+    .stats-empty::before {
+        font-size: 40px;
+        margin-bottom: 12px;
+    }
 }
 
 /* 三行歌词容器的双语显示优化 */

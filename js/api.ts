@@ -37,10 +37,10 @@ class ApiError extends Error {
     }
 }
 
-// 音乐API配置 - 直接使用原始API源
+// 音乐API配置 - 基于API文档优化，优先使用稳定的GDStudio API
 const API_SOURCES: ApiSource[] = [
     {
-        name: 'GDStudio 音乐API',
+        name: 'GDStudio 主API',
         url: 'https://music-api.gdstudio.xyz/api.php'
     },
     {
@@ -48,7 +48,7 @@ const API_SOURCES: ApiSource[] = [
         url: 'https://music-api.gdstudio.org/api.php'
     },
     {
-        name: 'Meting音乐API',
+        name: 'Meting备用API',
         url: 'https://api.injahow.cn/meting/'
     }
 ];
@@ -56,12 +56,14 @@ const API_SOURCES: ApiSource[] = [
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
 
-// 音乐平台配置
+// 音乐平台配置 - 基于API文档扩展支持平台
 const MUSIC_SOURCES = [
     { id: 'netease', name: '网易云音乐' },
     { id: 'tencent', name: 'QQ音乐' },
     { id: 'kugou', name: '酷狗音乐' },
-    { id: 'kuwo', name: '酷我音乐' }
+    { id: 'kuwo', name: '酷我音乐' },
+    { id: 'ximalaya', name: '喜马拉雅' },
+    { id: 'bilibili', name: 'B站音频' }
 ];
 
 // 艺术家字段规范化函数 - 老王修复：统一处理各种artist数据格式
@@ -585,34 +587,61 @@ export async function switchToNextAPI(): Promise<{ success: boolean; name?: stri
     return { success: false };
 }
 
-// 获取专辑封面 - 添加缓存
+// 获取专辑封面 - 基于API文档优化，支持多种尺寸和缓存
 export async function getAlbumCoverUrl(song: Song, size: number = 300): Promise<string> {
     const DEFAULT_COVER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
-    
-    if (!song.pic_id) {
+
+    // 支持多种图片ID字段
+    const picId = song.pic_id || song.cover || song.album_pic || song.pic;
+    if (!picId) {
         return DEFAULT_COVER;
     }
 
+    // 根据API文档优化尺寸参数：300, 500, 1024
+    const optimizedSize = size <= 300 ? 300 : size <= 500 ? 500 : 1024;
+
     // 检查缓存
-    const cacheKey = `cover_${song.source}_${song.pic_id}_${size}`;
+    const cacheKey = `cover_${song.source}_${picId}_${optimizedSize}`;
     const cached = cache.get<string>(cacheKey);
     if (cached) {
         return cached;
     }
 
     try {
-        const url = `${API_BASE}?types=pic&source=${song.source}&id=${song.pic_id}&size=${size}`;
+        // 根据API文档构建请求URL
+        const isGDStudio = API_BASE.includes('gdstudio');
+        let url: string;
+
+        if (isGDStudio) {
+            // GDStudio API格式: ?types=pic&source=netease&id=pic_id&size=300
+            url = `${API_BASE}?types=pic&source=${song.source}&id=${picId}&size=${optimizedSize}`;
+        } else {
+            // Meting API格式: ?type=pic&id=pic_id&size=300
+            url = `${API_BASE}?type=pic&id=${picId}&size=${optimizedSize}`;
+        }
+
         const response = await fetchWithRetry(url, {}, 1); // 封面请求减少重试次数
         const data = await response.json();
-        
+
         if (data && data.url) {
             cache.set(cacheKey, data.url);
             return data.url;
         }
-        
+
+        // 如果获取失败，尝试不同的尺寸
+        if (optimizedSize !== 300) {
+            return getAlbumCoverUrl(song, 300);
+        }
+
         return DEFAULT_COVER;
     } catch (error) {
         console.warn('获取专辑封面失败:', error);
+
+        // 如果获取失败且不是300尺寸，尝试300尺寸
+        if (size !== 300) {
+            return getAlbumCoverUrl(song, 300);
+        }
+
         return DEFAULT_COVER;
     }
 }
@@ -646,7 +675,18 @@ async function validateUrl(url: string): Promise<boolean> {
 // 获取歌曲URL
 export async function getSongUrl(song: Song, quality: string): Promise<{ url: string; br: string; error?: string }> {
     try {
-        const url = `${API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
+        // 根据API文档构建请求URL
+        const isGDStudio = API_BASE.includes('gdstudio');
+        let url: string;
+
+        if (isGDStudio) {
+            // GDStudio API格式: ?types=url&source=netease&id=song_id&br=320
+            url = `${API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
+        } else {
+            // Meting API格式: ?type=url&source=netease&id=song_id&br=320
+            url = `${API_BASE}?type=url&source=${song.source}&id=${song.id}&br=${quality}`;
+        }
+
         const response = await fetchWithRetry(url);
         
         // 处理401未授权错误 - 使用网易云直链
@@ -719,7 +759,18 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
     }
 
     try {
-        const url = `${API_BASE}?types=lyric&source=${song.source}&id=${song.lyric_id || song.id}`;
+        // 根据API文档构建请求URL
+        const isGDStudio = API_BASE.includes('gdstudio');
+        let url: string;
+
+        if (isGDStudio) {
+            // GDStudio API格式: ?types=lyric&source=netease&id=song_id
+            url = `${API_BASE}?types=lyric&source=${song.source}&id=${song.lyric_id || song.id}`;
+        } else {
+            // Meting API格式: ?type=lyric&source=netease&id=song_id
+            url = `${API_BASE}?type=lyric&source=${song.source}&id=${song.lyric_id || song.id}`;
+        }
+
         const response = await fetchWithRetry(url, {}, 1); // 歌词请求减少重试次数
         const data = await response.json();
         
@@ -740,7 +791,17 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
     
     // 优化: 使用请求去重
     return requestDeduplicator.dedupe(cacheKey, async () => {
-        const url = `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
+        // 根据API文档构建请求URL
+        const isGDStudio = API_BASE.includes('gdstudio');
+        let url: string;
+
+        if (isGDStudio) {
+            // GDStudio API格式: ?types=search&source=netease&name=关键词&count=30
+            url = `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
+        } else {
+            // Meting API格式: ?type=search&source=netease&keywords=关键词&limit=30
+            url = `${API_BASE}?type=search&source=${source}&keywords=${encodeURIComponent(keyword)}&limit=${limit}`;
+        }
         
         try {
             const response = await fetchWithRetry(url);
@@ -775,17 +836,30 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
             return [];
         }
         
-        // 过滤和规范化数据
+        // 过滤和规范化数据 - 增强数据提取逻辑
         songs = songs.filter(song =>
             song && (song.name || song.title) // 只要有名称就保留
-        ).map(song => ({
-            ...song,
-            id: song.id || song.url_id || song.lyric_id || `${source}_${Date.now()}_${Math.random()}`,
-            source: source,
-            name: normalizeSongName(song.name || song.title),
-            artist: normalizeArtistField(song.artist),
-            album: normalizeAlbumName(song.album)
-        }));
+        ).map(song => {
+            // 深度提取艺术家信息
+            const artistInfo = extractArtistInfo(song);
+
+            // 深度提取专辑信息
+            const albumInfo = extractAlbumInfo(song);
+
+            // 深度提取歌曲信息
+            const songInfo = extractSongInfo(song);
+
+            return {
+                ...song,
+                id: song.id || song.url_id || song.lyric_id || `${source}_${Date.now()}_${Math.random()}`,
+                source: source,
+                name: songInfo,
+                artist: artistInfo,
+                album: albumInfo,
+                // 保留原始数据以便后续使用
+                rawData: song
+            };
+        });
 
         return songs;
         } catch (error) {
@@ -847,8 +921,18 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
             }
         }
     }
-    
-    const apiUrl = `${API_BASE}?types=playlist&source=${source}&id=${playlistId}`;
+
+    // 根据API文档构建请求URL
+    const isGDStudio = API_BASE.includes('gdstudio');
+    let apiUrl: string;
+
+    if (isGDStudio) {
+        // GDStudio API格式: ?types=playlist&source=netease&id=playlist_id
+        apiUrl = `${API_BASE}?types=playlist&source=${source}&id=${playlistId}`;
+    } else {
+        // Meting API格式: ?type=playlist&source=netease&id=playlist_id
+        apiUrl = `${API_BASE}?type=playlist&source=${source}&id=${playlistId}`;
+    }
     
     try {
         const response = await fetchWithRetry(apiUrl);
@@ -890,16 +974,25 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
             throw new Error('歌单为空');
         }
         
-        // 规范化数据
+        // 规范化数据 - 使用增强的数据提取函数
         songs = songs
             .filter((song: any) => song && song.id && (song.name || song.title)) // 只要有ID和名称就保留
-            .map((song: any) => ({
-                ...song,
-                source: source,
-                name: normalizeSongName(song.name || song.title),
-                artist: normalizeArtistField(song.artist),
-                album: normalizeAlbumName(song.album)
-            }));
+            .map((song: any) => {
+                // 使用增强的数据提取函数
+                const songInfo = extractSongInfo(song);
+                const artistInfo = extractArtistInfo(song);
+                const albumInfo = extractAlbumInfo(song);
+
+                return {
+                    ...song,
+                    source: source,
+                    name: songInfo,
+                    artist: artistInfo,
+                    album: albumInfo,
+                    // 保留原始数据以便后续使用
+                    rawData: song
+                };
+            });
         
         return {
             songs: songs,
@@ -930,4 +1023,183 @@ export function getCurrentApiStatus(): {
 // 获取音乐源列表
 export function getMusicSources() {
     return MUSIC_SOURCES;
+}
+
+// 深度提取艺术家信息 - 保持原始数据完整性
+function extractArtistInfo(song: any): string[] {
+    // 优先级顺序：直接字段 > 嵌套对象 > 数组 > 分割字符串
+    const possibleSources = [
+        // 直接字段
+        song.artist,
+        song.artists,
+        song.artist_name,
+        song.singer,
+        song.singers,
+        // 嵌套对象
+        song?.artist?.name,
+        song?.artists?.[0]?.name,
+        song?.ar?.[0]?.name, // 网易云格式
+        song?.ar?.name,
+        // 数组字段
+        ...(Array.isArray(song.artist) ? song.artist : []),
+        ...(Array.isArray(song.artists) ? song.artists : []),
+        ...(Array.isArray(song.ar) ? song.ar : []),
+    ];
+
+    // 遍历所有可能的数据源
+    for (const source of possibleSources) {
+        if (source === null || source === undefined) continue;
+
+        if (typeof source === 'string' && source.trim()) {
+            // 字符串格式，可能是多个艺术家用分隔符分开
+            const artists = source.split(/[,，、/\/\s]+/).map(s => s.trim()).filter(s => s);
+            if (artists.length > 0) {
+                return artists;
+            }
+        } else if (typeof source === 'object' && source.name) {
+            // 对象格式，有name字段
+            const name = String(source.name).trim();
+            if (name) return [name];
+        }
+    }
+
+    // 最后的备选方案：从原始字段中提取任何可用的文本
+    const fallbackFields = ['artist', 'artists', 'ar'];
+    for (const field of fallbackFields) {
+        if (song[field]) {
+            const text = String(song[field]).trim();
+            if (text && text !== 'null' && text !== 'undefined') {
+                // 尝试解析JSON格式
+                try {
+                    const parsed = JSON.parse(text);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        const names = parsed.map(item =>
+                            typeof item === 'object' ? item.name : String(item)
+                        ).filter(Boolean);
+                        if (names.length > 0) return names;
+                    }
+                } catch {
+                    // 如果不是JSON，作为普通字符串处理
+                    const names = text.split(/[,，、/\/\s]+/).map(s => s.trim()).filter(s =>
+                        s && s !== 'null' && s !== 'undefined'
+                    );
+                    if (names.length > 0) return names;
+                }
+            }
+        }
+    }
+
+    return ['未知艺术家'];
+}
+
+// 深度提取专辑信息 - 保持原始数据完整性
+function extractAlbumInfo(song: any): string {
+    // 优先级顺序：直接字段 > 嵌套对象 > 备用字段
+    const possibleSources = [
+        // 直接字段
+        song.album,
+        song.album_name,
+        song.collection,
+        song.disc,
+        // 嵌套对象
+        song?.album?.name,
+        song?.al?.name, // 网易云格式
+        song?.collection?.name,
+        // 专辑ID相关
+        song.album_id,
+        song?.album?.id,
+        song?.al?.id,
+    ];
+
+    // 遍历所有可能的数据源
+    for (const source of possibleSources) {
+        if (source === null || source === undefined) continue;
+
+        if (typeof source === 'string' && source.trim()) {
+            const name = source.trim();
+            if (name && name !== 'null' && name !== 'undefined') {
+                return name;
+            }
+        } else if (typeof source === 'object' && source.name) {
+            const name = String(source.name).trim();
+            if (name && name !== 'null' && name !== 'undefined') {
+                return name;
+            }
+        } else if (typeof source === 'number') {
+            // 如果只有专辑ID，至少显示ID
+            return `专辑ID: ${source}`;
+        }
+    }
+
+    // 从pic_url或相关字段推断专辑名
+    if (song.pic_url || song.cover) {
+        const url = song.pic_url || song.cover;
+        const matches = url.match(/album[_\/]?(\d+)/i);
+        if (matches && matches[1]) {
+            return `专辑 ${matches[1]}`;
+        }
+    }
+
+    return '未知专辑';
+}
+
+// 深度提取歌曲信息 - 保持原始数据完整性
+function extractSongInfo(song: any): string {
+    // 优先级顺序：标准字段 > 备用字段 > URL推断
+    const possibleSources = [
+        // 标准字段
+        song.name,
+        song.title,
+        song.song_name,
+        // 嵌套对象（网易云格式等）
+        song?.name,
+        song?.title,
+        // 从文件名推断
+        song.filename,
+        song.file_name,
+    ];
+
+    // 遍历所有可能的数据源
+    for (const source of possibleSources) {
+        if (source === null || source === undefined) continue;
+
+        let songName = '';
+        if (typeof source === 'string') {
+            songName = source.trim();
+        } else if (typeof source === 'object' && source.name) {
+            songName = String(source.name).trim();
+        } else if (typeof source === 'object' && source.title) {
+            songName = String(source.title).trim();
+        }
+
+        if (songName && songName !== 'null' && songName !== 'undefined') {
+            // 清理文件扩展名
+            songName = songName.replace(/\.(mp3|flac|wav|m4a|aac)$/i, '');
+            // 清理常见的无效标识符
+            songName = songName.replace(/^[_\-\s]+|[_\-\s]+$/g, '');
+
+            if (songName) {
+                return songName;
+            }
+        }
+    }
+
+    // 从URL推断歌曲名
+    if (song.url || song.link) {
+        const url = song.url || song.link;
+        const filename = url.split('/').pop()?.split('?')[0];
+        if (filename) {
+            const songName = filename.replace(/\.(mp3|flac|wav|m4a|aac)$/i, '');
+            if (songName && songName !== 'null' && songName !== 'undefined') {
+                return decodeURIComponent(songName);
+            }
+        }
+    }
+
+    // 最后的备选方案：使用ID
+    if (song.id) {
+        return `歌曲 ${song.id}`;
+    }
+
+    return '未知歌曲';
 }

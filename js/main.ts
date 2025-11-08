@@ -883,15 +883,6 @@ function handleSwipe(velocity: number = 0): void {
     }
 }
 
-// 确保DOM完全加载后再启动应用
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        initializeApp();
-    });
-} else {
-    initializeApp();
-}
-
 // ========== 性能优化模块初始化 ==========
 async function initPerformanceOptimizations(): Promise<void> {
     console.log('🚀 初始化性能优化模块...');
@@ -1069,4 +1060,11 @@ function updatePageTitle(song: any | null, isPlaying: boolean): void {
 
 // ========== 初始化函数调用 ==========
 
-// 注意：initNonCriticalModules 函数已在前面定义
+// 确保DOM完全加载后再启动应用
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeApp();
+    });
+} else {
+    initializeApp();
+}
