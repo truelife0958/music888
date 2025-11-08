@@ -1,5 +1,6 @@
 import { Song } from './api.js';
 import * as player from './player.js';
+import { isSongInFavoritesSync } from './player.js';
 import { formatTime, formatArtist } from './utils.js';
 import { LyricLine } from './types.js';
 import { VirtualScroll, createSongListVirtualScroll } from './virtual-scroll.js';
@@ -137,7 +138,7 @@ function createSongElement(song: Song, index: number, playlistForPlayback: Song[
     songItem.className = 'song-item';
     songItem.dataset.index = String(index);
 
-    const isFavorite = player.isSongInFavorites(song);
+    const isFavorite = isSongInFavoritesSync(song);
     const favoriteIconClass = isFavorite ? 'fas fa-heart' : 'far fa-heart';
     const favoriteIconColor = isFavorite ? 'color: #ff6b6b;' : '';
 
@@ -289,7 +290,7 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
 
                 // 优化: 乐观更新 UI
                 const icon = target.closest('.favorite-btn')?.querySelector('i');
-                if (icon && player.isSongInFavorites(song)) {
+                if (icon && isSongInFavoritesSync(song)) {
                     icon.className = 'fas fa-heart';
                     icon.style.color = '#ff6b6b';
                 } else if (icon) {
@@ -650,7 +651,7 @@ function batchFavoriteSongs(): void {
 
     let successCount = 0;
     selectedSongsList.forEach(song => {
-        if (!player.isSongInFavorites(song)) {
+        if (!isSongInFavoritesSync(song)) {
             player.toggleFavoriteButton(song);
             successCount++;
         }

@@ -4,8 +4,10 @@
  */
 
 const DB_NAME = 'Music888DB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // 升级版本以支持新的对象存储
 const STORE_NAME = 'keyValueStore';
+const HISTORY_STORE = 'playHistory'; // 播放历史专用存储
+const FAVORITES_STORE = 'favorites'; // 收藏列表专用存储
 
 interface DBStore {
     key: string;
@@ -50,12 +52,36 @@ class IndexedDBStorage {
 
             request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
                 const db = (event.target as IDBOpenDBRequest).result;
+                const oldVersion = event.oldVersion;
                 
-                // 创建对象存储
+                // 创建通用key-value存储
                 if (!db.objectStoreNames.contains(STORE_NAME)) {
                     const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'key' });
                     objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-                    console.log('IndexedDB 对象存储创建成功');
+                    console.log('✅ IndexedDB 通用存储创建成功');
+                }
+                
+                // V2: 创建播放历史专用存储
+                if (oldVersion < 2 && !db.objectStoreNames.contains(HISTORY_STORE)) {
+                    const historyStore = db.createObjectStore(HISTORY_STORE, {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    historyStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    historyStore.createIndex('songId', 'songId', { unique: false });
+                    console.log('✅ IndexedDB 播放历史存储创建成功');
+                }
+                
+                // V2: 创建收藏列表专用存储
+                if (oldVersion < 2 && !db.objectStoreNames.contains(FAVORITES_STORE)) {
+                    const favoritesStore = db.createObjectStore(FAVORITES_STORE, {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    favoritesStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    favoritesStore.createIndex('songId', 'songId', { unique: false });
+                    favoritesStore.createIndex('source', 'source', { unique: false });
+                    console.log('✅ IndexedDB 收藏列表存储创建成功');
                 }
             };
         });
@@ -436,6 +462,464 @@ class IndexedDBStorage {
         }
 
         return stats;
+    }
+
+    /**
+     * 添加歌曲到播放历史
+     */
+    async addToHistory(song: any): Promise<boolean> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            // 使用通用的key-value存储
+            const history = await this.getItem<any[]>('playHistory') || [];
+            // 移除重复项
+            const filtered = history.filter(
+                (s: any) => !(s.id === song.id && s.source === song.source)
+            );
+            filtered.unshift(song);
+            // 限制数量
+            if (filtered.length > 500) {
+                filtered.splice(500);
+            }
+            return this.setItem('playHistory', filtered);
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve(false);
+                return;
+            }
+
+            const transaction = this.db.transaction([HISTORY_STORE], 'readwrite');
+            const store = transaction.objectStore(HISTORY_STORE);
+
+            const data = {
+                ...song,
+                timestamp: Date.now(),
+                songId: `${song.source}_${song.id}`
+            };
+
+            const request = store.add(data);
+
+            request.onsuccess = () => {
+                resolve(true);
+            };
+
+            request.onerror = () => {
+                console.error('添加播放历史失败:', request.error);
+                resolve(false);
+            };
+        });
+    }
+
+    /**
+     * 获取播放历史列表
+     */
+    async getHistory(limit: number = 500): Promise<any[]> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            const history = await this.getItem<any[]>('playHistory') || [];
+            return history.slice(0, limit);
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve([]);
+                return;
+            }
+
+            const transaction = this.db.transaction([HISTORY_STORE], 'readonly');
+            const store = transaction.objectStore(HISTORY_STORE);
+            const index = store.index('timestamp');
+            
+            // 按时间倒序获取
+            const request = index.openCursor(null, 'prev');
+            const results: any[] = [];
+
+            request.onsuccess = (event) => {
+                const cursor = (event.target as IDBRequest).result;
+                if (cursor && results.length < limit) {
+                    results.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
+
+            request.onerror = () => {
+                console.error('获取播放历史失败:', request.error);
+                resolve([]);
+            };
+        });
+    }
+
+    /**
+     * 清空播放历史
+     */
+    async clearHistory(): Promise<boolean> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            return this.removeItem('playHistory');
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve(false);
+                return;
+            }
+
+            const transaction = this.db.transaction([HISTORY_STORE], 'readwrite');
+            const store = transaction.objectStore(HISTORY_STORE);
+            const request = store.clear();
+
+            request.onsuccess = () => {
+                console.log('✅ 播放历史已清空');
+                resolve(true);
+            };
+
+            request.onerror = () => {
+                console.error('清空播放历史失败:', request.error);
+                resolve(false);
+            };
+        });
+    }
+
+    /**
+     * 从播放历史中删除指定歌曲
+     */
+    async removeFromHistory(songId: string, source: string): Promise<boolean> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            const history = await this.getItem<any[]>('playHistory') || [];
+            const filtered = history.filter(
+                (s: any) => !(s.id === songId && s.source === source)
+            );
+            return this.setItem('playHistory', filtered);
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve(false);
+                return;
+            }
+
+            const transaction = this.db.transaction([HISTORY_STORE], 'readwrite');
+            const store = transaction.objectStore(HISTORY_STORE);
+            const index = store.index('songId');
+            const request = index.openCursor(IDBKeyRange.only(`${source}_${songId}`));
+
+            request.onsuccess = (event) => {
+                const cursor = (event.target as IDBRequest).result;
+                if (cursor) {
+                    cursor.delete();
+                    cursor.continue();
+                } else {
+                    resolve(true);
+                }
+            };
+
+            request.onerror = () => {
+                console.error('从播放历史删除失败:', request.error);
+                resolve(false);
+            };
+        });
+    }
+
+    /**
+     * 添加歌曲到收藏
+     */
+    async addToFavorites(song: any): Promise<boolean> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            const favorites = await this.getItem<any[]>('favorites') || [];
+            // 检查是否已存在
+            const exists = favorites.some(
+                (s: any) => s.id === song.id && s.source === song.source
+            );
+            if (exists) {
+                return true; // 已存在，返回成功
+            }
+            favorites.unshift(song);
+            return this.setItem('favorites', favorites);
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve(false);
+                return;
+            }
+
+            const transaction = this.db.transaction([FAVORITES_STORE], 'readwrite');
+            const store = transaction.objectStore(FAVORITES_STORE);
+
+            const data = {
+                ...song,
+                timestamp: Date.now(),
+                songId: `${song.source}_${song.id}`
+            };
+
+            const request = store.add(data);
+
+            request.onsuccess = () => {
+                resolve(true);
+            };
+
+            request.onerror = () => {
+                // 可能是重复键错误，检查一下
+                if (request.error?.name === 'ConstraintError') {
+                    console.log('歌曲已在收藏中');
+                    resolve(true);
+                } else {
+                    console.error('添加收藏失败:', request.error);
+                    resolve(false);
+                }
+            };
+        });
+    }
+
+    /**
+     * 获取收藏列表
+     */
+    async getFavorites(): Promise<any[]> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            return await this.getItem<any[]>('favorites') || [];
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve([]);
+                return;
+            }
+
+            const transaction = this.db.transaction([FAVORITES_STORE], 'readonly');
+            const store = transaction.objectStore(FAVORITES_STORE);
+            const index = store.index('timestamp');
+            
+            // 按时间倒序获取
+            const request = index.openCursor(null, 'prev');
+            const results: any[] = [];
+
+            request.onsuccess = (event) => {
+                const cursor = (event.target as IDBRequest).result;
+                if (cursor) {
+                    results.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
+
+            request.onerror = () => {
+                console.error('获取收藏列表失败:', request.error);
+                resolve([]);
+            };
+        });
+    }
+
+    /**
+     * 从收藏中移除歌曲
+     */
+    async removeFromFavorites(songId: string, source: string): Promise<boolean> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            const favorites = await this.getItem<any[]>('favorites') || [];
+            const filtered = favorites.filter(
+                (s: any) => !(s.id === songId && s.source === source)
+            );
+            return this.setItem('favorites', filtered);
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve(false);
+                return;
+            }
+
+            const transaction = this.db.transaction([FAVORITES_STORE], 'readwrite');
+            const store = transaction.objectStore(FAVORITES_STORE);
+            const index = store.index('songId');
+            const request = index.openCursor(IDBKeyRange.only(`${source}_${songId}`));
+
+            request.onsuccess = (event) => {
+                const cursor = (event.target as IDBRequest).result;
+                if (cursor) {
+                    cursor.delete();
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            };
+
+            request.onerror = () => {
+                console.error('从收藏删除失败:', request.error);
+                resolve(false);
+            };
+        });
+    }
+
+    /**
+     * 检查歌曲是否在收藏中
+     */
+    async isInFavorites(songId: string, source: string): Promise<boolean> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            const favorites = await this.getItem<any[]>('favorites') || [];
+            return favorites.some(
+                (s: any) => s.id === songId && s.source === source
+            );
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve(false);
+                return;
+            }
+
+            const transaction = this.db.transaction([FAVORITES_STORE], 'readonly');
+            const store = transaction.objectStore(FAVORITES_STORE);
+            const index = store.index('songId');
+            const request = index.get(`${source}_${songId}`);
+
+            request.onsuccess = () => {
+                resolve(!!request.result);
+            };
+
+            request.onerror = () => {
+                console.error('检查收藏状态失败:', request.error);
+                resolve(false);
+            };
+        });
+    }
+
+    /**
+     * 清空收藏列表
+     */
+    async clearFavorites(): Promise<boolean> {
+        await this.init();
+
+        if (this.fallbackToLocalStorage) {
+            return this.removeItem('favorites');
+        }
+
+        return new Promise((resolve) => {
+            if (!this.db) {
+                resolve(false);
+                return;
+            }
+
+            const transaction = this.db.transaction([FAVORITES_STORE], 'readwrite');
+            const store = transaction.objectStore(FAVORITES_STORE);
+            const request = store.clear();
+
+            request.onsuccess = () => {
+                console.log('✅ 收藏列表已清空');
+                resolve(true);
+            };
+
+            request.onerror = () => {
+                console.error('清空收藏列表失败:', request.error);
+                resolve(false);
+            };
+        });
+    }
+
+    /**
+     * 从localStorage迁移播放历史和收藏到IndexedDB
+     */
+    async migratePlayDataFromLocalStorage(): Promise<{
+        historyMigrated: number;
+        favoritesMigrated: number;
+        historyFailed: number;
+        favoritesFailed: number;
+    }> {
+        await this.init();
+
+        const result = {
+            historyMigrated: 0,
+            favoritesMigrated: 0,
+            historyFailed: 0,
+            favoritesFailed: 0
+        };
+
+        if (this.fallbackToLocalStorage) {
+            console.log('使用 localStorage 模式，无需迁移播放数据');
+            return result;
+        }
+
+        try {
+            // 迁移播放历史
+            const historyKey = 'music888_playHistory';
+            const historyData = localStorage.getItem(historyKey);
+            if (historyData) {
+                try {
+                    const history = JSON.parse(historyData);
+                    if (Array.isArray(history) && history.length > 0) {
+                        console.log(`🔄 开始迁移 ${history.length} 条播放历史...`);
+                        for (const song of history) {
+                            const success = await this.addToHistory(song);
+                            if (success) {
+                                result.historyMigrated++;
+                            } else {
+                                result.historyFailed++;
+                            }
+                        }
+                        console.log(`✅ 播放历史迁移完成: ${result.historyMigrated} 成功, ${result.historyFailed} 失败`);
+                        
+                        // 迁移成功后删除localStorage数据
+                        if (result.historyMigrated > 0) {
+                            localStorage.removeItem(historyKey);
+                        }
+                    }
+                } catch (error) {
+                    console.error('解析播放历史数据失败:', error);
+                    result.historyFailed = 1;
+                }
+            }
+
+            // 迁移收藏列表（从歌单数据中提取）
+            const playlistsKey = 'music888_playlists';
+            const playlistsData = localStorage.getItem(playlistsKey);
+            if (playlistsData) {
+                try {
+                    const data = JSON.parse(playlistsData);
+                    if (data.playlists && Array.isArray(data.playlists)) {
+                        // 查找收藏歌单
+                        for (const [key, playlist] of data.playlists) {
+                            if ((playlist as any).isFavorites && (playlist as any).songs) {
+                                const songs = (playlist as any).songs;
+                                console.log(`🔄 开始迁移 ${songs.length} 首收藏歌曲...`);
+                                for (const song of songs) {
+                                    const success = await this.addToFavorites(song);
+                                    if (success) {
+                                        result.favoritesMigrated++;
+                                    } else {
+                                        result.favoritesFailed++;
+                                    }
+                                }
+                                console.log(`✅ 收藏列表迁移完成: ${result.favoritesMigrated} 成功, ${result.favoritesFailed} 失败`);
+                                break; // 只处理第一个收藏歌单
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('解析收藏列表数据失败:', error);
+                    result.favoritesFailed = 1;
+                }
+            }
+        } catch (error) {
+            console.error('迁移播放数据失败:', error);
+        }
+
+        return result;
     }
 }
 

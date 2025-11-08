@@ -12,13 +12,13 @@ let currentArtistInitial: string | number = -1;
 // 初始化发现音乐模块
 export function initDiscover() {
     console.log('📊 初始化发现音乐模块...');
-    initArtistCategory();
+    initArtistView();
     initHotPlaylists();
     console.log('✅ 发现音乐模块初始化完成');
 }
 
-// 初始化歌手分类
-function initArtistCategory() {
+// 初始化歌手视图
+function initArtistView() {
     const typeSelect = document.getElementById('artistTypeSelect') as HTMLSelectElement;
     const areaSelect = document.getElementById('artistAreaSelect') as HTMLSelectElement;
     const initialSelect = document.getElementById('artistInitialSelect') as HTMLSelectElement;
@@ -32,6 +32,9 @@ function initArtistCategory() {
     if (initialSelect) {
         initialSelect.addEventListener('change', loadArtistList);
     }
+    
+    // 初始加载热门歌手
+    loadArtistList();
 }
 
 // 加载歌手列表

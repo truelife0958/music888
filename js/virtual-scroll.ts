@@ -2,6 +2,7 @@
 
 import { Song } from './api.js';
 import * as player from './player.js';
+import { isSongInFavoritesSync } from './player.js';
 import { debounce } from './utils.js';
 
 interface VirtualScrollConfig {
@@ -154,7 +155,7 @@ function createSongElement(song: Song, index: number, containerId: string): HTML
     songItem.className = 'song-item';
     songItem.dataset.index = String(index);
     
-    const isFavorite = player.isSongInFavorites(song);
+    const isFavorite = isSongInFavoritesSync(song);
     const favoriteIconClass = isFavorite ? 'fas fa-heart' : 'far fa-heart';
     const favoriteIconColor = isFavorite ? 'color: #ff6b6b;' : '';
     
@@ -187,7 +188,7 @@ function createSongElement(song: Song, index: number, containerId: string): HTML
             player.toggleFavoriteButton(song);
             // 更新图标
             const icon = favoriteBtn.querySelector('i');
-            if (icon && player.isSongInFavorites(song)) {
+            if (icon && isSongInFavoritesSync(song)) {
                 icon.className = 'fas fa-heart';
                 (icon as HTMLElement).style.color = '#ff6b6b';
             } else if (icon) {

@@ -11,6 +11,8 @@ import lyricsWorkerManager from './lyrics-worker-manager.js';
 import { safeSetItem, safeGetItem, getStorageInfo } from './storage-utils.js';
 // BUG-006修复: 引入统一的代理处理
 import { getProxiedUrl } from './proxy-handler.js';
+// 引入IndexedDB存储
+import indexedDB from './indexed-db.js';
 
 // --- Player State ---
 let currentPlaylist: Song[] = [];
@@ -581,17 +583,21 @@ export function downloadLyricByData(song: Song | null): void {
     });
 }
 
-export function loadSavedPlaylists(): void {
+export async function loadSavedPlaylists(): Promise<void> {
     try {
-        // BUG-004修复: 使用安全的localStorage读取
+        // BUG-004修复: 使用安全的localStorage读取歌单数据（保持兼容）
         const data = safeGetItem(STORAGE_CONFIG.KEY_PLAYLISTS, { playlists: [], counter: 0 });
         playlistStorage = new Map(data.playlists || []);
         playlistCounter = data.counter || 0;
         
         initializeFavoritesPlaylist();
 
-        // BUG-004修复: 加载播放历史也使用安全函数
-        playHistorySongs = safeGetItem(STORAGE_CONFIG.KEY_HISTORY, []);
+        // 新增: 从IndexedDB加载播放历史
+        playHistorySongs = await indexedDB.getHistory(PLAYER_CONFIG.MAX_HISTORY_SIZE);
+        console.log(`✅ 从IndexedDB加载了 ${playHistorySongs.length} 条播放历史`);
+        
+        // 新增: 从IndexedDB加载收藏列表
+        await loadFavoritesFromIndexedDB();
         
         console.log('✅ 播放列表和历史加载成功');
     } catch (error) {
@@ -604,8 +610,26 @@ export function loadSavedPlaylists(): void {
     }
 }
 
-// 添加歌曲到播放历史
-function addToPlayHistory(song: Song): void {
+// 从IndexedDB加载收藏列表到localStorage（保持兼容）
+async function loadFavoritesFromIndexedDB(): Promise<void> {
+    try {
+        const favorites = await indexedDB.getFavorites();
+        const key = getFavoritesPlaylistKey();
+        if (key && favorites.length > 0) {
+            const favPlaylist = playlistStorage.get(key);
+            if (favPlaylist) {
+                favPlaylist.songs = favorites;
+                savePlaylistsToStorage();
+                console.log(`✅ 从IndexedDB加载了 ${favorites.length} 首收藏歌曲`);
+            }
+        }
+    } catch (error) {
+        console.error('❌ 从IndexedDB加载收藏列表失败:', error);
+    }
+}
+
+// 添加歌曲到播放历史（使用IndexedDB）
+async function addToPlayHistory(song: Song): Promise<void> {
     // 标准化艺术家信息为 string[]，防止存储对象导致显示 [object Object]
     const normalizedSong = {
         ...song,
@@ -614,45 +638,26 @@ function addToPlayHistory(song: Song): void {
             : (typeof song.artist === 'string' ? [song.artist] : ['未知歌手'])
     };
     
-    // 移除重复的歌曲
-    playHistorySongs = playHistorySongs.filter(
-        s => !(s.id === normalizedSong.id && s.source === normalizedSong.source)
-    );
-
-    // 添加到历史开头
-    playHistorySongs.unshift(normalizedSong);
-
-    // 限制历史记录数量
-    if (playHistorySongs.length > PLAYER_CONFIG.MAX_HISTORY_SIZE) {
-        playHistorySongs = playHistorySongs.slice(0, PLAYER_CONFIG.MAX_HISTORY_SIZE);
-    }
-
-    // BUG-004修复: 使用safeSetItem自动处理配额问题
-    const saved = safeSetItem(STORAGE_CONFIG.KEY_HISTORY, playHistorySongs, {
-        onQuotaExceeded: () => {
-            // 配额超限时的用户交互
-            const storageInfo = getStorageInfo();
-            const usedMB = (storageInfo.used / (1024 * 1024)).toFixed(2);
-            
-            const userChoice = confirm(
-                `存储空间不足 (已使用 ${usedMB}MB)！\n\n` +
-                `点击"确定"导出播放历史备份后清理\n` +
-                `点击"取消"直接清理（数据将丢失）`
-            );
-            
-            if (userChoice) {
-                exportPlayHistoryBackup();
-                ui.showNotification('播放历史已导出备份', 'success');
-            }
-            
-            ui.showNotification('播放历史已自动清理以释放空间', 'info');
-        },
-        maxRetries: 3
-    });
+    // 先从IndexedDB删除重复项
+    await indexedDB.removeFromHistory(normalizedSong.id, normalizedSong.source);
     
-    if (!saved) {
-        console.error('❌ 播放历史保存失败，即使经过多次清理尝试');
-        ui.showNotification('播放历史保存失败，请清理浏览器存储', 'error');
+    // 添加到IndexedDB
+    const saved = await indexedDB.addToHistory(normalizedSong);
+    
+    if (saved) {
+        // 更新内存中的播放历史
+        playHistorySongs = playHistorySongs.filter(
+            s => !(s.id === normalizedSong.id && s.source === normalizedSong.source)
+        );
+        playHistorySongs.unshift(normalizedSong);
+        
+        // 限制内存中的历史记录数量
+        if (playHistorySongs.length > PLAYER_CONFIG.MAX_HISTORY_SIZE) {
+            playHistorySongs = playHistorySongs.slice(0, PLAYER_CONFIG.MAX_HISTORY_SIZE);
+        }
+    } else {
+        console.error('❌ 播放历史保存失败');
+        ui.showNotification('播放历史保存失败', 'error');
     }
 }
 
@@ -677,10 +682,10 @@ function exportPlayHistoryBackup(): void {
     }
 }
 
-// BUG-005修复: 导出收藏列表备份函数
-export function exportFavoritesBackup(): void {
+// BUG-005修复: 导出收藏列表备份函数（异步版本）
+export async function exportFavoritesBackup(): Promise<void> {
     try {
-        const favorites = getFavoriteSongs();
+        const favorites = await indexedDB.getFavorites();
         const data = JSON.stringify(favorites, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -704,29 +709,41 @@ export function getPlayHistory(): Song[] {
     return playHistorySongs;
 }
 
-// 清空播放历史
-export function clearPlayHistory(): void {
+// 清空播放历史（使用IndexedDB）
+export async function clearPlayHistory(): Promise<void> {
     playHistorySongs = [];
-    localStorage.removeItem(STORAGE_CONFIG.KEY_HISTORY);
+    await indexedDB.clearHistory();
+    ui.showNotification('播放历史已清空', 'success');
 }
 
-// 获取收藏歌曲列表
-export function getFavoriteSongs(): Song[] {
+// 获取收藏歌曲列表（从IndexedDB）
+export async function getFavoriteSongs(): Promise<Song[]> {
+    return await indexedDB.getFavorites();
+}
+
+// 同步版本，用于兼容旧代码
+export function getFavoriteSongsSync(): Song[] {
     const key = getFavoritesPlaylistKey();
     if (!key) return [];
     const favorites = playlistStorage.get(key);
     return favorites?.songs || [];
 }
 
-// 清空收藏列表
-export function clearFavorites(): void {
+// 清空收藏列表（使用IndexedDB）
+export async function clearFavorites(): Promise<void> {
+    await indexedDB.clearFavorites();
+    
+    // 同时清空localStorage中的收藏（保持兼容）
     const key = getFavoritesPlaylistKey();
-    if (!key) return;
-    const favorites = playlistStorage.get(key);
-    if (favorites) {
-        favorites.songs = [];
-        savePlaylistsToStorage();
+    if (key) {
+        const favorites = playlistStorage.get(key);
+        if (favorites) {
+            favorites.songs = [];
+            savePlaylistsToStorage();
+        }
     }
+    
+    ui.showNotification('收藏列表已清空', 'success');
 }
 
 function initializeFavoritesPlaylist(): void {
@@ -751,17 +768,21 @@ function getFavoritesPlaylistKey(): string | null {
     return null;
 }
 
-export function isSongInFavorites(song: Song): boolean {
+// 检查歌曲是否在收藏中（异步版本）
+export async function isSongInFavorites(song: Song): Promise<boolean> {
+    return await indexedDB.isInFavorites(song.id, song.source);
+}
+
+// 同步版本，用于兼容旧代码
+export function isSongInFavoritesSync(song: Song): boolean {
     const key = getFavoritesPlaylistKey();
     if (!key) return false;
     const favorites = playlistStorage.get(key);
     return favorites.songs.some((favSong: Song) => favSong.id === song.id && favSong.source === song.source);
 }
 
-export function toggleFavoriteButton(song: Song): void {
-    const key = getFavoritesPlaylistKey();
-    if (!key) return;
-
+// 切换收藏状态（使用IndexedDB）
+export async function toggleFavoriteButton(song: Song): Promise<void> {
     // 标准化艺术家信息为 string[]，防止存储对象导致显示 [object Object]
     const normalizedSong = {
         ...song,
@@ -770,31 +791,50 @@ export function toggleFavoriteButton(song: Song): void {
             : (typeof song.artist === 'string' ? [song.artist] : ['未知歌手'])
     };
 
-    const favorites = playlistStorage.get(key);
-    const songIndex = favorites.songs.findIndex((favSong: Song) => favSong.id === normalizedSong.id && favSong.source === normalizedSong.source);
+    // 检查是否已在收藏中
+    const isInFavorites = await indexedDB.isInFavorites(normalizedSong.id, normalizedSong.source);
 
-    if (songIndex > -1) {
-        favorites.songs.splice(songIndex, 1);
+    if (isInFavorites) {
+        // 从IndexedDB移除
+        await indexedDB.removeFromFavorites(normalizedSong.id, normalizedSong.source);
         ui.showNotification(`已从"我的喜欢"中移除`, 'success');
     } else {
-        favorites.songs.unshift(normalizedSong);
+        // 添加到IndexedDB
+        await indexedDB.addToFavorites(normalizedSong);
         ui.showNotification(`已添加到"我的喜欢"`, 'success');
     }
 
-    savePlaylistsToStorage();
-    updatePlayerFavoriteButton();
+    // 同时更新localStorage中的收藏（保持兼容）
+    const key = getFavoritesPlaylistKey();
+    if (key) {
+        const favorites = playlistStorage.get(key);
+        const songIndex = favorites.songs.findIndex((favSong: Song) => 
+            favSong.id === normalizedSong.id && favSong.source === normalizedSong.source
+        );
+        if (isInFavorites && songIndex > -1) {
+            favorites.songs.splice(songIndex, 1);
+        } else if (!isInFavorites) {
+            favorites.songs.unshift(normalizedSong);
+        }
+        savePlaylistsToStorage();
+    }
+
+    await updatePlayerFavoriteButton();
 
     // 触发全局事件,通知main.ts更新显示
     window.dispatchEvent(new CustomEvent('favoritesUpdated'));
 }
 
-function updatePlayerFavoriteButton(): void {
+// 更新播放器收藏按钮状态（异步版本）
+async function updatePlayerFavoriteButton(): Promise<void> {
     const song = getCurrentSong();
     const btn = document.getElementById('playerFavoriteBtn');
     if (!song || !btn) return;
     
     const icon = btn.querySelector('i')!;
-    if (isSongInFavorites(song)) {
+    const isInFavorites = await indexedDB.isInFavorites(song.id, song.source);
+    
+    if (isInFavorites) {
         icon.className = 'fas fa-heart';
         icon.style.color = '#ff6b6b';
     } else {
@@ -1141,6 +1181,36 @@ export function init(): void {
     loadSavedPlaylists();
     // 初始化歌词 Worker
     lyricsWorkerManager.init();
+    
+    // 执行数据迁移（从localStorage到IndexedDB）
+    migrateDataToIndexedDB();
+}
+
+// 添加数据迁移函数
+async function migrateDataToIndexedDB(): Promise<void> {
+    try {
+        console.log('🔄 开始检查数据迁移...');
+        const result = await indexedDB.migratePlayDataFromLocalStorage();
+        
+        if (result.historyMigrated > 0 || result.favoritesMigrated > 0) {
+            console.log('✅ 数据迁移完成:', {
+                历史记录: `${result.historyMigrated} 成功, ${result.historyFailed} 失败`,
+                收藏歌曲: `${result.favoritesMigrated} 成功, ${result.favoritesFailed} 失败`
+            });
+            
+            ui.showNotification(
+                `数据已迁移到IndexedDB: ${result.historyMigrated}条历史, ${result.favoritesMigrated}首收藏`,
+                'success'
+            );
+            
+            // 重新加载数据以反映迁移结果
+            await loadSavedPlaylists();
+        } else {
+            console.log('✅ 无需迁移数据');
+        }
+    } catch (error) {
+        console.error('❌ 数据迁移失败:', error);
+    }
 }
 
 // 老王修复：移除自动调用，避免重复初始化
