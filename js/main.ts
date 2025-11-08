@@ -741,21 +741,34 @@ let touchEndY = 0;
 let touchStartTime = 0;
 
 const mainContainer = document.querySelector('.main-container');
-if (mainContainer && window.innerWidth <= 768) {
-    // 优化: 添加更精确的滑动检测
-    let isSwiping = false;
-    let hasMovedEnough = false;
-    let swipeDirection: 'horizontal' | 'vertical' | 'none' = 'none';
-    
-    mainContainer.addEventListener('touchstart', (e: Event) => {
-        const touchEvent = e as TouchEvent;
-        touchStartX = touchEvent.changedTouches[0].screenX;
-        touchStartY = touchEvent.changedTouches[0].screenY;
-        touchStartTime = Date.now();
-        isSwiping = false;
-        hasMovedEnough = false;
-        swipeDirection = 'none';
-    }, { passive: true });
+
+// 移动端滑动功能 - 支持动态窗口大小检测
+function initMobileSwipe(): void {
+    if (!mainContainer) return;
+
+    // 检查是否已经初始化过滑动功能
+    if ((mainContainer as any).swipeInitialized) {
+        return;
+    }
+
+    // 只在移动端宽度初始化
+    if (window.innerWidth <= 768) {
+        console.log('🎯 初始化移动端滑动功能');
+
+        // 优化: 添加更精确的滑动检测
+        let isSwiping = false;
+        let hasMovedEnough = false;
+        let swipeDirection: 'horizontal' | 'vertical' | 'none' = 'none';
+
+        mainContainer.addEventListener('touchstart', (e: Event) => {
+            const touchEvent = e as TouchEvent;
+            touchStartX = touchEvent.changedTouches[0].screenX;
+            touchStartY = touchEvent.changedTouches[0].screenY;
+            touchStartTime = Date.now();
+            isSwiping = false;
+            hasMovedEnough = false;
+            swipeDirection = 'none';
+        }, { passive: true });
 
     // 优化: 改进滑动方向判断和惯性检测
     mainContainer.addEventListener('touchmove', (e: Event) => {
@@ -804,7 +817,22 @@ if (mainContainer && window.innerWidth <= 768) {
         hasMovedEnough = false;
         swipeDirection = 'none';
     }, { passive: true });
+
+        // 标记为已初始化
+        (mainContainer as any).swipeInitialized = true;
+        console.log('✅ 移动端滑动功能初始化完成');
+    }
 }
+
+// 添加窗口大小变化监听，支持动态初始化
+window.addEventListener('resize', debounce(() => {
+    if (window.innerWidth <= 768 && mainContainer && !(mainContainer as any).swipeInitialized) {
+        initMobileSwipe();
+    }
+}, 300));
+
+// 初始化移动端滑动功能
+initMobileSwipe();
 
 // 优化: 支持快速滑动和惯性检测
 function handleSwipe(velocity: number = 0): void {
@@ -1030,3 +1058,7 @@ function updatePageTitle(song: any | null, isPlaying: boolean): void {
         }
     }
 }
+
+// ========== 初始化函数调用 ==========
+
+// 注意：initNonCriticalModules 函数已在前面定义
