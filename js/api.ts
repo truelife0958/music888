@@ -407,33 +407,56 @@ function isRetryableError(error: any, statusCode?: number): boolean {
     return false;
 }
 
-// 改进的重试机制 - 带超时和智能重试
+// BUG-005修复: 改进的重试机制 - 区分错误类型，使用指数退避
 async function fetchWithRetry(
     url: string,
     options: RequestInit = {},
     maxRetries: number = 2
 ): Promise<Response> {
-    const timeoutDuration = 8000; // 8秒超时
+    const timeoutDuration = 15000; // 15秒超时（从8秒增加）
     
-    // 优化: 提取重试延迟计算
+    // BUG-005修复: 指数退避计算，更合理的延迟
     const getRetryDelay = (attempt: number): number => {
-        // 指数退避: 1s, 2s, 4s (最多3s)
-        return Math.min(1000 * Math.pow(2, attempt), 3000);
+        // 指数退避: 1s, 2s, 4s (最多4秒)
+        return Math.min(1000 * Math.pow(2, attempt), 4000);
     };
     
-    // 优化: 提取请求执行逻辑
+    // BUG-005修复: 提取请求执行逻辑，增加错误类型判断
     const executeRequest = async (signal: AbortSignal): Promise<Response> => {
         const response = await fetch(url, { ...options, signal });
         
+        // 2xx 成功响应
         if (response.ok) {
             return response;
         }
         
+        // BUG-005修复: 4xx客户端错误不应重试（除了429限流和408超时）
+        if (response.status >= 400 && response.status < 500) {
+            const retryable = response.status === 429 || response.status === 408;
+            throw new ApiError(
+                ApiErrorType.SERVER,
+                `客户端请求错误: HTTP ${response.status}`,
+                response.status,
+                retryable  // 只有429和408可重试
+            );
+        }
+        
+        // BUG-005修复: 5xx服务器错误可以重试
+        if (response.status >= 500) {
+            throw new ApiError(
+                ApiErrorType.SERVER,
+                `服务器错误: HTTP ${response.status}`,
+                response.status,
+                true  // 服务器错误可重试
+            );
+        }
+        
+        // 其他未知状态码
         throw new ApiError(
             ApiErrorType.SERVER,
-            `API请求失败: HTTP ${response.status}`,
+            `未知响应状态: HTTP ${response.status}`,
             response.status,
-            isRetryableError(null, response.status)
+            false  // 未知状态不重试
         );
     };
     
@@ -446,23 +469,41 @@ async function fetchWithRetry(
         try {
             const response = await executeRequest(controller.signal);
             clearTimeout(timeoutId);
+            
+            // BUG-005修复: 成功后重置连续失败计数（如果有的话）
+            if (attempt > 0) {
+                console.log(`✅ 请求在第${attempt + 1}次尝试后成功`);
+            }
+            
             return response;
             
         } catch (error) {
-            // 优化: 确保超时ID在所有情况下都被清理
+            // BUG-005修复: 确保超时ID在所有情况下都被清理
             clearTimeout(timeoutId);
             
-            // 优化: 统一错误处理
+            // BUG-005修复: 统一错误处理
             lastError = normalizeError(error);
             
-            // 最后一次尝试或不可重试
-            if (attempt >= maxRetries || !lastError.retryable) {
+            // BUG-005修复: 详细的重试判断逻辑
+            const isLastAttempt = attempt >= maxRetries;
+            const shouldRetry = !isLastAttempt && lastError.retryable;
+            
+            if (!shouldRetry) {
+                // 记录最终失败
+                if (isLastAttempt) {
+                    console.error(`❌ 请求失败，已重试${attempt}次: ${lastError.message}`);
+                } else {
+                    console.error(`❌ 请求失败（不可重试）: ${lastError.message}`);
+                }
                 throw lastError;
             }
             
             // 继续重试
             const delay = getRetryDelay(attempt);
-            console.warn(`${lastError.type}错误, ${delay}ms后进行第${attempt + 1}次重试...`);
+            console.warn(
+                `⚠️ ${lastError.type}错误 (HTTP ${lastError.statusCode || 'N/A'}), ` +
+                `${delay}ms后进行第${attempt + 2}/${maxRetries + 1}次尝试...`
+            );
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
@@ -1733,6 +1774,216 @@ export async function getComments(songId: string, source: string = 'netease', li
     } catch (error) {
         console.error('获取评论失败:', error);
         return { hotComments: [], total: 0 };
+    }
+}
+
+// 获取网友精选碟歌单 - 新增功能
+export async function getHotPlaylists(order: 'hot' | 'new' = 'hot', cat: string = '全部', limit: number = 50, offset: number = 0): Promise<{
+    playlists: Array<{
+        id: string;
+        name: string;
+        coverImgUrl: string;
+        playCount: number;
+        description: string;
+        creator: { nickname: string };
+    }>;
+    total: number;
+    more: boolean;
+}> {
+    const cacheKey = `hot_playlists_${order}_${cat}_${limit}_${offset}`;
+    const cached = cache.get<any>(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
+    try {
+        const apiFormat = detectApiFormat(API_BASE);
+        let url: string;
+
+        switch (apiFormat.format) {
+            case 'ncm':
+                // NCM API格式: /top/playlist?order=hot&cat=华语&limit=50&offset=0
+                url = `${API_BASE}top/playlist?order=${order}&cat=${encodeURIComponent(cat)}&limit=${limit}&offset=${offset}`;
+                break;
+            default:
+                // 其他API暂不支持此功能，返回空结果
+                return { playlists: [], total: 0, more: false };
+        }
+
+        const response = await fetchWithRetry(url);
+        const data = await response.json();
+
+        let result = {
+            playlists: [] as any[],
+            total: 0,
+            more: false
+        };
+
+        if (apiFormat.format === 'ncm') {
+            // NCM API格式: { playlists: [...], total: 0, more: false }
+            if (data && data.playlists && Array.isArray(data.playlists)) {
+                result.playlists = data.playlists.map((playlist: any) => ({
+                    id: playlist.id,
+                    name: playlist.name,
+                    coverImgUrl: playlist.coverImgUrl || playlist.cover,
+                    playCount: playlist.playCount || 0,
+                    description: playlist.description || '',
+                    creator: { nickname: playlist.creator?.nickname || '未知创建者' }
+                }));
+                result.total = data.total || 0;
+                result.more = data.more || false;
+            }
+        }
+
+        cache.set(cacheKey, result);
+        return result;
+    } catch (error) {
+        console.error('获取网友精选碟失败:', error);
+        return { playlists: [], total: 0, more: false };
+    }
+}
+
+// 获取歌手分类列表 - 新增功能
+export async function getArtistList(type: number = -1, area: number = -1, initial: string | number = -1, limit: number = 30, offset: number = 0): Promise<{
+    artists: Array<{
+        id: string;
+        name: string;
+        picUrl: string;
+        albumSize: number;
+        musicSize: number;
+    }>;
+    total: number;
+    more: boolean;
+}> {
+    const cacheKey = `artist_list_${type}_${area}_${initial}_${limit}_${offset}`;
+    const cached = cache.get<any>(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
+    try {
+        const apiFormat = detectApiFormat(API_BASE);
+        let url: string;
+
+        switch (apiFormat.format) {
+            case 'ncm':
+                // NCM API格式: /artist/list?type=1&area=96&initial=b&limit=30&offset=0
+                url = `${API_BASE}artist/list?type=${type}&area=${area}&initial=${initial}&limit=${limit}&offset=${offset}`;
+                break;
+            default:
+                // 其他API暂不支持此功能，返回空结果
+                return { artists: [], total: 0, more: false };
+        }
+
+        const response = await fetchWithRetry(url);
+        const data = await response.json();
+
+        let result = {
+            artists: [] as any[],
+            total: 0,
+            more: false
+        };
+
+        if (apiFormat.format === 'ncm') {
+            // NCM API格式: { artists: [...], total: 0, more: false }
+            if (data && data.artists && Array.isArray(data.artists)) {
+                result.artists = data.artists.map((artist: any) => ({
+                    id: artist.id,
+                    name: artist.name,
+                    picUrl: artist.picUrl || artist.img1v1Url,
+                    albumSize: artist.albumSize || 0,
+                    musicSize: artist.musicSize || 0
+                }));
+                result.total = data.total || 0;
+                result.more = data.more || false;
+            }
+        }
+
+        cache.set(cacheKey, result);
+        return result;
+    } catch (error) {
+        console.error('获取歌手分类列表失败:', error);
+        return { artists: [], total: 0, more: false };
+    }
+}
+
+// 获取歌手热门50首歌曲 - 新增功能
+export async function getArtistTopSongs(artistId: string): Promise<{
+    artist: {
+        id: string;
+        name: string;
+        picUrl: string;
+    };
+    songs: Song[];
+}> {
+    const cacheKey = `artist_top_songs_${artistId}`;
+    const cached = cache.get<any>(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
+    try {
+        const apiFormat = detectApiFormat(API_BASE);
+        let url: string;
+
+        switch (apiFormat.format) {
+            case 'ncm':
+                // NCM API格式: /artist/top/song?id=歌手ID
+                url = `${API_BASE}artist/top/song?id=${artistId}`;
+                break;
+            default:
+                // 其他API暂不支持此功能，返回空结果
+                return { artist: { id: artistId, name: '未知歌手', picUrl: '' }, songs: [] };
+        }
+
+        const response = await fetchWithRetry(url);
+        const data = await response.json();
+
+        let result = {
+            artist: {
+                id: artistId,
+                name: '未知歌手',
+                picUrl: ''
+            },
+            songs: [] as Song[]
+        };
+
+        if (apiFormat.format === 'ncm') {
+            // NCM API格式: { artist: {...}, songs: [...] }
+            if (data && data.artist) {
+                result.artist = {
+                    id: data.artist.id || artistId,
+                    name: data.artist.name || '未知歌手',
+                    picUrl: data.artist.picUrl || ''
+                };
+            }
+            if (data && data.songs && Array.isArray(data.songs)) {
+                result.songs = data.songs.map((song: any) => {
+                    const songInfo = extractSongInfo(song);
+                    const artistInfo = [data.artist?.name || '未知歌手']; // 歌手歌曲直接使用歌手名
+                    const albumInfo = extractAlbumInfo(song);
+                    const picId = song.pic_id || song.cover || song.album_pic || song.pic ||
+                                 song?.al?.picStr || song?.album?.picStr || song?.album?.pic ||
+                                 data.artist?.picUrl; // 使用歌手图片作为专辑封面
+
+                    return {
+                        ...song,
+                        source: 'netease',
+                        name: songInfo,
+                        artist: artistInfo,
+                        album: albumInfo,
+                        pic_id: picId,
+                        rawData: song
+                    };
+                });
+            }
+        }
+
+        cache.set(cacheKey, result);
+        return result;
+    } catch (error) {
+        console.error('获取歌手热门歌曲失败:', error);
+        return { artist: { id: artistId, name: '未知歌手', picUrl: '' }, songs: [] };
     }
 }
 

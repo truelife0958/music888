@@ -2,6 +2,7 @@
 
 import { Song } from './api.js';
 import * as player from './player.js';
+import { debounce } from './utils.js';
 
 interface VirtualScrollConfig {
     container: HTMLElement;
@@ -20,7 +21,8 @@ export class VirtualScroll {
     private contentHeight: number = 0;
     private viewport!: HTMLElement;
     private content!: HTMLElement;
-    private scrollListener: () => void;
+    private scrollListener: (() => void) | null = null;
+    private debouncedRender: (() => void) | null = null;
 
     constructor(config: VirtualScrollConfig) {
         this.config = config;
@@ -28,6 +30,11 @@ export class VirtualScroll {
         
         // 创建虚拟滚动容器结构
         this.setupViewport();
+        
+        // 优化：创建防抖渲染函数（16ms ≈ 60fps）
+        this.debouncedRender = debounce(() => {
+            this.render();
+        }, 16);
         
         // 绑定滚动事件
         this.scrollListener = this.onScroll.bind(this);
@@ -63,7 +70,10 @@ export class VirtualScroll {
 
     private onScroll(): void {
         this.scrollTop = this.viewport.scrollTop;
-        this.render();
+        // 优化：使用防抖渲染，避免频繁重绘
+        if (this.debouncedRender) {
+            this.debouncedRender();
+        }
     }
 
     private render(): void {
@@ -110,7 +120,11 @@ export class VirtualScroll {
     }
 
     public destroy(): void {
-        this.viewport.removeEventListener('scroll', this.scrollListener);
+        if (this.scrollListener) {
+            this.viewport.removeEventListener('scroll', this.scrollListener);
+            this.scrollListener = null;
+        }
+        this.debouncedRender = null;
         this.content.innerHTML = '';
     }
 }

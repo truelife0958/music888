@@ -133,8 +133,8 @@ function mergeLyrics(
 function findClosestTranslation(time: number, translations: LyricLine[]): string | undefined {
     if (translations.length === 0) return undefined;
     
-    // 查找时间差在0.5秒内的翻译
-    const tolerance = 0.5;
+    // 优化：提高歌词匹配精度，从0.5秒缩小到0.3秒
+    const tolerance = 0.3;
     
     for (const trans of translations) {
         if (Math.abs(trans.time - time) <= tolerance) {

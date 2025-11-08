@@ -7,6 +7,7 @@ import * as player from './player.js';
 import { debounce } from './utils.js';
 import storageAdapter from './storage-adapter.js';
 import { ThemeManager } from './theme-manager.js';
+import performanceMonitor from './performance-monitor.js';
 
 // 优化: 使用动态导入实现代码分割，减少初始加载时间
 let rankModule: any = null;
@@ -15,6 +16,7 @@ let searchHistoryModule: any = null;
 let playStatsModule: any = null;
 let imageLazyLoader: any = null;
 let downloadProgressManager: any = null;
+let discoverModule: any = null;
 let themeManager: ThemeManager | null = null;
 
 // 防止重复初始化的全局标志
@@ -27,7 +29,8 @@ const moduleLoadStatus = {
     searchHistory: false,
     playStats: false,
     imageLoader: false,
-    downloadProgress: false
+    downloadProgress: false,
+    discover: false
 };
 
 // Tab切换逻辑
@@ -54,6 +57,8 @@ export function switchTab(tabName: string): void {
     // 按需加载各标签页对应的模块
     if (tabName === 'rank') {
         loadRankModule();
+    } else if (tabName === 'discover') {
+        loadDiscoverModule();
     } else if (tabName === 'playlist') {
         loadPlaylistModule();
     }
@@ -66,6 +71,10 @@ async function initializeApp(): Promise<void> {
     }
     appInitialized = true;
     console.log('🚀 开始初始化应用...');
+    
+    // 启动性能监控
+    performanceMonitor.init();
+    performanceMonitor.mark('app-init-start');
     
     // 优化: 初始化主题管理器
     themeManager = new ThemeManager();
@@ -81,6 +90,9 @@ async function initializeApp(): Promise<void> {
     
     ui.init();
     player.init();
+    
+    // 优化：iOS Safari音频解锁机制
+    initIOSAudioUnlock();
     
     // 优化: 延迟初始化非关键模块
     initPerformanceOptimizations();
@@ -177,21 +189,20 @@ async function initializeApp(): Promise<void> {
         console.error('❌ 搜索功能初始化失败：缺少必要元素');
     }
     
-    // 实时搜索防抖（可选功能，默认禁用）
-    // 如需启用实时搜索，取消下面的注释
-    /*
+    // 优化：启用实时搜索防抖，提升用户体验
     const debouncedSearch = debounce(() => {
         if (searchInput && searchInput.value.trim()) {
+            console.log('🔍 [防抖搜索] 触发搜索:', searchInput.value);
             handleSearch();
         }
-    }, 500);
+    }, 300); // 300ms防抖延迟
     
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             debouncedSearch();
         });
+        console.log('✅ 实时搜索防抖已启用（300ms延迟）');
     }
-    */
 
     // 播放器控制 - 使用ID选择器更安全
     document.getElementById('playBtn')!.addEventListener('click', player.togglePlay);
@@ -292,6 +303,15 @@ async function initializeApp(): Promise<void> {
 
     // 移动端页面指示器事件绑定
     initMobilePageIndicators();
+    
+    // 性能监控：标记应用初始化完成
+    performanceMonitor.mark('app-init-end');
+    performanceMonitor.measure('app-initialization', 'app-init-start', 'app-init-end');
+    
+    // 打印性能报告（延迟5秒，确保所有资源加载完成）
+    setTimeout(() => {
+        performanceMonitor.printReport();
+    }, 5000);
 }
 
 // 优化: 按需加载非关键模块
@@ -311,7 +331,7 @@ async function initNonCriticalModules(): Promise<void> {
 // 优化: 按需加载排行榜模块
 async function loadRankModule(): Promise<void> {
     if (moduleLoadStatus.rank) return;
-    
+
     try {
         console.log('📦 加载排行榜模块...');
         rankModule = await import('./rank.js');
@@ -320,6 +340,23 @@ async function loadRankModule(): Promise<void> {
         console.log('✅ 排行榜模块加载完成');
     } catch (error) {
         console.error('❌ 排行榜模块加载失败:', error);
+    }
+}
+
+// 优化: 按需加载发现音乐模块
+async function loadDiscoverModule(): Promise<void> {
+    if (moduleLoadStatus.discover && discoverModule) return;
+
+    try {
+        console.log('📦 加载发现音乐模块...');
+        discoverModule = await import('./discover.js');
+        discoverModule.initDiscover();
+        moduleLoadStatus.discover = true;
+        console.log('✅ 发现音乐模块加载完成');
+    } catch (error) {
+        console.error('❌ 发现音乐模块加载失败:', error);
+        moduleLoadStatus.discover = false;
+        discoverModule = null;
     }
 }
 
@@ -780,7 +817,10 @@ if (window.innerWidth <= 768) {
     (window as any).switchMobilePage(0);
 }
 
-// 页面卸载时清理资源，防止内存泄漏
+// BUG-002修复: 页面卸载时清理资源，防止内存泄漏
+// 导入歌词Worker管理器以便同步清理
+import lyricsWorkerManager from './lyrics-worker-manager.js';
+
 window.addEventListener('beforeunload', () => {
     console.log('🧹 页面卸载，清理资源...');
     
@@ -800,7 +840,7 @@ window.addEventListener('beforeunload', () => {
     }
     
     // 清理性能优化模块
-    if (imageLazyLoader) {
+    if (imageLazyLoader && typeof imageLazyLoader.destroy === 'function') {
         imageLazyLoader.destroy();
         imageLazyLoader = null;
     }
@@ -810,15 +850,26 @@ window.addEventListener('beforeunload', () => {
     }
     
     // 清理主题管理器
-    if (themeManager) {
+    if (themeManager && typeof themeManager.destroy === 'function') {
         themeManager.destroy();
         themeManager = null;
     }
     
-    // 清理歌词 Worker
-    import('./lyrics-worker-manager.js').then(module => {
-        module.default.destroy();
-    });
+    // BUG-002修复: 同步清理歌词Worker（不使用异步导入）
+    lyricsWorkerManager.destroy();
+    
+    // 清理性能监控
+    performanceMonitor.cleanup();
+    
+    console.log('✅ 资源清理完成');
+});
+
+// BUG-002修复: 添加页面隐藏时的清理（移动端切换应用）
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        console.log('📱 页面隐藏，暂停非必要资源...');
+        // 暂停时可以考虑清理一些临时数据，但不终止Worker
+    }
 });
 
 // 优化: 移动端滑动手势支持 - 增强版
@@ -935,9 +986,9 @@ function handleSwipe(velocity: number = 0): void {
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
     
-    // 优化: 根据滑动速度动态调整最小距离要求
-    // 快速滑动（velocity > 0.5）只需30px，慢速滑动需要60px
-    const minSwipeDistance = velocity > 0.5 ? 30 : 60;
+    // 优化: 提高手势阈值到60px，避免误触
+    // 快速滑动（velocity > 0.5）只需40px，慢速滑动需要60px
+    const minSwipeDistance = velocity > 0.5 ? 40 : 60;
 
     // 只处理水平滑动
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
@@ -1144,6 +1195,49 @@ function updatePageTitle(song: any | null, isPlaying: boolean): void {
             titleUpdateInterval = null;
         }
     }
+}
+
+// ========== iOS Safari音频解锁 ==========
+function initIOSAudioUnlock(): void {
+    // 检测是否为iOS设备
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    
+    if (!isIOS) {
+        console.log('ℹ️ 非iOS设备，跳过音频解锁');
+        return;
+    }
+    
+    console.log('📱 检测到iOS设备，初始化音频解锁机制');
+    
+    // 创建音频解锁函数
+    const unlockAudio = () => {
+        // 获取页面中的audio元素
+        const audioElement = document.querySelector('audio');
+        if (audioElement) {
+            // 尝试播放并立即暂停以解锁音频
+            const playPromise = audioElement.play();
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        audioElement.pause();
+                        console.log('✅ iOS音频已解锁');
+                    })
+                    .catch((error: Error) => {
+                        console.warn('⚠️ iOS音频解锁失败:', error.message);
+                    });
+            }
+        }
+        
+        // 清理事件监听器
+        document.removeEventListener('touchstart', unlockAudio);
+        document.removeEventListener('touchend', unlockAudio);
+        document.removeEventListener('click', unlockAudio);
+    };
+    
+    // 监听用户首次交互
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('touchend', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
 }
 
 // ========== 初始化函数调用 ==========

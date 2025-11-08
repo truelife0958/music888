@@ -26,6 +26,30 @@ export const API_CONFIG = {
     RETRY_BASE_DELAY: 1000,
     /** API 失败阈值 */
     API_FAILURE_THRESHOLD: 3,
+    /** BUG-006修复: 统一的代理配置 */
+    USE_PROXY: true,
+    /** 需要代理的源列表 */
+    PROXY_SOURCES: ['bilibili', 'kuwo'] as const,
+} as const;
+
+/**
+ * BUG-006修复: 跨域代理配置
+ */
+export const PROXY_CONFIG = {
+    /** Bilibili代理路径 */
+    BILIBILI_PROXY: '/api/bilibili-proxy',
+    /** 通用音频代理路径 */
+    AUDIO_PROXY: '/api/audio-proxy',
+    /** 是否自动将HTTP升级为HTTPS */
+    AUTO_HTTPS: true,
+    /** 允许的源域名（用于验证） */
+    ALLOWED_DOMAINS: [
+        'music.163.com',
+        'y.qq.com',
+        'bilibili.com',
+        'kuwo.cn',
+        'kugou.com'
+    ] as const,
 } as const;
 
 /**

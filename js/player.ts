@@ -7,6 +7,10 @@ import { LyricLine } from './types.js';
 import { recordPlay } from './play-stats.js';
 import { startDownloadWithProgress } from './download-progress.js';
 import lyricsWorkerManager from './lyrics-worker-manager.js';
+// BUG-004修复: 引入安全的localStorage操作函数
+import { safeSetItem, safeGetItem, getStorageInfo } from './storage-utils.js';
+// BUG-006修复: 引入统一的代理处理
+import { getProxiedUrl } from './proxy-handler.js';
 
 // --- Player State ---
 let currentPlaylist: Song[] = [];
@@ -134,8 +138,10 @@ function initAudioPlayer(): void {
     };
     addManagedEventListener(audioPlayer as any, 'ended', endedHandler);
     
-    // BUG-002修复: 添加定期状态验证，每2秒检查一次
+    // BUG-001修复: 添加定期状态验证，防止死循环
     let stateCheckInterval: number | null = null;
+    let stateCheckRetryCount = 0;
+    const MAX_STATE_CHECK_RETRIES = 5;
     
     const startStateCheck = () => {
         if (stateCheckInterval !== null) return; // 防止重复启动
@@ -150,8 +156,22 @@ function initAudioPlayer(): void {
                     actual: actuallyPlaying,
                     paused: audioPlayer.paused,
                     ended: audioPlayer.ended,
-                    currentTime: audioPlayer.currentTime
+                    currentTime: audioPlayer.currentTime,
+                    retryCount: stateCheckRetryCount
                 });
+                
+                // BUG-001修复: 检查重试次数限制
+                if (stateCheckRetryCount >= MAX_STATE_CHECK_RETRIES) {
+                    console.error('❌ 状态同步重试次数过多，停止自动修正');
+                    isPlaying = false;
+                    ui.updatePlayButton(false);
+                    document.getElementById('currentCover')?.classList.remove('playing');
+                    ui.showNotification('播放器状态异常，请刷新页面', 'error');
+                    stateCheckRetryCount = 0;
+                    return;
+                }
+                
+                stateCheckRetryCount++;
                 
                 // 修正状态
                 isPlaying = actuallyPlaying;
@@ -162,6 +182,9 @@ function initAudioPlayer(): void {
                 } else {
                     document.getElementById('currentCover')?.classList.remove('playing');
                 }
+            } else {
+                // 状态一致时重置重试计数
+                stateCheckRetryCount = 0;
             }
         }, 2000); // 每2秒检查一次
     };
@@ -311,14 +334,16 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                 console.warn('⚠️ 下载歌词按钮未找到');
             }
 
-            // Bilibili 音乐源使用代理服务
-            if (song.source === 'bilibili') {
-                // 优先使用代理服务，支持范围请求和流式播放
-                const proxyUrl = `/api/bilibili-proxy?url=${encodeURIComponent(urlData.url)}`;
-                audioPlayer.src = proxyUrl;
-                            } else {
-                audioPlayer.src = urlData.url.replace(/^http:/, 'https:');
-            }
+            // BUG-006修复: 统一使用代理处理函数
+            const finalUrl = getProxiedUrl(urlData.url, song.source);
+            audioPlayer.src = finalUrl;
+            
+            console.log('🎵 播放URL:', {
+                original: urlData.url,
+                final: finalUrl,
+                source: song.source,
+                proxied: urlData.url !== finalUrl
+            });
             audioPlayer.load();
 
             // 添加到播放历史
@@ -558,21 +583,25 @@ export function downloadLyricByData(song: Song | null): void {
 
 export function loadSavedPlaylists(): void {
     try {
-        const saved = localStorage.getItem(STORAGE_CONFIG.KEY_PLAYLISTS);
-        if (saved) {
-            const data = JSON.parse(saved);
-            playlistStorage = new Map(data.playlists || []);
-            playlistCounter = data.counter || 0;
-        }
+        // BUG-004修复: 使用安全的localStorage读取
+        const data = safeGetItem(STORAGE_CONFIG.KEY_PLAYLISTS, { playlists: [], counter: 0 });
+        playlistStorage = new Map(data.playlists || []);
+        playlistCounter = data.counter || 0;
+        
         initializeFavoritesPlaylist();
 
-        //加载播放历史
-        const savedHistory = localStorage.getItem(STORAGE_CONFIG.KEY_HISTORY);
-        if (savedHistory) {
-            playHistorySongs = JSON.parse(savedHistory);
-        }
+        // BUG-004修复: 加载播放历史也使用安全函数
+        playHistorySongs = safeGetItem(STORAGE_CONFIG.KEY_HISTORY, []);
+        
+        console.log('✅ 播放列表和历史加载成功');
     } catch (error) {
-            }
+        console.error('❌ 加载播放列表失败:', error);
+        // 降级：使用空数据
+        playlistStorage = new Map();
+        playlistCounter = 0;
+        playHistorySongs = [];
+        initializeFavoritesPlaylist();
+    }
 }
 
 // 添加歌曲到播放历史
@@ -598,80 +627,32 @@ function addToPlayHistory(song: Song): void {
         playHistorySongs = playHistorySongs.slice(0, PLAYER_CONFIG.MAX_HISTORY_SIZE);
     }
 
-    // BUG-005修复: 改进localStorage保存，增加用户交互和导出功能
-    try {
-        const data = JSON.stringify(playHistorySongs);
-        const dataSizeMB = data.length / (1024 * 1024);
-        
-        // 检查数据大小（localStorage通常限制5-10MB）
-        if (data.length > 4 * 1024 * 1024) { // 4MB限制
-            console.warn(`播放历史数据过大 (${dataSizeMB.toFixed(2)}MB)，需要用户选择`);
+    // BUG-004修复: 使用safeSetItem自动处理配额问题
+    const saved = safeSetItem(STORAGE_CONFIG.KEY_HISTORY, playHistorySongs, {
+        onQuotaExceeded: () => {
+            // 配额超限时的用户交互
+            const storageInfo = getStorageInfo();
+            const usedMB = (storageInfo.used / (1024 * 1024)).toFixed(2);
             
-            // BUG-005修复: 提供用户选择，而不是自动清理
             const userChoice = confirm(
-                `播放历史数据过大 (${dataSizeMB.toFixed(2)}MB)，存储空间即将不足。\n\n` +
-                `点击"确定"导出备份后自动清理\n` +
-                `点击"取消"仅清理不备份`
+                `存储空间不足 (已使用 ${usedMB}MB)！\n\n` +
+                `点击"确定"导出播放历史备份后清理\n` +
+                `点击"取消"直接清理（数据将丢失）`
             );
             
             if (userChoice) {
-                // 导出备份
                 exportPlayHistoryBackup();
+                ui.showNotification('播放历史已导出备份', 'success');
             }
             
-            // 清理到50%
-            playHistorySongs = playHistorySongs.slice(0, Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE / 2));
-            localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
-            ui.showNotification('播放历史已清理，保留最近50%', 'info');
-        } else {
-            localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, data);
-        }
-    } catch (error) {
-        if (error instanceof Error && error.name === 'QuotaExceededError') {
-            console.error('localStorage空间不足，需要用户交互');
-            
-            // BUG-005修复: localStorage溢出时提供用户选择
-            const userChoice = confirm(
-                '存储空间已满！\n\n' +
-                '点击"确定"导出数据备份后清理\n' +
-                '点击"取消"直接清理（数据将丢失）'
-            );
-            
-            if (userChoice) {
-                // 先导出当前数据
-                exportPlayHistoryBackup();
-            }
-            
-            // 分级清理策略
-            const cleanupStrategies = [
-                { size: Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE * 0.7), desc: '保留70%' },
-                { size: Math.floor(PLAYER_CONFIG.MAX_HISTORY_SIZE * 0.5), desc: '保留50%' },
-                { size: 50, desc: '保留最近50首' },
-                { size: 20, desc: '保留最近20首' }
-            ];
-            
-            let saved = false;
-            for (const strategy of cleanupStrategies) {
-                try {
-                    playHistorySongs = playHistorySongs.slice(0, strategy.size);
-                    localStorage.setItem(STORAGE_CONFIG.KEY_HISTORY, JSON.stringify(playHistorySongs));
-                    console.log(`清理成功: ${strategy.desc}`);
-                    ui.showNotification(`已清理播放历史(${strategy.desc})`, 'success');
-                    saved = true;
-                    break;
-                } catch (retryError) {
-                    continue;
-                }
-            }
-            
-            if (!saved) {
-                console.error('所有清理策略均失败');
-                ui.showNotification('存储空间严重不足，建议清理浏览器缓存', 'error');
-            }
-        } else {
-            console.error('保存播放历史失败:', error);
-            ui.showNotification('保存播放历史失败', 'error');
-        }
+            ui.showNotification('播放历史已自动清理以释放空间', 'info');
+        },
+        maxRetries: 3
+    });
+    
+    if (!saved) {
+        console.error('❌ 播放历史保存失败，即使经过多次清理尝试');
+        ui.showNotification('播放历史保存失败，请清理浏览器存储', 'error');
     }
 }
 
@@ -848,33 +829,40 @@ function getAlternativeSources(originalSong: Song): Song[] {
     return alternativeSources;
 }
 
-// 保存歌单到本地存储
+// BUG-004修复: 保存歌单到本地存储（使用安全函数）
 function savePlaylistsToStorage(): void {
-    try {
-        const playlistsData = {
-            playlists: Array.from(playlistStorage.entries()),
-            counter: playlistCounter
-        };
-        const data = JSON.stringify(playlistsData);
-        
-        // 检查数据大小
-        if (data.length > 4 * 1024 * 1024) { // 4MB限制
-            console.warn('歌单数据过大，建议用户导出备份');
-        }
-        
-        localStorage.setItem(STORAGE_CONFIG.KEY_PLAYLISTS, data);
-    } catch (error) {
-        if (error instanceof Error && error.name === 'QuotaExceededError') {
-            console.error('localStorage空间不足，无法保存歌单');
-            // 通知用户
+    const playlistsData = {
+        playlists: Array.from(playlistStorage.entries()),
+        counter: playlistCounter
+    };
+    
+    const saved = safeSetItem(STORAGE_CONFIG.KEY_PLAYLISTS, playlistsData, {
+        onQuotaExceeded: () => {
+            console.error('❌ localStorage空间不足，无法保存歌单');
+            ui.showNotification('存储空间不足，歌单保存失败', 'error');
+            
+            // 通知用户导出备份
+            const shouldExport = confirm(
+                '存储空间不足！\n\n' +
+                '是否导出收藏列表备份？'
+            );
+            
+            if (shouldExport) {
+                exportFavoritesBackup();
+            }
+            
+            // 触发全局事件
             if (typeof window !== 'undefined' && window.dispatchEvent) {
                 window.dispatchEvent(new CustomEvent('storageQuotaExceeded', {
                     detail: { type: 'playlists' }
                 }));
             }
-        } else {
-            console.error('保存歌单失败:', error);
-        }
+        },
+        maxRetries: 2
+    });
+    
+    if (!saved) {
+        console.error('❌ 歌单保存失败');
     }
 }
 

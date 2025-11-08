@@ -40,13 +40,13 @@
     
     <div class="main-container">
         <div class="content-section">
-            <!-- 标签页：搜索结果、排行榜、歌单 -->
+            <!-- 标签页：搜索结果、发现音乐、歌单 -->
             <div class="tabs">
                 <button class="tab-btn active" data-tab="search">
                     <i class="fas fa-search"></i> 搜索结果
                 </button>
-                <button class="tab-btn" data-tab="rank">
-                    <i class="fas fa-chart-line"></i> 排行榜
+                <button class="tab-btn" data-tab="discover">
+                    <i class="fas fa-compass"></i> 发现音乐
                 </button>
                 <button class="tab-btn" data-tab="playlist">
                     <i class="fas fa-list-music"></i> 歌单
@@ -73,9 +73,82 @@
                 </div>
             </div>
 
-            <!-- 排行榜标签页 - 显示排行榜选择列表 -->
-            <div id="rankTab" class="tab-content">
-                <div class="rank-songs" id="rankSongs"></div>
+            <!-- 发现音乐标签页 - 包含排行榜和歌手分类 -->
+            <div id="discoverTab" class="tab-content">
+                <!-- 功能选择区 -->
+                <div class="discover-nav">
+                    <button class="discover-nav-btn active" data-discover="rank">
+                        <i class="fas fa-chart-line"></i> 排行榜
+                    </button>
+                    <button class="discover-nav-btn" data-discover="artists">
+                        <i class="fas fa-microphone"></i> 歌手分类
+                    </button>
+                </div>
+
+                <!-- 排行榜内容 -->
+                <div id="rankContent" class="discover-content active">
+                    <div class="rank-songs" id="rankSongs"></div>
+                </div>
+
+                <!-- 歌手分类内容 -->
+                <div id="artistContent" class="discover-content">
+                    <div class="artist-filters">
+                        <div class="filter-group">
+                            <label>类型:</label>
+                            <select class="artist-type-select" id="artistTypeSelect">
+                                <option value="-1">全部</option>
+                                <option value="1">男歌手</option>
+                                <option value="2">女歌手</option>
+                                <option value="3">乐队</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>地区:</label>
+                            <select class="artist-area-select" id="artistAreaSelect">
+                                <option value="-1">全部</option>
+                                <option value="7">华语</option>
+                                <option value="96">欧美</option>
+                                <option value="8">日本</option>
+                                <option value="16">韩国</option>
+                                <option value="0">其他</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>首字母:</label>
+                            <select class="artist-initial-select" id="artistInitialSelect">
+                                <option value="-1">热门</option>
+                                <option value="0">#</option>
+                                <option value="a">A</option>
+                                <option value="b">B</option>
+                                <option value="c">C</option>
+                                <option value="d">D</option>
+                                <option value="e">E</option>
+                                <option value="f">F</option>
+                                <option value="g">G</option>
+                                <option value="h">H</option>
+                                <option value="i">I</option>
+                                <option value="j">J</option>
+                                <option value="k">K</option>
+                                <option value="l">L</option>
+                                <option value="m">M</option>
+                                <option value="n">N</option>
+                                <option value="o">O</option>
+                                <option value="p">P</option>
+                                <option value="q">Q</option>
+                                <option value="r">R</option>
+                                <option value="s">S</option>
+                                <option value="t">T</option>
+                                <option value="u">U</option>
+                                <option value="v">V</option>
+                                <option value="w">W</option>
+                                <option value="x">X</option>
+                                <option value="y">Y</option>
+                                <option value="z">Z</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="artist-list" id="artistList"></div>
+                </div>
             </div>
 
             <!-- 歌单标签页 -->
@@ -97,10 +170,71 @@
                     <h4 style="color: rgba(255,255,255,0.9); font-size: 16px; margin: 20px 0 15px 0; padding-left: 10px; border-left: 3px solid #ff6b6b;">
                         <i class="fas fa-fire"></i> 网易热门歌单
                     </h4>
+                    <div class="hot-playlists-controls">
+                        <select class="playlist-order-select" id="playlistOrderSelect">
+                            <option value="hot">最热</option>
+                            <option value="new">最新</option>
+                        </select>
+                        <select class="playlist-category-select" id="playlistCategorySelect">
+                            <option value="全部">全部</option>
+                            <option value="华语">华语</option>
+                            <option value="古风">古风</option>
+                            <option value="欧美">欧美</option>
+                            <option value="流行">流行</option>
+                            <option value="摇滚">摇滚</option>
+                            <option value="民谣">民谣</option>
+                            <option value="电子">电子</option>
+                            <option value="说唱">说唱</option>
+                            <option value="轻音乐">轻音乐</option>
+                            <option value="影视原声">影视原声</option>
+                            <option value="ACG">ACG</option>
+                            <option value="怀旧">怀旧</option>
+                        </select>
+                        <button class="refresh-playlists-btn" id="refreshPlaylistsBtn">
+                            <i class="fas fa-sync-alt"></i> 刷新
+                        </button>
+                    </div>
                     <div class="hot-playlists-grid" id="hotPlaylistsGrid">
                         <div class="loading">
                             <i class="fas fa-spinner"></i>
                             <div>正在加载热门歌单...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 网友精选碟 -->
+                <div class="user-playlists-section" id="userPlaylistsSection">
+                    <h4 style="color: rgba(255,255,255,0.9); font-size: 16px; margin: 20px 0 15px 0; padding-left: 10px; border-left: 3px solid #4ecdc4;">
+                        <i class="fas fa-star"></i> 网友精选碟
+                    </h4>
+                    <div class="user-playlists-controls">
+                        <select class="user-playlists-order-select" id="userPlaylistsOrderSelect">
+                            <option value="hot">最热</option>
+                            <option value="new">最新</option>
+                        </select>
+                        <select class="user-playlists-category-select" id="userPlaylistsCategorySelect">
+                            <option value="全部">全部</option>
+                            <option value="华语">华语</option>
+                            <option value="古风">古风</option>
+                            <option value="欧美">欧美</option>
+                            <option value="流行">流行</option>
+                            <option value="摇滚">摇滚</option>
+                            <option value="民谣">民谣</option>
+                            <option value="电子">电子</option>
+                            <option value="说唱">说唱</option>
+                            <option value="轻音乐">轻音乐</option>
+                            <option value="影视原声">影视原声</option>
+                            <option value="ACG">ACG</option>
+                            <option value="怀旧">怀旧</option>
+                        </select>
+                        <button class="refresh-user-playlists-btn" id="refreshUserPlaylistsBtn">
+                            <i class="fas fa-sync-alt"></i> 刷新
+                        </button>
+                    </div>
+                    <div class="user-playlists-grid" id="userPlaylistsGrid">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <div>正在加载网友精选碟...</div>
                         </div>
                     </div>
                 </div>

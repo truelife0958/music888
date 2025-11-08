@@ -37,9 +37,55 @@ class LyricsWorkerManager {
             this.workerReady = true;
             console.log('✅ 歌词 Worker 初始化成功');
         } catch (error) {
-            console.error('❌ 歌词 Worker 初始化失败:', error);
+            console.error('❌ 歌词 Worker 初始化失败，使用降级方案:', error);
             this.workerReady = false;
+            // BUG-003修复: Worker初始化失败时，创建降级Worker接口
+            this.createFallbackWorker();
         }
+    }
+
+    /**
+     * BUG-003修复: 创建降级Worker（模拟Worker接口）
+     */
+    private createFallbackWorker(): void {
+        console.log('📦 创建降级Worker接口');
+        
+        // 创建一个模拟Worker对象，实现必要的接口
+        const mockWorker = {
+            postMessage: (message: any) => {
+                // 在主线程同步处理
+                setTimeout(() => {
+                    try {
+                        const { type, lyric, id } = message;
+                        if (type === 'parse') {
+                            const lines = this.parseLyricFallback(lyric);
+                            this.handleMessage({
+                                data: { id, lines, error: undefined }
+                            } as MessageEvent<any>);
+                        }
+                    } catch (error) {
+                        this.handleMessage({
+                            data: {
+                                id: message.id,
+                                lines: [],
+                                error: error instanceof Error ? error.message : 'Unknown error'
+                            }
+                        } as MessageEvent<any>);
+                    }
+                }, 0);
+            },
+            addEventListener: (type: string, handler: any) => {
+                // 降级模式不需要监听事件，因为我们直接调用handleMessage
+            },
+            terminate: () => {
+                // 降级模式没有实际Worker需要终止
+                console.log('🧹 降级Worker已终止');
+            }
+        };
+        
+        this.worker = mockWorker as any;
+        this.workerReady = true;
+        console.log('✅ 降级Worker创建成功');
     }
 
     /**
