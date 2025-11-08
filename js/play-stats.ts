@@ -124,7 +124,7 @@ function updateSidebarFavorites() {
         try {
             const coverUrl = await getAlbumCoverUrl(song, 40);
             if (coverUrl) {
-                const coverElement = container.querySelector(`.stats-song-item:nth-child(${index + 1}) .stats-cover-img`);
+                const coverElement = container.querySelector(`.stats-song-item:nth-child(${index + 1}) .stats-cover-img`) as HTMLImageElement;
                 if (coverElement) {
                     coverElement.src = coverUrl;
                 }
@@ -192,7 +192,7 @@ function updateSidebarHistory() {
         try {
             const coverUrl = await getAlbumCoverUrl(song, 40);
             if (coverUrl) {
-                const coverElement = container.querySelector(`.stats-song-item:nth-child(${index + 1}) .stats-cover-img`);
+                const coverElement = container.querySelector(`.stats-song-item:nth-child(${index + 1}) .stats-cover-img`) as HTMLImageElement;
                 if (coverElement) {
                     coverElement.src = coverUrl;
                 }
@@ -250,7 +250,7 @@ function createStatsPanel() {
     panel.innerHTML = `
         <div class="stats-header">
             <h3>📊 播放统计</h3>
-            <button class="stats-close" onclick="window.closeStatsPanel()">×</button>
+            <button class="stats-close" id="statsCloseBtn">×</button>
         </div>
         <div class="stats-overview" id="statsOverview"></div>
         <div class="stats-tabs">
@@ -262,12 +262,24 @@ function createStatsPanel() {
             <div class="stats-tab-content" id="statsArtistsTab"></div>
         </div>
         <div class="stats-footer">
-            <button class="stats-clear-btn" onclick="window.clearPlayStats()">
+            <button class="stats-clear-btn" id="statsClearBtn">
                 <i class="fas fa-trash-alt"></i> 清除统计数据
             </button>
         </div>
     `;
     document.body.appendChild(panel);
+    
+    // 绑定关闭按钮
+    const closeBtn = document.getElementById('statsCloseBtn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeStatsPanel);
+    }
+    
+    // 绑定清除按钮
+    const clearBtn = document.getElementById('statsClearBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearStats);
+    }
     
     // 绑定标签切换
     panel.querySelectorAll('.stats-tab').forEach(tab => {
@@ -279,10 +291,6 @@ function createStatsPanel() {
             panel.querySelector(`#stats${tabName?.charAt(0).toUpperCase()}${tabName?.slice(1)}Tab`)?.classList.add('active');
         });
     });
-    
-    // 全局函数
-    (window as any).closeStatsPanel = closeStatsPanel;
-    (window as any).clearPlayStats = clearStats;
 }
 
 // 显示/隐藏统计面板

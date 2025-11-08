@@ -4,6 +4,13 @@ import { parsePlaylistAPI, getHotPlaylists, getArtistList, getArtistTopSongs, ty
 import { playSong } from './player';
 import { showNotification, displaySearchResults, showLoading, showError } from './ui';
 
+// HTML转义函数
+function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // 发现音乐状态管理
 let currentArtistType = -1;
 let currentArtistArea = -1;
@@ -379,18 +386,31 @@ async function loadPlaylistSongs(playlistId: string) {
             searchTab.style.display = 'block';
 
             // 显示歌单信息
+            const playlistName = result.name || '未知歌单';
             searchResults.innerHTML = `
                 <div class="playlist-detail-header">
-                    <button class="back-btn" onclick="location.reload()">
+                    <button class="back-btn" id="playlistBackToDiscoverBtn">
                         <i class="fas fa-arrow-left"></i> 返回
                     </button>
                     <div class="playlist-detail-info">
-                        <h3>${result.name}</h3>
+                        <h3>${escapeHtml(playlistName)}</h3>
                         <p>共 ${result.count} 首歌曲</p>
                     </div>
                 </div>
                 <div class="playlist-songs-container"></div>
             `;
+
+            // 绑定返回按钮事件
+            const backBtn = document.getElementById('playlistBackToDiscoverBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', () => {
+                    // 返回发现音乐标签页
+                    const discoverTab = document.querySelector('[data-tab="discover"]');
+                    if (discoverTab) {
+                        (discoverTab as HTMLElement).click();
+                    }
+                });
+            }
 
             // 显示歌曲列表
             const container = searchResults.querySelector('.playlist-songs-container');
@@ -398,7 +418,7 @@ async function loadPlaylistSongs(playlistId: string) {
                 displaySearchResults(result.songs, container.id = 'playlistSongs', result.songs);
             }
 
-            showNotification(`已加载歌单：${result.name}`, 'success');
+            showNotification(`已加载歌单：${escapeHtml(playlistName)}`, 'success');
         }
 
     } catch (error) {

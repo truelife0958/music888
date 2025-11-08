@@ -51,11 +51,11 @@ function createRadioPanel() {
     panel.innerHTML = `
         <div class="artist-radio-header">
             <h3>🎤 歌手电台</h3>
-            <button class="artist-radio-close" onclick="window.closeArtistRadio()">×</button>
+            <button class="artist-radio-close" id="artistRadioCloseBtn">×</button>
         </div>
         <div class="artist-radio-search">
             <input type="text" id="artistSearchInput" class="artist-search-input" placeholder="输入歌手名搜索...">
-            <button class="artist-search-btn" onclick="window.searchArtistSongs()">
+            <button class="artist-search-btn" id="artistSearchBtn">
                 <i class="fas fa-search"></i>
             </button>
         </div>
@@ -66,6 +66,18 @@ function createRadioPanel() {
     `;
     document.body.appendChild(panel);
     
+    // 绑定关闭按钮
+    const closeBtn = document.getElementById('artistRadioCloseBtn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeRadioPanel);
+    }
+    
+    // 绑定搜索按钮
+    const searchBtn = document.getElementById('artistSearchBtn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', searchArtistSongs);
+    }
+    
     // 绑定回车键搜索
     const input = document.getElementById('artistSearchInput') as HTMLInputElement;
     if (input) {
@@ -75,10 +87,6 @@ function createRadioPanel() {
             }
         });
     }
-    
-    // 全局函数
-    (window as any).closeArtistRadio = closeRadioPanel;
-    (window as any).searchArtistSongs = searchArtistSongs;
 }
 
 // 处理右键菜单
@@ -117,12 +125,21 @@ function showContextMenu(x: number, y: number, artist: string) {
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
     menu.innerHTML = `
-        <div class="context-menu-item" onclick="window.openArtistRadioWith('${escapeHtml(artist)}')">
+        <div class="context-menu-item" id="openArtistRadioItem">
             <i class="fas fa-broadcast-tower"></i>
-            <span>${artist} 的电台</span>
+            <span>${escapeHtml(artist)} 的电台</span>
         </div>
     `;
     document.body.appendChild(menu);
+    
+    // 绑定菜单项点击事件
+    const menuItem = document.getElementById('openArtistRadioItem');
+    if (menuItem) {
+        menuItem.addEventListener('click', () => {
+            menu.remove();
+            openRadioWithArtist(artist);
+        });
+    }
     
     // 点击其他地方关闭菜单
     setTimeout(() => {
@@ -130,12 +147,6 @@ function showContextMenu(x: number, y: number, artist: string) {
             menu.remove();
         }, { once: true });
     }, 100);
-    
-    // 全局函数
-    (window as any).openArtistRadioWith = (artistName: string) => {
-        menu.remove();
-        openRadioWithArtist(artistName);
-    };
 }
 
 // 打开电台并搜索指定歌手
@@ -189,29 +200,32 @@ async function searchArtistSongs() {
             infoContainer.innerHTML = `
                 <div class="artist-info-card">
                     <div class="artist-info-text">
-                        <div class="artist-name">${artist}</div>
+                        <div class="artist-name">${escapeHtml(artist)}</div>
                         <div class="artist-count">找到 ${artistSongs.length} 首歌曲</div>
                     </div>
-                    <button class="artist-play-all-btn" onclick="window.playAllArtistSongs()">
+                    <button class="artist-play-all-btn" id="artistPlayAllBtn">
                         <i class="fas fa-play"></i> 播放全部
                     </button>
                 </div>
             `;
+            
+            // 绑定播放全部按钮
+            const playAllBtn = document.getElementById('artistPlayAllBtn');
+            if (playAllBtn) {
+                playAllBtn.addEventListener('click', playAllArtistSongs);
+            }
         }
         
         // 显示歌曲列表
         displayArtistSongs(artistSongs);
         
-        showNotification(`找到 ${artistSongs.length} 首"${artist}"的歌曲`, 'success');
+        showNotification(`找到 ${artistSongs.length} 首"${escapeHtml(artist)}"的歌曲`, 'success');
         
     } catch (error) {
         console.error('搜索歌手歌曲失败:', error);
         songsContainer.innerHTML = '<div class="error">搜索失败，请重试</div>';
         showNotification('搜索失败', 'error');
     }
-    
-    // 全局函数
-    (window as any).playAllArtistSongs = playAllArtistSongs;
 }
 
 // 显示歌手歌曲列表
@@ -225,8 +239,8 @@ function displayArtistSongs(songs: Song[]) {
                 <div class="artist-song-item" data-index="${index}">
                     <span class="artist-song-number">${index + 1}</span>
                     <div class="artist-song-info">
-                        <div class="artist-song-name">${song.name}</div>
-                        <div class="artist-song-artist">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}</div>
+                        <div class="artist-song-name">${escapeHtml(song.name)}</div>
+                        <div class="artist-song-artist">${escapeHtml(Array.isArray(song.artist) ? song.artist.join(', ') : song.artist)}</div>
                     </div>
                     <button class="artist-song-play-btn" title="播放">▶</button>
                 </div>
