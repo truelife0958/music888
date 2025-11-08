@@ -404,9 +404,12 @@ async function loadHotPlaylists(): Promise<void> {
         ];
 
         hotPlaylistsGrid.innerHTML = hotPlaylists.map(playlist => `
-            <div class="hot-playlist-card" data-playlist-id="${playlist.id}">
+            <div class="hot-playlist-card" data-playlist-id="${playlist.id}" data-playlist-name="${playlist.name}" data-playlist-icon="${playlist.icon}">
                 <div class="hot-playlist-icon">${playlist.icon}</div>
                 <div class="hot-playlist-name">${playlist.name}</div>
+                <div class="hot-playlist-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
             </div>
         `).join('');
 
@@ -414,12 +417,11 @@ async function loadHotPlaylists(): Promise<void> {
         hotPlaylistsGrid.querySelectorAll('.hot-playlist-card').forEach(card => {
             card.addEventListener('click', async () => {
                 const playlistId = (card as HTMLElement).dataset.playlistId;
+                const playlistName = (card as HTMLElement).dataset.playlistName || '';
+                const playlistIcon = (card as HTMLElement).dataset.playlistIcon || '';
+
                 if (playlistId) {
-                    const playlistInput = document.getElementById('playlistIdInput') as HTMLInputElement;
-                    if (playlistInput) {
-                        playlistInput.value = playlistId;
-                        await handleParsePlaylist();
-                    }
+                    await loadPlaylistDetail(playlistId, playlistName, playlistIcon);
                 }
             });
         });
@@ -430,6 +432,92 @@ async function loadHotPlaylists(): Promise<void> {
         if (hotPlaylistsGrid) {
             hotPlaylistsGrid.innerHTML = '<div class="error">加载失败，请重试</div>';
         }
+    }
+}
+
+// 加载歌单详情
+async function loadPlaylistDetail(playlistId: string, playlistName: string, playlistIcon: string): Promise<void> {
+    const parseResults = document.getElementById('parseResults');
+    const hotPlaylistsSection = document.getElementById('hotPlaylistsSection');
+
+    if (!parseResults || !hotPlaylistsSection) return;
+
+    try {
+        // 隐藏热门歌单区域，显示解析结果
+        hotPlaylistsSection.style.display = 'none';
+        parseResults.style.display = 'block';
+
+        ui.showLoading('parseResults');
+
+        const playlist = await api.parsePlaylistAPI(playlistId, 'netease');
+
+        // 创建详细的歌单视图，包含返回按钮
+        parseResults.innerHTML = `
+            <div class="playlist-detail-header">
+                <button class="back-btn" id="playlistBackBtn" title="返回歌单列表">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <div class="playlist-detail-info">
+                    <h3 class="playlist-detail-title">
+                        <span class="playlist-icon">${playlistIcon}</span>
+                        ${playlist.name || playlistName}
+                    </h3>
+                    <p class="playlist-detail-desc">共 ${playlist.songs?.length || 0} 首歌曲</p>
+                </div>
+            </div>
+            <div class="playlist-songs-list" id="playlistSongsList"></div>
+        `;
+
+        // 绑定返回按钮事件
+        const backBtn = document.getElementById('playlistBackBtn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                // 清空解析结果，重新显示热门歌单
+                parseResults.style.display = 'none';
+                parseResults.innerHTML = '';
+                hotPlaylistsSection.style.display = 'block';
+            });
+        }
+
+        // 显示歌曲列表
+        if (playlist.songs && playlist.songs.length > 0) {
+            ui.displaySearchResults(playlist.songs, 'playlistSongsList', playlist.songs);
+            ui.showNotification(`成功加载歌单《${playlist.name || playlistName}》，共 ${playlist.songs.length} 首歌曲`, 'success');
+        } else {
+            document.getElementById('playlistSongsList')!.innerHTML = '<div class="empty-state"><div>歌单为空</div></div>';
+            ui.showNotification('歌单为空', 'warning');
+        }
+
+    } catch (error) {
+        let errorMessage = '解析歌单失败';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+
+        // 显示错误信息，包含返回按钮
+        parseResults.innerHTML = `
+            <div class="playlist-detail-header">
+                <button class="back-btn" id="playlistBackBtn" title="返回歌单列表">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+            </div>
+            <div class="error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>${errorMessage}</div>
+            </div>
+        `;
+
+        // 绑定返回按钮事件
+        const backBtn = document.getElementById('playlistBackBtn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                parseResults.style.display = 'none';
+                parseResults.innerHTML = '';
+                hotPlaylistsSection.style.display = 'block';
+            });
+        }
+
+        ui.showNotification(errorMessage, 'error');
     }
 }
 
