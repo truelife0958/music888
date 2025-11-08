@@ -250,9 +250,6 @@
                     <button class="control-btn small" id="playlistBtn" title="播放列表">
                         <i class="fas fa-list-ul"></i>
                     </button>
-                    <button class="control-btn small" id="playerFavoriteBtn" title="添加到我的喜欢">
-                        <i class="far fa-heart"></i>
-                    </button>
                     <button class="control-btn small" id="prevBtn" title="上一首">
                         <i class="fas fa-step-backward"></i>
                     </button>
@@ -267,6 +264,12 @@
                     </button>
                 </div>
                 <div class="lyrics-container-inline" id="lyricsContainerInline">
+                    <div class="lyrics-header-inline">
+                        <button class="lyrics-download-btn" id="lyricsDownloadBtn" disabled title="下载当前歌词">
+                            <i class="fas fa-download"></i>
+                            <span>下载歌词</span>
+                        </button>
+                    </div>
                     <div class="lyric-line lyric-prev"></div>
                     <div class="lyric-line lyric-current active">暂无歌词</div>
                     <div class="lyric-line lyric-next"></div>
@@ -284,19 +287,10 @@
                     <i class="fas fa-volume-up volume-icon"></i>
                     <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="80">
                 </div>
-                <div class="quality-download-container">
-                    <select class="quality-select" id="qualitySelect">
-                        <option value="128">标准 128K</option>
-                        <option value="192">较高 192K</option>
-                        <option value="320" selected>高品质 320K</option>
-                    </select>
-                    <button class="download-btn" id="downloadSongBtn" disabled>
-                        <i class="fas fa-download"></i>
-                        <span>下载音乐</span>
-                    </button>
-                    <button class="download-btn" id="downloadLyricBtn" disabled>
-                        <i class="fas fa-file-text"></i>
-                        <span>下载歌词</span>
+                <div class="quality-control-container">
+                    <button class="quality-toggle-btn" id="qualityToggleBtn" title="点击切换音质">
+                        <i class="fas fa-music"></i>
+                        <span id="qualityText">高品质 320K</span>
                     </button>
                 </div>
             </div>

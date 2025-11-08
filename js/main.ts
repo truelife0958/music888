@@ -212,25 +212,24 @@ async function initializeApp(): Promise<void> {
     document.getElementById('volumeSlider')!.addEventListener('input', (e) => player.setVolume((e.target as HTMLInputElement).value));
     document.querySelector('.progress-bar')!.addEventListener('click', (e) => player.seekTo(e as MouseEvent));
 
-    // 老王修复：主题切换按钮已删除，不再需要绑定事件
+    // 音质切换按钮
+    const qualityToggleBtn = document.getElementById('qualityToggleBtn');
+    if (qualityToggleBtn) {
+        qualityToggleBtn.addEventListener('click', () => {
+            player.toggleQuality();
+        });
+    }
 
-    // 下载按钮
-    document.getElementById('downloadSongBtn')!.addEventListener('click', () => {
-        const currentSong = player.getCurrentSong();
-        if (currentSong) player.downloadSongByData(currentSong);
-    });
-    document.getElementById('downloadLyricBtn')!.addEventListener('click', () => {
-        const currentSong = player.getCurrentSong();
-        if (currentSong) player.downloadLyricByData(currentSong);
-    });
-
-    // 收藏按钮
-    document.getElementById('playerFavoriteBtn')!.addEventListener('click', () => {
-        const currentSong = player.getCurrentSong();
-        if (currentSong) {
-            player.toggleFavoriteButton(currentSong);
-        }
-    });
+    // 歌词下载按钮（已集成到歌词区域）
+    const lyricsDownloadBtn = document.getElementById('lyricsDownloadBtn');
+    if (lyricsDownloadBtn) {
+        lyricsDownloadBtn.addEventListener('click', () => {
+            const currentSong = player.getCurrentSong();
+            if (currentSong) {
+                player.downloadLyricByData(currentSong);
+            }
+        });
+    }
 
     // Tab按钮 - 优化: 按需加载对应模块
     document.querySelectorAll('.tab-btn').forEach(button => {

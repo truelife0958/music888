@@ -29,6 +29,15 @@ let currentLyrics: LyricLine[] = []; // 存储当前歌曲的歌词
 let playStartTime: number = 0; // 记录播放开始时间
 let lastRecordedSong: Song | null = null; // 上一首记录统计的歌曲
 
+// 音质管理
+const QUALITY_OPTIONS = ['128', '320', '999'];
+const QUALITY_LABELS: { [key: string]: string } = {
+    '128': '标准 128K',
+    '320': '高品质 320K',
+    '999': '无损'
+};
+let currentQualityIndex = 1; // 默认320K
+
 // 事件监听器管理 - 防止内存泄漏
 interface EventListenerRecord {
     element: HTMLElement | Window | Document;
@@ -265,14 +274,25 @@ export async function playSong(index: number, playlist: Song[], containerId: str
     const coverUrl = await api.getAlbumCoverUrl(song);
     ui.updateCurrentSongInfo(song, coverUrl);
     ui.updateActiveItem(currentIndex, containerId);
+    
+    // 修复播放焦点问题：滚动到当前播放的歌曲
+    setTimeout(() => {
+        const songElements = document.querySelectorAll(`#${containerId} .song-item`);
+        if (songElements[currentIndex]) {
+            songElements[currentIndex].scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+    }, 100); // 延迟100ms确保DOM更新完成
+    
     updatePlayerFavoriteButton();
 
     try {
         ui.showNotification('正在加载音乐...', 'info');
 
-        // 老王修复BUG-PLAYER-001：品质选择器可能不存在
-        const qualitySelect = document.getElementById('qualitySelect') as HTMLSelectElement;
-        const preferredQuality = qualitySelect ? qualitySelect.value : '320';
+        // 修改：从新的音质切换按钮获取当前音质
+        const preferredQuality = getCurrentQuality();
 
         // 确保首选品质在队列首位
         const qualityQueue = [preferredQuality, ...QUALITY_FALLBACK.filter(q => q !== preferredQuality)];
@@ -322,18 +342,10 @@ export async function playSong(index: number, playlist: Song[], containerId: str
                 );
             }
 
-            // 老王修复BUG-PLAYER-002：下载按钮可能不存在
-            const downloadSongBtn = document.getElementById('downloadSongBtn') as HTMLButtonElement;
-            const downloadLyricBtn = document.getElementById('downloadLyricBtn') as HTMLButtonElement;
-            if (downloadSongBtn) {
-                downloadSongBtn.disabled = false;
-            } else {
-                console.warn('⚠️ 下载歌曲按钮未找到');
-            }
-            if (downloadLyricBtn) {
-                downloadLyricBtn.disabled = false;
-            } else {
-                console.warn('⚠️ 下载歌词按钮未找到');
+            // 启用歌词下载按钮（在歌词区域内）
+            const lyricsDownloadBtn = document.getElementById('lyricsDownloadBtn') as HTMLButtonElement;
+            if (lyricsDownloadBtn) {
+                lyricsDownloadBtn.disabled = false;
             }
 
             // BUG-006修复: 统一使用代理处理函数
@@ -522,6 +534,25 @@ export function seekTo(event: MouseEvent): void {
     const progressBar = event.currentTarget as HTMLElement;
     const clickPosition = (event.clientX - progressBar.getBoundingClientRect().left) / progressBar.offsetWidth;
     audioPlayer.currentTime = clickPosition * audioPlayer.duration;
+}
+
+// 音质切换功能
+export function toggleQuality(): void {
+    currentQualityIndex = (currentQualityIndex + 1) % QUALITY_OPTIONS.length;
+    const quality = QUALITY_OPTIONS[currentQualityIndex];
+    
+    // 更新按钮文本
+    const qualityText = document.getElementById('qualityText');
+    if (qualityText) {
+        qualityText.textContent = QUALITY_LABELS[quality];
+    }
+    
+    ui.showNotification(`音质已切换到 ${QUALITY_LABELS[quality]}`, 'success');
+}
+
+// 获取当前音质
+export function getCurrentQuality(): string {
+    return QUALITY_OPTIONS[currentQualityIndex];
 }
 
 export function togglePlayMode(): void {
@@ -825,22 +856,10 @@ export async function toggleFavoriteButton(song: Song): Promise<void> {
     window.dispatchEvent(new CustomEvent('favoritesUpdated'));
 }
 
-// 更新播放器收藏按钮状态（异步版本）
+// 更新播放器收藏按钮状态（异步版本）- 已删除播放器收藏按钮
 async function updatePlayerFavoriteButton(): Promise<void> {
-    const song = getCurrentSong();
-    const btn = document.getElementById('playerFavoriteBtn');
-    if (!song || !btn) return;
-    
-    const icon = btn.querySelector('i')!;
-    const isInFavorites = await indexedDB.isInFavorites(song.id, song.source);
-    
-    if (isInFavorites) {
-        icon.className = 'fas fa-heart';
-        icon.style.color = '#ff6b6b';
-    } else {
-        icon.className = 'far fa-heart';
-        icon.style.color = '';
-    }
+    // 按钮已从UI中移除，保留函数以避免其他代码出错
+    return;
 }
 
 // 获取同一首歌的其他音乐源版本
@@ -1119,8 +1138,7 @@ export async function downloadMultipleSongs(songs: Song[]): Promise<void> {
         }
     }
 
-    const qualitySelect = document.getElementById('qualitySelect') as HTMLSelectElement;
-    const quality = qualitySelect ? qualitySelect.value : '320';
+    const quality = getCurrentQuality();
 
     ui.showNotification(`开始下载 ${songs.length} 首歌曲...`, 'info');
 

@@ -1291,9 +1291,46 @@ body {
     max-height: 90px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     gap: 6px;
     overflow: hidden;
+}
+
+.lyrics-header-inline {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 5px;
+}
+
+.lyrics-download-btn {
+    padding: 4px 10px;
+    background: var(--bg-glass-medium);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all var(--transition-normal) ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.lyrics-download-btn:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.lyrics-download-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.lyrics-download-btn i {
+    font-size: 11px;
 }
 
 .lyrics-container-inline .lyric-line {
