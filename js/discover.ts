@@ -5,68 +5,20 @@ import { playSong } from './player';
 import { showNotification, displaySearchResults, showLoading, showError } from './ui';
 
 // 发现音乐状态管理
-let currentDiscoverView: 'rank' | 'artists' = 'rank';
 let currentArtistType = -1;
 let currentArtistArea = -1;
-let currentArtistInitial = -1;
+let currentArtistInitial: string | number = -1;
 
 // 初始化发现音乐模块
 export function initDiscover() {
-    initDiscoverNav();
-    initRankView();
-    initArtistView();
+    console.log('📊 初始化发现音乐模块...');
+    initArtistCategory();
     initHotPlaylists();
+    console.log('✅ 发现音乐模块初始化完成');
 }
 
-// 初始化发现音乐导航
-function initDiscoverNav() {
-    const navButtons = document.querySelectorAll('.discover-nav-btn');
-
-    navButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const discoverType = (button as HTMLElement).dataset.discover as 'rank' | 'artists';
-            switchDiscoverView(discoverType);
-        });
-    });
-}
-
-// 切换发现音乐视图
-function switchDiscoverView(view: 'rank' | 'artists') {
-    currentDiscoverView = view;
-
-    // 更新导航按钮状态
-    document.querySelectorAll('.discover-nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-discover="${view}"]`)?.classList.add('active');
-
-    // 切换内容区域
-    document.querySelectorAll('.discover-content').forEach(content => {
-        content.classList.remove('active');
-    });
-
-    if (view === 'rank') {
-        document.getElementById('rankContent')?.classList.add('active');
-    } else {
-        document.getElementById('artistContent')?.classList.add('active');
-        loadArtistList(); // 加载歌手列表
-    }
-}
-
-// 初始化排行榜视图
-function initRankView() {
-    // 排行榜功能由 rank.ts 模块处理
-    const rankSongs = document.getElementById('rankSongs');
-    if (rankSongs) {
-        // 确保排行榜初始化
-        import('./rank').then(rankModule => {
-            rankModule.initRank();
-        });
-    }
-}
-
-// 初始化歌手视图
-function initArtistView() {
+// 初始化歌手分类
+function initArtistCategory() {
     const typeSelect = document.getElementById('artistTypeSelect') as HTMLSelectElement;
     const areaSelect = document.getElementById('artistAreaSelect') as HTMLSelectElement;
     const initialSelect = document.getElementById('artistInitialSelect') as HTMLSelectElement;
@@ -232,11 +184,25 @@ async function loadArtistTopSongs(artistId: string, artistName: string) {
 
 // 初始化热门歌单
 function initHotPlaylists() {
-    // 初始化网易热门歌单
-    initNeteasePlaylists();
-
-    // 初始化网友精选碟
-    initUserPlaylists();
+    console.log('📦 初始化热门歌单...');
+    
+    // 检查容器是否存在
+    const hotPlaylistsGrid = document.getElementById('hotPlaylistsGrid');
+    const userPlaylistsGrid = document.getElementById('userPlaylistsGrid');
+    
+    if (!hotPlaylistsGrid) {
+        console.warn('⚠️ 热门歌单容器未找到: #hotPlaylistsGrid');
+    } else {
+        // 初始化网易热门歌单
+        initNeteasePlaylists();
+    }
+    
+    if (!userPlaylistsGrid) {
+        console.warn('⚠️ 网友精选碟容器未找到: #userPlaylistsGrid');
+    } else {
+        // 初始化网友精选碟
+        initUserPlaylists();
+    }
 }
 
 // 初始化网易热门歌单
@@ -404,7 +370,7 @@ async function loadPlaylistSongs(playlistId: string) {
 
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
-                content.style.display = 'none';
+                (content as HTMLElement).style.display = 'none';
             });
             searchTab.classList.add('active');
             searchTab.style.display = 'block';

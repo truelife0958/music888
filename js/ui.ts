@@ -209,7 +209,7 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
         virtualScrollInstances.set(container, virtualScroll);
     } else {
         // 歌曲数量较少，使用传统渲染方式
-        // 老王新增：创建批量操作栏
+        // 老王新增：创建批量操作栏（已去掉反选按钮）
         const batchActionsBar = document.createElement('div');
         batchActionsBar.className = 'batch-actions-bar';
         batchActionsBar.innerHTML = `
@@ -217,9 +217,6 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
                 <span class="batch-count">已选择 0 首</span>
                 <button class="batch-action-btn" data-batch-action="select-all">
                     <i class="fas fa-check-square"></i> 全选
-                </button>
-                <button class="batch-action-btn" data-batch-action="invert">
-                    <i class="fas fa-retweet"></i> 反选
                 </button>
             </div>
             <div class="batch-actions-right">
@@ -272,8 +269,9 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
                     selectedSongs.delete(index);
                 }
 
-                // 更新批量操作按钮状态
+                // 更新批量操作按钮状态和全选按钮文本
                 updateBatchActionsState(containerId);
+                updateSelectAllButtonText(containerId);
                 return;
             }
 
@@ -620,11 +618,7 @@ export function showError(message: string, containerId: string = 'searchResults'
 function handleBatchAction(action: string, containerId: string): void {
     switch (action) {
         case 'select-all':
-            selectAllSongs(containerId);
-            break;
-
-        case 'invert':
-            invertSelection(containerId);
+            toggleSelectAll(containerId);
             break;
 
         case 'favorite':
@@ -726,8 +720,8 @@ function updateBatchActionsState(containerId: string): void {
     const batchButtons = batchActionsBar.querySelectorAll('.batch-action-btn');
     batchButtons.forEach(btn => {
         const action = (btn as HTMLElement).dataset.batchAction;
-        // 全选、反选按钮始终可用，其他按钮需要有选中项
-        if (action === 'select-all' || action === 'invert') {
+        // 全选按钮始终可用，其他按钮需要有选中项
+        if (action === 'select-all') {
             (btn as HTMLButtonElement).disabled = false;
         } else {
             (btn as HTMLButtonElement).disabled = selectedCount === 0;
@@ -739,7 +733,60 @@ function updateBatchActionsState(containerId: string): void {
 }
 
 /**
- * 全选当前列表的所有歌曲
+ * 切换全选/取消全选状态
+ */
+function toggleSelectAll(containerId: string): void {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const checkboxes = container.querySelectorAll('.song-checkbox') as NodeListOf<HTMLInputElement>;
+    const totalCount = checkboxes.length;
+    
+    // 判断当前是否全选：如果选中数量等于总数，则取消全选；否则全选
+    const isAllSelected = selectedSongs.size === totalCount;
+    
+    if (isAllSelected) {
+        // 取消全选
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        selectedSongs.clear();
+        showNotification('已取消全选', 'info');
+    } else {
+        // 全选
+        checkboxes.forEach((checkbox, index) => {
+            checkbox.checked = true;
+            selectedSongs.add(index);
+        });
+        showNotification(`已全选 ${selectedSongs.size} 首歌曲`, 'info');
+    }
+
+    updateBatchActionsState(containerId);
+    updateSelectAllButtonText(containerId);
+}
+
+/**
+ * 更新全选按钮的文本
+ */
+function updateSelectAllButtonText(containerId: string): void {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const selectAllBtn = container.querySelector('[data-batch-action="select-all"]');
+    if (!selectAllBtn) return;
+
+    const checkboxes = container.querySelectorAll('.song-checkbox') as NodeListOf<HTMLInputElement>;
+    const isAllSelected = selectedSongs.size === checkboxes.length && checkboxes.length > 0;
+    
+    if (isAllSelected) {
+        selectAllBtn.innerHTML = '<i class="fas fa-times-circle"></i> 取消全选';
+    } else {
+        selectAllBtn.innerHTML = '<i class="fas fa-check-square"></i> 全选';
+    }
+}
+
+/**
+ * 全选当前列表的所有歌曲（保留此函数供外部调用）
  */
 export function selectAllSongs(containerId: string): void {
     const container = document.getElementById(containerId);
@@ -752,6 +799,7 @@ export function selectAllSongs(containerId: string): void {
     });
 
     updateBatchActionsState(containerId);
+    updateSelectAllButtonText(containerId);
     showNotification(`已全选 ${selectedSongs.size} 首歌曲`, 'info');
 }
 
@@ -769,6 +817,7 @@ export function deselectAllSongs(containerId: string): void {
 
     selectedSongs.clear();
     updateBatchActionsState(containerId);
+    updateSelectAllButtonText(containerId);
     showNotification('已取消全选', 'info');
 }
 
