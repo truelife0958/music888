@@ -3,6 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- Content Security Policy (CSP) - 增强安全性 -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+        font-src 'self' https://cdnjs.cloudflare.com;
+        img-src 'self' data: https: http:;
+        media-src 'self' https: http: blob:;
+        connect-src 'self' https: http:;
+        worker-src 'self' blob:;
+        manifest-src 'self';
+        base-uri 'self';
+        form-action 'self';
+        frame-ancestors 'none';
+        upgrade-insecure-requests;
+    ">
+    
     <title>沄听 - 在线音乐播放器</title>
     <meta name="description" content="简洁的在线音乐播放器">
     <meta name="theme-color" content="#1db954">

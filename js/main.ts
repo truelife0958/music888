@@ -8,6 +8,7 @@ import { debounce } from './utils.js';
 import storageAdapter from './storage-adapter.js';
 import { ThemeManager } from './theme-manager.js';
 import performanceMonitor from './performance-monitor.js';
+import { validateSearchKeyword, validatePlaylistId } from './input-validator.js';
 
 // 优化: 使用动态导入实现代码分割，减少初始加载时间
 let rankModule: any = null;
@@ -594,13 +595,17 @@ function switchResultsContainer(activeContainer: 'search' | 'parse'): void {
 }
 
 async function handleSearch(): Promise<void> {
-    const keyword = (document.getElementById('searchInput') as HTMLInputElement).value;
+    const keywordInput = (document.getElementById('searchInput') as HTMLInputElement).value;
     const source = (document.getElementById('sourceSelect') as HTMLSelectElement).value;
 
-    if (!keyword.trim()) {
-        ui.showNotification('请输入搜索关键词', 'warning');
+    // 输入验证
+    const validation = validateSearchKeyword(keywordInput);
+    if (!validation.valid) {
+        ui.showNotification(validation.error || '输入无效', 'warning');
         return;
     }
+    
+    const keyword = validation.value;
 
     // 修复BUG-006: 使用统一的容器切换函数
     switchResultsContainer('search');
@@ -668,10 +673,14 @@ async function handleParsePlaylist(): Promise<void> {
     const playlistIdInput = (document.getElementById('playlistIdInput') as HTMLInputElement).value;
     const playlistSourceSelect = (document.getElementById('playlistSourceSelect') as HTMLSelectElement).value;
 
-    if (!playlistIdInput.trim()) {
-        ui.showNotification('请输入歌单ID或链接', 'warning');
+    // 输入验证
+    const validation = validatePlaylistId(playlistIdInput);
+    if (!validation.valid) {
+        ui.showNotification(validation.error || '输入无效', 'warning');
         return;
     }
+    
+    const playlistId = validation.value;
 
     // 修复BUG-006: 使用统一的容器切换函数
     switchResultsContainer('parse');
@@ -679,7 +688,7 @@ async function handleParsePlaylist(): Promise<void> {
     ui.showLoading('parseResults');
 
     try {
-        const playlist = await api.parsePlaylistAPI(playlistIdInput, playlistSourceSelect);
+        const playlist = await api.parsePlaylistAPI(playlistId, playlistSourceSelect);
         ui.displaySearchResults(playlist.songs, 'parseResults', playlist.songs);
 
         if (playlist.name) {

@@ -3,6 +3,7 @@
 import { searchMusicAPI, type Song } from './api';
 import { playSong } from './player';
 import { showNotification } from './ui';
+import { validateArtistName } from './input-validator';
 
 let isRadioVisible = false;
 let currentArtistSongs: Song[] = [];
@@ -162,12 +163,16 @@ async function openRadioWithArtist(artist: string) {
 // 搜索歌手歌曲
 async function searchArtistSongs() {
     const input = document.getElementById('artistSearchInput') as HTMLInputElement;
-    const artist = input?.value.trim();
+    const artistInput = input?.value || '';
     
-    if (!artist) {
-        showNotification('请输入歌手名', 'warning');
+    // 输入验证
+    const validation = validateArtistName(artistInput);
+    if (!validation.valid) {
+        showNotification(validation.error || '输入无效', 'warning');
         return;
     }
+    
+    const artist = validation.value;
     
     const songsContainer = document.getElementById('artistRadioSongs');
     const infoContainer = document.getElementById('artistRadioInfo');
