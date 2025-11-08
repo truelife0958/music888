@@ -74,7 +74,7 @@ export function normalizeArtistField(artist: any): string[] {
         'Various Artists', 'various artists',
         'N/A', 'n/a', '', ' '
     ];
-    
+
     // 检查字符串是否为无效值
     const isInvalid = (str: string): boolean => {
         const trimmed = str.trim().toLowerCase();
@@ -82,7 +82,7 @@ export function normalizeArtistField(artist: any): string[] {
             invalid.toLowerCase() === trimmed
         );
     };
-    
+
     // 过滤并清理字符串数组
     const filterAndClean = (arr: string[]): string[] => {
         return arr
@@ -93,24 +93,24 @@ export function normalizeArtistField(artist: any): string[] {
     // 如果是字符串数组
     if (Array.isArray(artist) && artist.length > 0 && typeof artist[0] === 'string') {
         const cleaned = filterAndClean(artist);
-        return cleaned.length > 0 ? cleaned : ['群星'];
+        return cleaned.length > 0 ? cleaned : ['未知艺术家'];
     }
 
     // 如果是对象数组，提取name字段
     if (Array.isArray(artist) && artist.length > 0 && typeof artist[0] === 'object') {
         const names = artist.map((a: any) => a?.name || a?.artist || '').filter(Boolean);
         const cleaned = filterAndClean(names);
-        return cleaned.length > 0 ? cleaned : ['群星'];
+        return cleaned.length > 0 ? cleaned : ['未知艺术家'];
     }
 
     // 如果是单个字符串
     if (typeof artist === 'string') {
         const trimmed = artist.trim();
-        if (!trimmed || isInvalid(trimmed)) return ['群星'];
+        if (!trimmed || isInvalid(trimmed)) return ['未知艺术家'];
 
         // 处理"歌手1,歌手2"或"歌手1/歌手2"等格式
         const parts = trimmed.split(/[,，、/／]/).map(s => s.trim()).filter(s => s && !isInvalid(s));
-        return parts.length > 0 ? parts : ['群星'];
+        return parts.length > 0 ? parts : ['未知艺术家'];
     }
 
     // 如果是单个对象，提取name字段
@@ -119,8 +119,8 @@ export function normalizeArtistField(artist: any): string[] {
         if (trimmed && !isInvalid(trimmed)) return [trimmed];
     }
 
-    // 默认返回群星
-    return ['群星'];
+    // 默认返回未知艺术家
+    return ['未知艺术家'];
 }
 
 // 歌曲名称规范化函数 - 老王修复：统一处理各种name数据格式
@@ -131,7 +131,7 @@ export function normalizeSongName(name: any): string {
         '未知歌曲', '未知', 'Unknown', 'unknown',
         'Untitled', 'untitled', 'N/A', 'n/a'
     ];
-    
+
     // 检查字符串是否为无效值
     const isInvalid = (str: string): boolean => {
         const trimmed = str.trim().toLowerCase();
@@ -139,7 +139,7 @@ export function normalizeSongName(name: any): string {
             invalid.toLowerCase() === trimmed
         );
     };
-    
+
     // 如果是有效字符串，trim后返回
     if (typeof name === 'string') {
         const trimmed = name.trim();
@@ -158,8 +158,8 @@ export function normalizeSongName(name: any): string {
         if (trimmed && !isInvalid(trimmed)) return trimmed;
     }
 
-    // 默认返回空字符串（避免显示"未知歌曲"）
-    return '无标题';
+    // 默认返回未知歌曲
+    return '未知歌曲';
 }
 
 // 专辑名称规范化函数 - 老王修复：统一处理各种album数据格式
@@ -171,7 +171,7 @@ export function normalizeAlbumName(album: any): string {
         'Unknown Album', 'unknown album',
         'N/A', 'n/a', '', ' '
     ];
-    
+
     // 检查字符串是否为无效值
     const isInvalid = (str: string): boolean => {
         const trimmed = str.trim().toLowerCase();
@@ -179,7 +179,7 @@ export function normalizeAlbumName(album: any): string {
             invalid.toLowerCase() === trimmed
         );
     };
-    
+
     // 如果是有效字符串，trim后返回
     if (typeof album === 'string') {
         const trimmed = album.trim();
@@ -198,8 +198,8 @@ export function normalizeAlbumName(album: any): string {
         if (trimmed && !isInvalid(trimmed)) return trimmed;
     }
 
-    // 默认返回空字符串（避免显示"未知专辑"）
-    return '';
+    // 默认返回未知专辑
+    return '未知专辑';
 }
 
 // 改进的LRU缓存 - 提升性能

@@ -218,9 +218,6 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
                 <button class="batch-action-btn" data-batch-action="select-all">
                     <i class="fas fa-check-square"></i> 全选
                 </button>
-                <button class="batch-action-btn" data-batch-action="deselect-all">
-                    <i class="far fa-square"></i> 取消全选
-                </button>
                 <button class="batch-action-btn" data-batch-action="invert">
                     <i class="fas fa-retweet"></i> 反选
                 </button>
@@ -626,10 +623,6 @@ function handleBatchAction(action: string, containerId: string): void {
             selectAllSongs(containerId);
             break;
 
-        case 'deselect-all':
-            deselectAllSongs(containerId);
-            break;
-
         case 'invert':
             invertSelection(containerId);
             break;
@@ -733,8 +726,8 @@ function updateBatchActionsState(containerId: string): void {
     const batchButtons = batchActionsBar.querySelectorAll('.batch-action-btn');
     batchButtons.forEach(btn => {
         const action = (btn as HTMLElement).dataset.batchAction;
-        // 全选、取消全选、反选按钮始终可用，其他按钮需要有选中项
-        if (action === 'select-all' || action === 'deselect-all' || action === 'invert') {
+        // 全选、反选按钮始终可用，其他按钮需要有选中项
+        if (action === 'select-all' || action === 'invert') {
             (btn as HTMLButtonElement).disabled = false;
         } else {
             (btn as HTMLButtonElement).disabled = selectedCount === 0;

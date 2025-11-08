@@ -1487,6 +1487,91 @@ body {
         font-size: 14px;
     }
 
+    /* 歌单解析输入区域 - 移动端优化 */
+    .playlist-input-container {
+        flex-direction: column;
+        gap: 12px;
+        padding: 0 5px;
+        margin-bottom: 15px;
+    }
+
+    .playlist-source-select {
+        width: 100%;
+        max-width: 100%;
+        flex: none;
+    }
+
+    .playlist-input {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 12px 15px;
+        font-size: 16px; /* 防止iOS放大 */
+    }
+
+    .playlist-btn {
+        width: 100%;
+        max-width: 100%;
+        padding: 12px 20px;
+        font-size: 16px; /* 防止iOS放大 */
+    }
+
+    /* 热门歌单网格 - 移动端优化 */
+    .hot-playlists-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 0 5px;
+    }
+
+    .hot-playlist-item {
+        padding: 15px;
+        text-align: center;
+    }
+
+    /* 批量操作栏 - 移动端优化 */
+    .batch-actions-bar {
+        flex-direction: column;
+        gap: 12px;
+        padding: 10px;
+        margin-bottom: 15px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .batch-actions-left,
+    .batch-actions-right {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .batch-count {
+        width: 100%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 5px;
+    }
+
+    .batch-action-btn {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 12px;
+        font-size: 13px;
+        border-radius: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .batch-action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     .tabs {
         gap: 8px;
         margin-bottom: 15px;
@@ -1777,10 +1862,10 @@ body {
 /* 老王新增：排行榜按钮容器样式 */
 .rank-buttons-container {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
 }
 
 /* 老王新增：排行榜按钮样式 */
@@ -1789,13 +1874,13 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 20px 15px;
+    gap: 6px;
+    padding: 15px 10px;
     background: var(--bg-glass-light);
     border: 2px solid var(--border-light);
     border-radius: var(--radius-md);
     color: var(--text-color);
-    font-size: var(--font-md);
+    font-size: var(--font-sm);
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-normal) ease;
@@ -2103,7 +2188,7 @@ body {
 
     /* 老王新增：移动端排行榜按钮样式 */
     .rank-buttons-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 12px;
         padding: 15px;
     }

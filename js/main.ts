@@ -773,11 +773,18 @@ function initMobileSwipe(): void {
     // 优化: 改进滑动方向判断和惯性检测
     mainContainer.addEventListener('touchmove', (e: Event) => {
         const touchEvent = e as TouchEvent;
+
+        // 检查是否可以取消事件
+        if (!touchEvent.cancelable) {
+            // 如果事件不可取消，直接返回不处理
+            return;
+        }
+
         const currentX = touchEvent.changedTouches[0].screenX;
         const currentY = touchEvent.changedTouches[0].screenY;
         const deltaX = Math.abs(currentX - touchStartX);
         const deltaY = Math.abs(currentY - touchStartY);
-        
+
         // 优化: 更早地判断滑动方向，阈值降低到20px
         if (swipeDirection === 'none' && (deltaX > 20 || deltaY > 20)) {
             // 优化: 使用更宽松的比例判断（1.3倍）提高响应性
@@ -788,9 +795,10 @@ function initMobileSwipe(): void {
                 swipeDirection = 'vertical';
             }
         }
-        
+
         // 优化: 只阻止水平滑动的默认行为，保留垂直滚动
-        if (swipeDirection === 'horizontal') {
+        // 确保事件是可取消的再调用preventDefault
+        if (swipeDirection === 'horizontal' && touchEvent.cancelable) {
             e.preventDefault();
             hasMovedEnough = true;
         }
