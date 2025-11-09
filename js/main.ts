@@ -116,16 +116,28 @@ async function initializeApp(): Promise<void> {
     // 增强功能：动态页面标题
     initDynamicPageTitle();
     
-    // API初始化
+    // API初始化 - 优先恢复用户偏好的API
     ui.showNotification('正在连接音乐服务...', 'info');
     try {
-        const result = await api.findWorkingAPI();
-        if (result.success) {
-            console.log(`✅ API初始化成功: ${result.name}`);
-            ui.showNotification(`已连接到 ${result.name}`, 'success');
+        // 先尝试恢复用户偏好的API
+        await api.restorePreferredApi();
+        
+        // 如果恢复失败，查找可用API
+        const currentApi = api.getCurrentApiStatus();
+        const testResult = await fetch(currentApi.url, { method: 'HEAD', mode: 'no-cors' }).catch(() => null);
+        
+        if (!testResult) {
+            const result = await api.findWorkingAPI();
+            if (result.success) {
+                console.log(`✅ API初始化成功: ${result.name}`);
+                ui.showNotification(`已连接到 ${result.name}`, 'success');
+            } else {
+                console.error('❌ 所有API均不可用');
+                ui.showNotification('所有 API 均不可用，搜索功能可能受影响', 'warning');
+            }
         } else {
-            console.error('❌ 所有API均不可用');
-            ui.showNotification('所有 API 均不可用，搜索功能可能受影响', 'warning');
+            console.log(`✅ 使用API: ${currentApi.name}`);
+            ui.showNotification(`已连接到 ${currentApi.name}`, 'success');
         }
     } catch (error) {
         console.error('❌ API初始化失败:', error);
@@ -297,6 +309,9 @@ async function initializeApp(): Promise<void> {
 
     // 初始化播放列表弹窗
     initPlaylistModal();
+    
+    // 初始化API设置弹窗
+    initApiSettingsModal();
 
     // 初始tab改为"搜索结果"
     switchTab('search');
@@ -791,6 +806,203 @@ function showPlaylistModal(): void {
     modal.style.display = 'flex';
 }
 
+// API设置弹窗
+function initApiSettingsModal(): void {
+    const apiSettingsBtn = document.getElementById('apiSettingsBtn');
+    const apiSettingsModal = document.getElementById('apiSettingsModal');
+    const closeBtn = document.getElementById('closeApiSettingsModal');
+    const closeFooterBtn = document.getElementById('closeApiSettingsModalFooter');
+    const testAllApisBtn = document.getElementById('testAllApisBtn');
+
+    if (apiSettingsBtn && apiSettingsModal && closeBtn && closeFooterBtn && testAllApisBtn) {
+        // 打开设置弹窗
+        apiSettingsBtn.addEventListener('click', () => {
+            showApiSettingsModal();
+        });
+
+        // 关闭按钮
+        closeBtn.addEventListener('click', () => {
+            apiSettingsModal.style.display = 'none';
+        });
+        
+        closeFooterBtn.addEventListener('click', () => {
+            apiSettingsModal.style.display = 'none';
+        });
+
+        // 测试所有API
+        testAllApisBtn.addEventListener('click', async () => {
+            await testAllApis();
+        });
+
+        // 点击模态框外部关闭
+        apiSettingsModal.addEventListener('click', (e) => {
+            if (e.target === apiSettingsModal) {
+                apiSettingsModal.style.display = 'none';
+            }
+        });
+    }
+}
+
+async function showApiSettingsModal(): Promise<void> {
+    const modal = document.getElementById('apiSettingsModal');
+    if (!modal) return;
+
+    // 显示弹窗
+    modal.style.display = 'flex';
+
+    // 更新当前API状态
+    await updateApiStatus();
+    
+    // 加载API源列表
+    await loadApiSourceList();
+}
+
+async function updateApiStatus(): Promise<void> {
+    const currentApiName = document.getElementById('currentApiName');
+    const currentApiUrl = document.getElementById('currentApiUrl');
+    const apiCapabilities = document.getElementById('apiCapabilities');
+
+    if (!currentApiName || !currentApiUrl || !apiCapabilities) return;
+
+    try {
+        const currentApi = api.getCurrentApiStatus();
+        currentApiName.textContent = currentApi.name;
+        currentApiUrl.textContent = currentApi.url;
+
+        // 检测功能支持
+        const capabilities = await api.detectApiCapabilities();
+        
+        const capabilityBadges = [];
+        if (capabilities.hotPlaylists) {
+            capabilityBadges.push('<span class="capability-badge success"><i class="fas fa-check"></i> 热门歌单</span>');
+        } else {
+            capabilityBadges.push('<span class="capability-badge warning"><i class="fas fa-exclamation"></i> 热门歌单(降级)</span>');
+        }
+        
+        if (capabilities.artistList) {
+            capabilityBadges.push('<span class="capability-badge success"><i class="fas fa-check"></i> 歌手分类</span>');
+        } else {
+            capabilityBadges.push('<span class="capability-badge warning"><i class="fas fa-exclamation"></i> 歌手分类(降级)</span>');
+        }
+        
+        if (capabilities.artistTopSongs) {
+            capabilityBadges.push('<span class="capability-badge success"><i class="fas fa-check"></i> 歌手歌曲</span>');
+        } else {
+            capabilityBadges.push('<span class="capability-badge error"><i class="fas fa-times"></i> 歌手歌曲</span>');
+        }
+
+        apiCapabilities.innerHTML = capabilityBadges.join('');
+    } catch (error) {
+        console.error('更新API状态失败:', error);
+        if (currentApiName) currentApiName.textContent = '获取失败';
+        if (currentApiUrl) currentApiUrl.textContent = '-';
+        if (apiCapabilities) apiCapabilities.innerHTML = '<span class="capability-badge error">检测失败</span>';
+    }
+}
+
+async function loadApiSourceList(): Promise<void> {
+    const apiSourceList = document.getElementById('apiSourceList');
+    if (!apiSourceList) return;
+
+    try {
+        const sources = api.getAllApiSources();
+        
+        const sourceCards = sources.map(source => `
+            <div class="api-source-card ${source.isCurrent ? 'active' : ''}" data-index="${source.index}">
+                <div class="api-source-header">
+                    <div class="api-source-info">
+                        <h5>${source.name}</h5>
+                        <p class="api-source-url">${source.url}</p>
+                    </div>
+                    ${source.isCurrent ? '<span class="api-source-badge">当前使用</span>' : ''}
+                </div>
+                <button class="api-source-btn ${source.isCurrent ? 'disabled' : ''}"
+                        data-index="${source.index}"
+                        ${source.isCurrent ? 'disabled' : ''}>
+                    ${source.isCurrent ? '使用中' : '切换到此API'}
+                </button>
+            </div>
+        `).join('');
+
+        apiSourceList.innerHTML = sourceCards;
+
+        // 绑定切换事件
+        apiSourceList.querySelectorAll('.api-source-btn:not(.disabled)').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const index = parseInt((e.target as HTMLElement).dataset.index || '0');
+                await switchApi(index);
+            });
+        });
+    } catch (error) {
+        console.error('加载API源列表失败:', error);
+        apiSourceList.innerHTML = '<div class="error">加载失败</div>';
+    }
+}
+
+async function switchApi(index: number): Promise<void> {
+    ui.showNotification('正在切换API...', 'info');
+    
+    try {
+        const result = await api.switchToAPI(index);
+        
+        if (result.success) {
+            ui.showNotification(`已切换到 ${result.name}`, 'success');
+            
+            // 刷新API状态
+            await updateApiStatus();
+            await loadApiSourceList();
+            
+            // 如果在发现音乐标签页，重新加载数据
+            const discoverTab = document.getElementById('discoverTab');
+            if (discoverTab && discoverTab.classList.contains('active')) {
+                if (discoverModule && discoverModule.initDiscover) {
+                    discoverModule.initDiscover();
+                }
+            }
+        } else {
+            ui.showNotification(result.error || 'API切换失败', 'error');
+        }
+    } catch (error) {
+        console.error('切换API失败:', error);
+        ui.showNotification('切换API失败，请重试', 'error');
+    }
+}
+
+async function testAllApis(): Promise<void> {
+    const testAllApisBtn = document.getElementById('testAllApisBtn');
+    if (testAllApisBtn) {
+        testAllApisBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 测试中...';
+        (testAllApisBtn as HTMLButtonElement).disabled = true;
+    }
+    
+    ui.showNotification('正在测试所有API...', 'info');
+
+    try {
+        const results = await api.testAllApis();
+        
+        // 统计可用API数量
+        const availableCount = results.filter(r => r.available).length;
+        const totalCount = results.length;
+        
+        console.log('📊 API测试结果:', results);
+        ui.showNotification(
+            `测试完成：${availableCount}/${totalCount} 个API可用`,
+            availableCount > 0 ? 'success' : 'warning'
+        );
+        
+        // 刷新列表
+        await loadApiSourceList();
+    } catch (error) {
+        console.error('测试API失败:', error);
+        ui.showNotification('测试失败，请重试', 'error');
+    } finally {
+        if (testAllApisBtn) {
+            testAllApisBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 测试所有API';
+            (testAllApisBtn as HTMLButtonElement).disabled = false;
+        }
+    }
+}
+
 // 移动端页面切换功能 - 支持三栏布局
 (window as any).switchMobilePage = function(pageIndex: number): void {
     const sections = [
@@ -1011,11 +1223,9 @@ function handleSwipe(velocity: number = 0): void {
             }
         });
 
-        // 优化: 支持快速滑动跳过多页（velocity > 1.0）
+        // 修复：移除快速滑动跳页功能，确保每次只移动一页
+        // 避免从第一栏直接跳到第三栏，跳过第二栏（播放器页面）
         let pagesToSkip = 1;
-        if (velocity > 1.0 && Math.abs(deltaX) > 100) {
-            pagesToSkip = 2;
-        }
 
         // 左滑显示下一页
         if (deltaX < 0 && currentPage < sections.length - 1) {

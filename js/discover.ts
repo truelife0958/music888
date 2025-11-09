@@ -68,8 +68,10 @@ async function loadArtistList() {
             0
         );
 
-        if (result.artists.length === 0) {
-            artistListContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>暂无歌手数据</div></div>';
+        // 修复：检查返回结果是否有效
+        if (!result || !result.artists || result.artists.length === 0) {
+            artistListContainer.innerHTML = '<div class="error"><i class="fas fa-info-circle"></i><div>暂无歌手数据，当前API可能不支持此功能</div></div>';
+            console.warn('歌手列表API返回空数据，可能需要切换到NCM API');
             return;
         }
 
@@ -78,8 +80,8 @@ async function loadArtistList() {
 
     } catch (error) {
         console.error('加载歌手列表失败:', error);
-        artistListContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请重试</div></div>';
-        showNotification('加载歌手列表失败', 'error');
+        artistListContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请重试<br><small>提示：此功能需要NCM API支持</small></div></div>';
+        showNotification('加载歌手列表失败，请检查API配置', 'error');
     }
 }
 
@@ -251,8 +253,10 @@ async function loadNeteasePlaylists() {
 
         const result = await getHotPlaylists(order, category, 20, 0);
 
-        if (result.playlists.length === 0) {
-            gridContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>暂无歌单数据</div></div>';
+        // 修复：检查返回结果是否有效
+        if (!result || !result.playlists || result.playlists.length === 0) {
+            gridContainer.innerHTML = '<div class="error"><i class="fas fa-info-circle"></i><div>暂无歌单数据，当前API可能不支持此功能</div></div>';
+            console.warn('热门歌单API返回空数据，可能需要切换到NCM API');
             return;
         }
 
@@ -260,8 +264,8 @@ async function loadNeteasePlaylists() {
 
     } catch (error) {
         console.error('加载热门歌单失败:', error);
-        gridContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请重试</div></div>';
-        showNotification('加载热门歌单失败', 'error');
+        gridContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请重试<br><small>提示：此功能需要NCM API支持</small></div></div>';
+        showNotification('加载热门歌单失败，请检查API配置', 'error');
     }
 }
 
@@ -301,8 +305,10 @@ async function loadUserPlaylists() {
 
         const result = await getHotPlaylists(order, category, 20, 10); // 偏移10个，获取不同的数据
 
-        if (result.playlists.length === 0) {
-            gridContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>暂无歌单数据</div></div>';
+        // 修复：检查返回结果是否有效
+        if (!result || !result.playlists || result.playlists.length === 0) {
+            gridContainer.innerHTML = '<div class="error"><i class="fas fa-info-circle"></i><div>暂无歌单数据，当前API可能不支持此功能</div></div>';
+            console.warn('网友精选碟API返回空数据，可能需要切换到NCM API');
             return;
         }
 
@@ -310,17 +316,21 @@ async function loadUserPlaylists() {
 
     } catch (error) {
         console.error('加载网友精选碟失败:', error);
-        gridContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请重试</div></div>';
-        showNotification('加载网友精选碟失败', 'error');
+        gridContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><div>加载失败，请重试<br><small>提示：此功能需要NCM API支持</small></div></div>';
+        showNotification('加载网友精选碟失败，请检查API配置', 'error');
     }
 }
 
 // 显示歌单
 function displayPlaylists(playlists: any[], type: 'netease' | 'user') {
-    const gridClass = type === 'netease' ? 'hot-playlists-grid' : 'user-playlists-grid';
-    const gridContainer = document.querySelector(`.${gridClass}`);
+    // 修复：使用正确的ID选择器而不是class选择器
+    const gridId = type === 'netease' ? 'hotPlaylistsGrid' : 'userPlaylistsGrid';
+    const gridContainer = document.getElementById(gridId);
 
-    if (!gridContainer) return;
+    if (!gridContainer) {
+        console.error(`找不到容器: ${gridId}`);
+        return;
+    }
 
     const playlistCards = playlists.map(playlist => `
         <div class="playlist-card" data-playlist-id="${playlist.id}">

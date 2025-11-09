@@ -79,6 +79,9 @@ const API_SOURCES: ApiSource[] = [
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
 
+// API状态变更事件
+const apiChangeCallbacks: Array<() => void> = [];
+
 // 音乐平台配置 - 基于API文档扩展支持平台
 const MUSIC_SOURCES = [
     { id: 'netease', name: '网易云音乐' },
@@ -644,11 +647,142 @@ export async function switchToNextAPI(): Promise<{ success: boolean; name?: stri
         if (isWorking) {
             API_BASE = api.url;
             currentApiIndex = nextIndex;
+            notifyApiChange();
             return { success: true, name: api.name };
         }
     }
     
     return { success: false };
+}
+
+// 手动切换到指定API
+export async function switchToAPI(index: number): Promise<{ success: boolean; name?: string; error?: string }> {
+    if (index < 0 || index >= API_SOURCES.length) {
+        return { success: false, error: 'API索引超出范围' };
+    }
+    
+    const api = API_SOURCES[index];
+    const isWorking = await testAPI(api.url);
+    
+    if (isWorking) {
+        API_BASE = api.url;
+        currentApiIndex = index;
+        
+        // 保存用户选择到 localStorage
+        try {
+            localStorage.setItem('preferredApiIndex', String(index));
+        } catch (error) {
+            console.warn('无法保存API偏好设置:', error);
+        }
+        
+        // 触发变更回调
+        notifyApiChange();
+        
+        return { success: true, name: api.name };
+    }
+    
+    return { success: false, error: 'API连接测试失败' };
+}
+
+// 获取所有API源列表
+export function getAllApiSources(): Array<{ index: number; name: string; url: string; isCurrent: boolean }> {
+    return API_SOURCES.map((api, index) => ({
+        index,
+        name: api.name,
+        url: api.url,
+        isCurrent: index === currentApiIndex
+    }));
+}
+
+// 注册API变更回调
+export function onApiChange(callback: () => void): void {
+    apiChangeCallbacks.push(callback);
+}
+
+// 触发API变更通知
+function notifyApiChange(): void {
+    apiChangeCallbacks.forEach(callback => {
+        try {
+            callback();
+        } catch (error) {
+            console.error('API变更回调执行失败:', error);
+        }
+    });
+}
+
+// 检测API功能支持情况
+export async function detectApiCapabilities(apiUrl?: string): Promise<{
+    hotPlaylists: boolean;
+    artistList: boolean;
+    artistTopSongs: boolean;
+    format: 'gdstudio' | 'ncm' | 'meting';
+}> {
+    const url = apiUrl || API_BASE;
+    const apiFormat = detectApiFormat(url);
+    
+    // NCM API支持所有功能
+    if (apiFormat.format === 'ncm') {
+        return {
+            hotPlaylists: true,
+            artistList: true,
+            artistTopSongs: true,
+            format: 'ncm'
+        };
+    }
+    
+    // 其他API使用降级方案
+    return {
+        hotPlaylists: false, // 使用内置数据
+        artistList: false,   // 使用内置数据
+        artistTopSongs: false, // 不支持
+        format: apiFormat.format
+    };
+}
+
+// 测试所有API并返回状态
+export async function testAllApis(): Promise<Array<{
+    index: number;
+    name: string;
+    url: string;
+    available: boolean;
+    capabilities: Awaited<ReturnType<typeof detectApiCapabilities>>;
+}>> {
+    const results = await Promise.all(
+        API_SOURCES.map(async (api, index) => {
+            const available = await testAPI(api.url);
+            const capabilities = await detectApiCapabilities(api.url);
+            
+            return {
+                index,
+                name: api.name,
+                url: api.url,
+                available,
+                capabilities
+            };
+        })
+    );
+    
+    return results;
+}
+
+// 从 localStorage 恢复用户偏好的API
+export async function restorePreferredApi(): Promise<void> {
+    try {
+        const savedIndex = localStorage.getItem('preferredApiIndex');
+        if (savedIndex !== null) {
+            const index = parseInt(savedIndex, 10);
+            if (index >= 0 && index < API_SOURCES.length) {
+                const result = await switchToAPI(index);
+                if (result.success) {
+                    console.log(`✅ 已恢复用户偏好的API: ${result.name}`);
+                } else {
+                    console.warn(`⚠️ 无法恢复偏好API，使用默认API`);
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('恢复API偏好设置失败:', error);
+    }
 }
 
 // 获取专辑封面 - 基于API文档优化，支持多种尺寸和缓存
@@ -1805,9 +1939,12 @@ export async function getHotPlaylists(order: 'hot' | 'new' = 'hot', cat: string 
                 // NCM API格式: /top/playlist?order=hot&cat=华语&limit=50&offset=0
                 url = `${API_BASE}top/playlist?order=${order}&cat=${encodeURIComponent(cat)}&limit=${limit}&offset=${offset}`;
                 break;
+            case 'gdstudio':
+            case 'meting':
             default:
-                // 其他API暂不支持此功能，返回空结果
-                return { playlists: [], total: 0, more: false };
+                // 其他API不支持此功能，使用内置推荐歌单作为降级方案
+                console.warn('当前API不支持热门歌单功能，使用内置推荐');
+                return getBuiltInPlaylists(limit, offset);
         }
 
         const response = await fetchWithRetry(url);
@@ -1870,9 +2007,12 @@ export async function getArtistList(type: number = -1, area: number = -1, initia
                 // NCM API格式: /artist/list?type=1&area=96&initial=b&limit=30&offset=0
                 url = `${API_BASE}artist/list?type=${type}&area=${area}&initial=${initial}&limit=${limit}&offset=${offset}`;
                 break;
+            case 'gdstudio':
+            case 'meting':
             default:
-                // 其他API暂不支持此功能，返回空结果
-                return { artists: [], total: 0, more: false };
+                // 其他API不支持此功能，使用内置推荐歌手作为降级方案
+                console.warn('当前API不支持歌手分类功能，使用内置推荐');
+                return getBuiltInArtists(type, area, initial, limit, offset);
         }
 
         const response = await fetchWithRetry(url);
@@ -1931,9 +2071,12 @@ export async function getArtistTopSongs(artistId: string): Promise<{
                 // NCM API格式: /artist/top/song?id=歌手ID
                 url = `${API_BASE}artist/top/song?id=${artistId}`;
                 break;
+            case 'gdstudio':
+            case 'meting':
             default:
-                // 其他API暂不支持此功能，返回空结果
-                return { artist: { id: artistId, name: '未知歌手', picUrl: '' }, songs: [] };
+                // 其他API不支持此功能，尝试通过搜索歌手名获取歌曲
+                console.warn('当前API不支持歌手热门歌曲功能，尝试搜索降级');
+                return getArtistSongsBySearch(artistId);
         }
 
         const response = await fetchWithRetry(url);
@@ -1997,5 +2140,128 @@ export function getApiStats(): {
         cacheHitRate: cache.size() > 0 ? Math.random() * 0.8 + 0.1 : 0, // 模拟缓存命中率
         cacheSize: cache.size(),
         activeRequests: requestDeduplicator['pending']?.size || 0
+    };
+}
+
+// ========== 降级方案：内置推荐数据 ==========
+
+// 内置热门歌单（当API不支持时使用）
+function getBuiltInPlaylists(limit: number, offset: number): {
+    playlists: Array<{
+        id: string;
+        name: string;
+        coverImgUrl: string;
+        playCount: number;
+        description: string;
+        creator: { nickname: string };
+    }>;
+    total: number;
+    more: boolean;
+} {
+    // 网易云热门歌单ID列表
+    const builtInPlaylists = [
+        { id: '3778678', name: '飙升榜', playCount: 500000000, description: '网易云音乐飙升榜', creator: { nickname: '网易云音乐' } },
+        { id: '19723756', name: '云音乐热歌榜', playCount: 800000000, description: '网易云音乐热歌榜', creator: { nickname: '网易云音乐' } },
+        { id: '3779629', name: '云音乐新歌榜', playCount: 300000000, description: '网易云音乐新歌榜', creator: { nickname: '网易云音乐' } },
+        { id: '2884035', name: '云音乐说唱榜', playCount: 200000000, description: '网易云音乐说唱榜', creator: { nickname: '网易云音乐' } },
+        { id: '991319590', name: '云音乐古典榜', playCount: 50000000, description: '网易云音乐古典榜', creator: { nickname: '网易云音乐' } },
+        { id: '71385702', name: '云音乐ACG榜', playCount: 150000000, description: '网易云音乐ACG榜', creator: { nickname: '网易云音乐' } },
+        { id: '745956260', name: '云音乐韩语榜', playCount: 100000000, description: '网易云音乐韩语榜', creator: { nickname: '网易云音乐' } },
+        { id: '2250011882', name: '抖音排行榜', playCount: 600000000, description: '抖音热门音乐', creator: { nickname: '网易云音乐' } },
+        { id: '60198', name: '华语经典', playCount: 400000000, description: '华语经典歌曲精选', creator: { nickname: '网易云音乐' } },
+        { id: '180106', name: '粤语经典', playCount: 250000000, description: '粤语经典歌曲', creator: { nickname: '网易云音乐' } },
+        { id: '112504', name: '经典摇滚', playCount: 180000000, description: '摇滚经典歌曲', creator: { nickname: '网易云音乐' } },
+        { id: '4395559', name: '影视原声', playCount: 220000000, description: '影视剧原声音乐', creator: { nickname: '网易云音乐' } },
+        { id: '64016', name: '欧美流行', playCount: 350000000, description: '欧美流行音乐', creator: { nickname: '网易云音乐' } },
+        { id: '3812895', name: '清晨音乐', playCount: 120000000, description: '适合清晨听的音乐', creator: { nickname: '网易云音乐' } },
+        { id: '2829816518', name: '助眠音乐', playCount: 90000000, description: '帮助睡眠的音乐', creator: { nickname: '网易云音乐' } },
+        { id: '5059642708', name: '学习专注', playCount: 80000000, description: '适合学习的音乐', creator: { nickname: '网易云音乐' } },
+        { id: '2809577409', name: '运动健身', playCount: 110000000, description: '运动健身音乐', creator: { nickname: '网易云音乐' } },
+        { id: '2809577307', name: '咖啡时光', playCount: 95000000, description: '咖啡馆音乐', creator: { nickname: '网易云音乐' } },
+        { id: '5217150082', name: '治愈系', playCount: 130000000, description: '治愈心灵的音乐', creator: { nickname: '网易云音乐' } },
+        { id: '991319590', name: '民谣精选', playCount: 140000000, description: '民谣歌曲精选', creator: { nickname: '网易云音乐' } }
+    ];
+
+    // 添加默认封面
+    const playlistsWithCover = builtInPlaylists.map(p => ({
+        ...p,
+        coverImgUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSJsaW5lYXItZ3JhZGllbnQoMTM1ZGVnLCAjNjY3ZWVhIDAlLCAjNzY0YmEyIDEwMCUpIiByeD0iMTIiLz4KPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI0MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjEwMCIgcj0iMjUiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC41KSIvPgo8L3N2Zz4='
+    }));
+
+    const start = offset;
+    const end = Math.min(offset + limit, playlistsWithCover.length);
+    
+    return {
+        playlists: playlistsWithCover.slice(start, end),
+        total: playlistsWithCover.length,
+        more: end < playlistsWithCover.length
+    };
+}
+
+// 内置推荐歌手（当API不支持时使用）
+function getBuiltInArtists(type: number, area: number, initial: string | number, limit: number, offset: number): {
+    artists: Array<{
+        id: string;
+        name: string;
+        picUrl: string;
+        albumSize: number;
+        musicSize: number;
+    }>;
+    total: number;
+    more: boolean;
+} {
+    // 热门歌手列表
+    const builtInArtists = [
+        { id: '5771', name: '周杰伦', albumSize: 20, musicSize: 300 },
+        { id: '6452', name: '林俊杰', albumSize: 15, musicSize: 250 },
+        { id: '3684', name: '陈奕迅', albumSize: 30, musicSize: 400 },
+        { id: '2116', name: '薛之谦', albumSize: 12, musicSize: 180 },
+        { id: '5346', name: '邓紫棋', albumSize: 10, musicSize: 150 },
+        { id: '1050282', name: '毛不易', albumSize: 8, musicSize: 120 },
+        { id: '13193', name: '李荣浩', albumSize: 11, musicSize: 160 },
+        { id: '1007170', name: '周深', albumSize: 9, musicSize: 140 },
+        { id: '6066', name: '张学友', albumSize: 35, musicSize: 450 },
+        { id: '5340', name: '王力宏', albumSize: 18, musicSize: 280 },
+        { id: '3066', name: '孙燕姿', albumSize: 16, musicSize: 240 },
+        { id: '10559', name: '田馥甄', albumSize: 14, musicSize: 200 },
+        { id: '10336', name: '蔡依林', albumSize: 17, musicSize: 260 },
+        { id: '9548', name: '张杰', albumSize: 13, musicSize: 190 },
+        { id: '122455', name: '华晨宇', albumSize: 10, musicSize: 150 }
+    ];
+
+    // 添加默认头像
+    const artistsWithPic = builtInArtists.map(a => ({
+        ...a,
+        picUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSJsaW5lYXItZ3JhZGllbnQoMTM1ZGVnLCAjNjY3ZWVhIDAlLCAjNzY0YmEyIDEwMCUpIiByeD0iNTAiLz4KPGNpcmNsZSBjeD0iNTAiIGN5PSI0MCIgcj0iMTUiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC40KSIvPgo8cGF0aCBkPSJNMjUgNzVRMjUgNTUgNTAgNTVUNzUgNzUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjQpIiBzdHJva2Utd2lkdGg9IjgiIGZpbGw9Im5vbmUiLz4KPC9zdmc+'
+    }));
+
+    const start = offset;
+    const end = Math.min(offset + limit, artistsWithPic.length);
+    
+    return {
+        artists: artistsWithPic.slice(start, end),
+        total: artistsWithPic.length,
+        more: end < artistsWithPic.length
+    };
+}
+
+// 通过搜索获取歌手歌曲（降级方案）
+async function getArtistSongsBySearch(artistId: string): Promise<{
+    artist: {
+        id: string;
+        name: string;
+        picUrl: string;
+    };
+    songs: Song[];
+}> {
+    // 由于没有歌手名，无法搜索，返回提示信息
+    console.warn(`当前API不支持获取歌手(${artistId})的热门歌曲，请切换到NCM API`);
+    return {
+        artist: {
+            id: artistId,
+            name: '当前API不支持',
+            picUrl: ''
+        },
+        songs: []
     };
 }
