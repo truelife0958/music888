@@ -1,6 +1,6 @@
 // js/rank.ts - 音乐排行榜功能
 
-import { parsePlaylistAPI, type Song } from './api';
+import { parsePlaylistAPI, type Song, fetchWithRetry, detectApiFormat, API_BASE } from './api';
 import { playSong } from './player';
 import { showNotification, displaySearchResults, showLoading, showError } from './ui';
 
@@ -37,7 +37,7 @@ function initRankTab() {
     showRankList();
 }
 
-// 加载排行榜歌曲
+// 加载排行榜歌曲 - 使用专门的排行榜API
 async function loadRankSongs(rankId: string, source: string) {
     const songsContainer = document.getElementById('rankSongs');
     if (!songsContainer) return;
@@ -53,10 +53,42 @@ async function loadRankSongs(rankId: string, source: string) {
         // 显示加载状态
         songsContainer.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>正在加载...</div></div>';
 
-        // 直接使用标准API加载排行榜
-        const result = await parsePlaylistAPI(rankId, source);
-        const songs = result.songs;
-        const rankName = result.name || rankInfo.name;
+        // 使用排行榜API获取数据
+        let songs: Song[] = [];
+        const apiFormat = detectApiFormat(API_BASE);
+
+        if (apiFormat.format === 'ncm') {
+            // 使用NCM的排行榜API: /top/list?id=榜单ID
+            try {
+                const url = `${API_BASE}top/list?id=${rankId}`;
+                const response = await fetchWithRetry(url);
+                const data = await response.json();
+
+                if (data && data.playlist && data.playlist.tracks) {
+                    // NCM API返回的数据格式需要转换
+                    songs = data.playlist.tracks.slice(0, 50).map((song: any) => ({
+                        id: song.id,
+                        name: song.name,
+                        artist: song.ar?.map((artist: any) => artist.name) || [song.artist?.name || '未知艺术家'],
+                        album: song.al?.name || '未知专辑',
+                        pic_id: song.al?.picStr || song.pic || '',
+                        lyric_id: song.id,
+                        source: source,
+                        rawData: song
+                    }));
+                } else {
+                    console.warn('NCM排行榜API返回数据格式异常，使用歌单API降级');
+                }
+            } catch (error) {
+                console.warn('NCM排行榜API调用失败，使用歌单API降级:', error);
+            }
+        }
+
+        // 如果NCM API失败或不是NCM API，使用歌单API作为降级方案
+        if (songs.length === 0) {
+            const result = await parsePlaylistAPI(rankId, source);
+            songs = result.songs;
+        }
 
         currentRankSongs = songs;
 
@@ -74,7 +106,7 @@ async function loadRankSongs(rankId: string, source: string) {
                 <div class="rank-detail-info">
                     <h3 class="rank-detail-title">
                         <span class="rank-icon">${rankInfo.icon}</span>
-                        ${rankName}
+                        ${rankInfo.name}
                     </h3>
                     <p class="rank-detail-desc">共 ${songs.length} 首歌曲</p>
                 </div>
@@ -91,7 +123,7 @@ async function loadRankSongs(rankId: string, source: string) {
         // 使用displaySearchResults显示歌曲列表（自动包含批量操作功能）
         displaySearchResults(currentRankSongs, 'rankSongsList', currentRankSongs);
 
-        showNotification(`已加载 ${rankName}，共 ${songs.length} 首歌曲`, 'success');
+        showNotification(`已加载 ${rankInfo.name}，共 ${songs.length} 首歌曲`, 'success');
 
     } catch (error) {
         console.error('加载排行榜失败:', error);

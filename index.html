@@ -63,10 +63,13 @@
     
     <div class="main-container">
         <div class="content-section">
-            <!-- 标签页：搜索结果、发现音乐、歌单 -->
+            <!-- 标签页：搜索结果、排行榜、发现音乐、歌单 -->
             <div class="tabs">
                 <button class="tab-btn active" data-tab="search">
                     <i class="fas fa-search"></i> 搜索结果
+                </button>
+                <button class="tab-btn" data-tab="rank">
+                    <i class="fas fa-trophy"></i> 排行榜
                 </button>
                 <button class="tab-btn" data-tab="discover">
                     <i class="fas fa-compass"></i> 发现音乐
@@ -92,6 +95,17 @@
                     <div class="empty-state">
                         <i class="fas fa-search"></i>
                         <div>在上方搜索框输入关键词搜索音乐</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 排行榜标签页 -->
+            <div id="rankTab" class="tab-content">
+                <div class="rank-content" id="rankSongs">
+                    <!-- 排行榜选择和歌曲列表将在这里动态生成 -->
+                    <div class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <div>正在加载排行榜...</div>
                     </div>
                 </div>
             </div>

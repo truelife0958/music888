@@ -373,6 +373,10 @@ function stopCacheCleanup(): void {
     }
 }
 
+// 导出必要的函数供其他模块使用
+export { fetchWithRetry, detectApiFormat };
+export { API_BASE, API_SOURCES };
+
 // 导出清理函数供外部调用
 export function cleanup(): void {
     console.log('🧹 清理API模块资源...');
