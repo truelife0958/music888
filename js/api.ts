@@ -59,7 +59,7 @@ function detectApiFormat(apiUrl: string): {
     };
 }
 
-// 音乐API配置 - 基于API文档优化，优先使用稳定的GDStudio API，新增NCM API源
+// 音乐API配置 - 老王调整：恢复GDStudio主API为默认，解决版权和数据问题
 const API_SOURCES: ApiSource[] = [
     {
         name: 'GDStudio 主API',
@@ -70,21 +70,46 @@ const API_SOURCES: ApiSource[] = [
         url: 'https://music-api.gdstudio.org/api.php'
     },
     {
+        name: 'Meting备用API',
+        url: 'https://api.injahow.cn/meting/'
+    },
+    {
         name: 'NCM增强API',
         url: 'https://ncm-api.imixc.top/'
     },
     {
-        name: 'ClawCloud API',
+        name: 'ClawCloud API (网易云增强)',
         url: 'https://pkllzbbagoeg.ap-southeast-1.clawcloudrun.com/'
-    },
-    {
-        name: 'Meting备用API',
-        url: 'https://api.injahow.cn/meting/'
     }
 ];
 
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
+
+// 老王优化：播放专用API源优先级列表（避免版权限制）
+// 数据获取用ClawCloud API，播放优先用备用API规避版权问题
+const PLAYBACK_API_SOURCES: ApiSource[] = [
+    {
+        name: 'GDStudio 主API',
+        url: 'https://music-api.gdstudio.xyz/api.php'
+    },
+    {
+        name: 'GDStudio 备用API',
+        url: 'https://music-api.gdstudio.org/api.php'
+    },
+    {
+        name: 'Meting备用API',
+        url: 'https://api.injahow.cn/meting/'
+    },
+    {
+        name: 'NCM增强API',
+        url: 'https://ncm-api.imixc.top/'
+    },
+    {
+        name: 'ClawCloud API (网易云增强)',
+        url: 'https://pkllzbbagoeg.ap-southeast-1.clawcloudrun.com/'
+    }
+];
 
 // API状态变更事件
 const apiChangeCallbacks: Array<() => void> = [];
@@ -912,30 +937,30 @@ async function validateUrl(url: string): Promise<boolean> {
     }
 }
 
-// 获取歌曲URL - 支持NCM API格式
-export async function getSongUrl(song: Song, quality: string): Promise<{ url: string; br: string; error?: string }> {
+// 老王优化：单个API源获取歌曲URL的辅助函数
+async function getSongUrlFromApi(song: Song, quality: string, apiUrl: string): Promise<{ url: string; br: string; error?: string }> {
     try {
-        const apiFormat = detectApiFormat(API_BASE);
+        const apiFormat = detectApiFormat(apiUrl);
         let url: string;
 
         // 根据不同API格式构建请求URL
         switch (apiFormat.format) {
             case 'gdstudio':
                 // GDStudio API格式: ?types=url&source=netease&id=song_id&br=320
-                url = `${API_BASE}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
+                url = `${apiUrl}?types=url&source=${song.source}&id=${song.id}&br=${quality}`;
                 break;
             case 'ncm':
                 // NCM API格式: /song/url?id=song_id&br=320
-                url = `${API_BASE}song/url?id=${song.id}&br=${quality}`;
+                url = `${apiUrl}song/url?id=${song.id}&br=${quality}`;
                 break;
             case 'clawcloud':
                 // ClawCloud API = 网易云音乐API Enhanced,使用song/url/v1接口获取更高音质
-                url = `${API_BASE}song/url/v1?id=${song.id}&level=${quality === '320' ? 'exhigh' : quality === '192' ? 'higher' : 'standard'}`;
+                url = `${apiUrl}song/url/v1?id=${song.id}&level=${quality === '320' ? 'exhigh' : quality === '192' ? 'higher' : 'standard'}`;
                 break;
             case 'meting':
             default:
                 // Meting API格式: ?type=url&source=netease&id=song_id&br=320
-                url = `${API_BASE}?type=url&source=${song.source}&id=${song.id}&br=${quality}`;
+                url = `${apiUrl}?type=url&source=${song.source}&id=${song.id}&br=${quality}`;
                 break;
         }
 
@@ -956,7 +981,7 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
 
         // 处理不同API格式的响应数据
         let songUrl = '';
-        if (apiFormat.format === 'ncm') {
+        if (apiFormat.format === 'ncm' || apiFormat.format === 'clawcloud') {
             // NCM API格式: { data: [{ url: "...", br: 320000 }] }
             if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
                 songUrl = data.data[0].url;
@@ -971,7 +996,7 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
         }
 
         if (songUrl) {
-            // 优化: 验证返回的URL是否有效
+            // 优化: 验证返回的URL是否有效（只验证网易云音乐）
             if (song.source === 'netease') {
                 const isValid = await validateUrl(songUrl);
                 if (!isValid) {
@@ -1011,10 +1036,53 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
         }
 
         const errorMessage = error instanceof ApiError
-            ? error.message
-            : 'API请求失败';
+            ? `API请求失败: ${error.message}`
+            : `请求失败`;
+
+        console.error(`从 ${apiUrl} 获取歌曲URL失败:`, errorMessage);
         return { url: '', br: '', error: errorMessage };
     }
+}
+
+// 获取歌曲URL - 老王优化：使用播放专用API源列表，规避版权限制
+export async function getSongUrl(song: Song, quality: string): Promise<{ url: string; br: string; error?: string }> {
+    console.log(`🎵 [播放优化] 开始获取歌曲URL: ${song.name} (ID: ${song.id})`);
+
+    const errors: string[] = [];
+
+    // 遍历播放专用API源列表，优先使用备用API规避版权问题
+    for (let i = 0; i < PLAYBACK_API_SOURCES.length; i++) {
+        const apiSource = PLAYBACK_API_SOURCES[i];
+        console.log(`🔄 [播放优化] 尝试API源 ${i + 1}/${PLAYBACK_API_SOURCES.length}: ${apiSource.name}`);
+
+        try {
+            const result = await getSongUrlFromApi(song, quality, apiSource.url);
+
+            // 如果成功获取到URL，直接返回
+            if (result.url) {
+                console.log(`✅ [播放优化] 成功从 ${apiSource.name} 获取音乐链接`);
+                return result;
+            }
+
+            // 记录错误
+            if (result.error) {
+                errors.push(`${apiSource.name}: ${result.error}`);
+                console.warn(`⚠️ [播放优化] ${apiSource.name} 返回错误: ${result.error}`);
+            }
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : '未知错误';
+            errors.push(`${apiSource.name}: ${errorMsg}`);
+            console.error(`❌ [播放优化] ${apiSource.name} 请求失败:`, errorMsg);
+        }
+    }
+
+    // 所有API源都失败，返回错误
+    console.error(`❌ [播放优化] 所有API源均失败，歌曲: ${song.name}`);
+    const combinedError = errors.length > 0
+        ? `尝试${errors.length}个API均失败 - ${errors[0]}`
+        : '无法获取音乐链接';
+
+    return { url: '', br: '', error: combinedError };
 }
 
 // 获取歌词 - 添加缓存，支持NCM API格式

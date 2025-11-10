@@ -93,19 +93,24 @@ const PLAYLIST_GENRES = [
     { value: '怀旧', label: '怀旧', icon: '📻' }
 ];
 
-// 导航状态
+// 老王大改：简化歌单模块状态，只保留列表和详情
 interface PlaylistNavState {
-    category: string; // 'rank' | 'hot' | 'user'
-    genre?: string;
-    order?: 'hot' | 'new';
-    stage: 'category' | 'subcategory' | 'list' | 'detail';
+    stage: 'list' | 'detail';
     playlistId?: string;
     playlistName?: string;
+    // 分页状态
+    currentPlaylists: any[];
+    offset: number;
+    hasMore: boolean;
+    isLoading: boolean;
 }
 
 let currentState: PlaylistNavState = {
-    category: '',
-    stage: 'category'
+    stage: 'list',
+    currentPlaylists: [],
+    offset: 0,
+    hasMore: true,
+    isLoading: false
 };
 
 // ========== 老王修复BUG：命名事件处理函数 ==========
@@ -144,7 +149,19 @@ function handleRankCardClick(e: Event): void {
 function handleGenreButtonClick(e: Event): void {
     currentState.genre = (e.currentTarget as HTMLElement).dataset.genre || '全部';
     currentState.order = 'hot'; // 默认最热
+    // 重置分页状态
+    currentState.currentPlaylists = [];
+    currentState.offset = 0;
+    currentState.hasMore = true;
     loadPlaylistsByGenre();
+}
+
+/**
+ * 处理加载更多歌单按钮点击
+ */
+function handleLoadMorePlaylists(): void {
+    if (currentState.isLoading || !currentState.hasMore) return;
+    loadMorePlaylists();
 }
 
 /**
@@ -168,132 +185,18 @@ function handleArtistCardClick(e: Event): void {
     }
 }
 
-// 初始化歌单模块
+// 老王大改：初始化直接加载热门歌单，去掉分类导航
 export function initPlaylist() {
-    console.log('📀 初始化歌单模块...');
-    showCategorySelection();
+    console.log('📀 初始化歌单模块（热门歌单）...');
+    // 重置状态
+    currentState.currentPlaylists = [];
+    currentState.offset = 0;
+    currentState.hasMore = true;
+    loadPlaylistsByGenre();
     console.log('✅ 歌单模块初始化完成');
 }
 
-// 第1层：显示大分类选择
-function showCategorySelection() {
-    const container = document.getElementById('playlistContainer');
-    if (!container) return;
-
-    // 老王修复BUG：渲染前清理旧监听器
-    clearCurrentListeners();
-
-    currentState.stage = 'category';
-
-    container.innerHTML = `
-        <div class="nav-stage-container">
-            <div class="nav-stage-header">
-                <h3><i class="fas fa-list-music"></i> 选择歌单类型</h3>
-            </div>
-            <div class="nav-buttons-grid category-grid">
-                ${PLAYLIST_CATEGORIES.map(cat => `
-                    <button class="nav-button nav-button-large" data-category="${cat.id}" style="border-color: ${cat.color};">
-                        <span class="nav-button-icon" style="font-size: 3em;">${cat.icon}</span>
-                        <span class="nav-button-label" style="font-size: 1.2em;">${cat.label}</span>
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    // 老王修复BUG：使用registerEventListener替换addEventListener
-    container.querySelectorAll('.nav-button').forEach(btn => {
-        registerEventListener(btn, 'click', handleCategoryButtonClick);
-    });
-}
-
-// 第2层-排行榜：显示排行榜列表
-function showRankList() {
-    const container = document.getElementById('playlistContainer');
-    if (!container) return;
-
-    // 老王修复BUG：渲染前清理旧监听器
-    clearCurrentListeners();
-
-    currentState.stage = 'list';
-
-    container.innerHTML = `
-        <div class="nav-stage-container">
-            <div class="nav-stage-header">
-                <button class="back-btn" id="backToCategory">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
-                <h3><i class="fas fa-trophy"></i> 排行榜列表</h3>
-            </div>
-            <div class="rank-selection-grid">
-                ${RANK_LISTS.map(rank => `
-                    <div class="rank-selection-card" data-rank-id="${rank.id}">
-                        <div class="rank-selection-icon">${rank.icon}</div>
-                        <div class="rank-selection-name">${rank.name}</div>
-                        <div class="rank-selection-arrow">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    // 老王修复BUG：返回按钮使用命名函数
-    const backBtn = document.getElementById('backToCategory');
-    if (backBtn) {
-        registerEventListener(backBtn, 'click', showCategorySelection);
-    }
-
-    // 老王修复BUG：排行榜卡片使用命名函数
-    container.querySelectorAll('.rank-selection-card').forEach(card => {
-        registerEventListener(card, 'click', handleRankCardClick);
-    });
-}
-
-// 第2层-歌单：显示风格选择
-function showGenreSelection() {
-    const container = document.getElementById('playlistContainer');
-    if (!container) return;
-
-    // 老王修复BUG：渲染前清理旧监听器
-    clearCurrentListeners();
-
-    currentState.stage = 'subcategory';
-    const selectedCategory = PLAYLIST_CATEGORIES.find(c => c.id === currentState.category);
-
-    container.innerHTML = `
-        <div class="nav-stage-container">
-            <div class="nav-stage-header">
-                <button class="back-btn" id="backToCategory">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
-                <h3><i class="fas fa-music"></i> 选择风格 <span class="breadcrumb-hint">${selectedCategory?.label}</span></h3>
-            </div>
-            <div class="nav-buttons-grid">
-                ${PLAYLIST_GENRES.map(genre => `
-                    <button class="nav-button" data-genre="${genre.value}">
-                        <span class="nav-button-icon">${genre.icon}</span>
-                        <span class="nav-button-label">${genre.label}</span>
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    // 老王修复BUG：返回按钮使用命名函数
-    const backBtn = document.getElementById('backToCategory');
-    if (backBtn) {
-        registerEventListener(backBtn, 'click', showCategorySelection);
-    }
-
-    // 老王修复BUG：风格按钮使用命名函数
-    container.querySelectorAll('.nav-button').forEach(btn => {
-        registerEventListener(btn, 'click', handleGenreButtonClick);
-    });
-}
-
-// 第3层：加载歌单列表
+// 老王大改：加载热门歌单列表（首次加载）
 async function loadPlaylistsByGenre() {
     const container = document.getElementById('playlistContainer');
     if (!container) return;
@@ -302,111 +205,154 @@ async function loadPlaylistsByGenre() {
     clearCurrentListeners();
 
     currentState.stage = 'list';
-    const selectedCategory = PLAYLIST_CATEGORIES.find(c => c.id === currentState.category);
-    const selectedGenre = PLAYLIST_GENRES.find(g => g.value === currentState.genre);
+    currentState.isLoading = true;
 
     try {
-        container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>正在加载歌单...</div></div>';
+        container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>正在加载热门歌单...</div></div>';
 
-        // 根据分类使用不同的偏移量
-        const offset = currentState.category === 'user' ? 10 : 0;
-
+        // 固定参数为热门歌单：order='hot', cat='全部'
         const result = await getHotPlaylists(
-            currentState.order || 'hot',
-            currentState.genre || '全部',
-            20,
-            offset
+            'hot',  // 最热排序
+            '全部',  // 全部分类
+            150,    // 获取150个歌单
+            currentState.offset
         );
+
+        currentState.isLoading = false;
 
         if (!result || !result.playlists || result.playlists.length === 0) {
             container.innerHTML = `
                 <div class="error">
-                    <button class="back-btn" id="backToGenre">
-                        <i class="fas fa-arrow-left"></i> 返回
-                    </button>
                     <i class="fas fa-info-circle"></i>
                     <div>暂无歌单数据</div>
                 </div>
             `;
-            // 老王修复BUG：使用registerEventListener
-            const backBtn = document.getElementById('backToGenre');
-            if (backBtn) {
-                registerEventListener(backBtn, 'click', showGenreSelection);
-            }
             return;
         }
 
-        displayPlaylistGrid(result.playlists, selectedCategory?.label, selectedGenre?.label);
+        // 保存数据和分页状态
+        currentState.currentPlaylists = result.playlists;
+        currentState.offset += result.playlists.length;
+        currentState.hasMore = result.more || false;
+
+        displayPlaylistGrid(result.playlists);
 
     } catch (error) {
-        console.error('加载歌单失败:', error);
+        console.error('加载热门歌单失败:', error);
+        currentState.isLoading = false;
         container.innerHTML = `
             <div class="error">
-                <button class="back-btn" id="backToGenre">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
                 <i class="fas fa-exclamation-triangle"></i>
                 <div>加载失败，请重试</div>
             </div>
         `;
-        // 老王修复BUG：使用registerEventListener
-        const backBtn = document.getElementById('backToGenre');
-        if (backBtn) {
-            registerEventListener(backBtn, 'click', showGenreSelection);
-        }
-        showNotification('加载歌单失败', 'error');
+        showNotification('加载热门歌单失败', 'error');
     }
 }
 
-// 显示歌单网格
-function displayPlaylistGrid(playlists: any[], categoryName?: string, genreName?: string) {
+// 老王大改：加载更多热门歌单
+async function loadMorePlaylists() {
+    if (currentState.isLoading || !currentState.hasMore) return;
+
     const container = document.getElementById('playlistContainer');
     if (!container) return;
 
-    const playlistCards = playlists.map(playlist => `
-        <div class="playlist-card" data-playlist-id="${playlist.id}">
-            <div class="playlist-cover">
-                <img src="${playlist.coverImgUrl || '/images/default-playlist.png'}"
-                     alt="${escapeHtml(playlist.name)}"
-                     loading="lazy"
-                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU5LDAuMSkiIHJ4PSIxMiIvPgo8cGF0aCBkPSJNMTAwIDYwTDE0MCAxMDBIMTIwVjE0MEg4MFYxMDBINjBMMTAwIDYwWiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo='">
-                <div class="playlist-play-count">
-                    <i class="fas fa-play"></i>
-                    ${formatPlayCount(playlist.playCount)}
-                </div>
-            </div>
-            <div class="playlist-info">
-                <div class="playlist-name">${escapeHtml(playlist.name)}</div>
-                <div class="playlist-creator">by ${escapeHtml(playlist.creator?.nickname || '未知')}</div>
-            </div>
-        </div>
+    const loadMoreBtn = document.getElementById('loadMorePlaylistsBtn') as HTMLButtonElement;
+
+    try {
+        currentState.isLoading = true;
+        if (loadMoreBtn) {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中...';
+        }
+
+        // 固定参数为热门歌单：order='hot', cat='全部'
+        const result = await getHotPlaylists(
+            'hot',  // 最热排序
+            '全部',  // 全部分类
+            150,
+            currentState.offset
+        );
+
+        currentState.isLoading = false;
+
+        if (result && result.playlists && result.playlists.length > 0) {
+            // 追加新数据
+            currentState.currentPlaylists.push(...result.playlists);
+            currentState.offset += result.playlists.length;
+            currentState.hasMore = result.more || false;
+
+            // 重新渲染整个列表
+            displayPlaylistGrid(currentState.currentPlaylists);
+
+            showNotification(`已加载 ${result.playlists.length} 个歌单，当前共 ${currentState.currentPlaylists.length} 个`, 'success');
+        } else {
+            currentState.hasMore = false;
+            if (loadMoreBtn) {
+                loadMoreBtn.disabled = true;
+                loadMoreBtn.textContent = '已加载全部';
+            }
+        }
+
+    } catch (error) {
+        console.error('加载更多歌单失败:', error);
+        currentState.isLoading = false;
+        if (loadMoreBtn) {
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.innerHTML = '<i class="fas fa-redo"></i> 重试';
+        }
+        showNotification('加载更多失败，请重试', 'error');
+    }
+}
+
+// 老王大改：显示热门歌单按钮列表
+function displayPlaylistGrid(playlists: any[]) {
+    const container = document.getElementById('playlistContainer');
+    if (!container) return;
+
+    const playlistButtons = playlists.map(playlist => `
+        <button class="nav-btn-item" data-playlist-id="${playlist.id}">
+            <span class="btn-icon">🎵</span>
+            <span class="btn-content">
+                <span class="btn-title">${escapeHtml(playlist.name)}</span>
+                <span class="btn-subtitle">
+                    <i class="fas fa-play"></i> ${formatPlayCount(playlist.playCount)} ·
+                    by ${escapeHtml(playlist.creator?.nickname || '未知')}
+                </span>
+            </span>
+            <i class="fas fa-chevron-right btn-arrow"></i>
+        </button>
     `).join('');
 
     container.innerHTML = `
         <div class="nav-stage-container">
             <div class="nav-stage-header">
-                <button class="back-btn" id="backToGenre">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
-                <h3><i class="fas fa-compact-disc"></i> 歌单列表 <span class="breadcrumb-hint">${categoryName} / ${genreName}</span></h3>
-                <p class="result-count">共 ${playlists.length} 个歌单</p>
+                <h3><i class="fas fa-fire"></i> 热门歌单</h3>
+                <p class="result-count">共 ${playlists.length} 个歌单${currentState.hasMore ? ' (还有更多)' : ' (已全部加载)'}</p>
             </div>
-            <div class="playlist-grid">
-                ${playlistCards}
+            <div class="nav-buttons-container">
+                ${playlistButtons}
             </div>
+            ${currentState.hasMore ? `
+                <div class="load-more-container">
+                    <button class="load-more-btn" id="loadMorePlaylistsBtn">
+                        <i class="fas fa-chevron-down"></i> 加载更多歌单
+                    </button>
+                </div>
+            ` : ''}
         </div>
     `;
 
-    // 老王修复BUG：返回按钮使用registerEventListener
-    const backBtn = document.getElementById('backToGenre');
-    if (backBtn) {
-        registerEventListener(backBtn, 'click', showGenreSelection);
-    }
-
-    // 老王修复BUG：歌单卡片使用命名函数
-    container.querySelectorAll('.playlist-card').forEach(card => {
-        registerEventListener(card, 'click', handlePlaylistCardClick);
+    // 老王修复BUG：歌单按钮使用命名函数
+    container.querySelectorAll('.nav-btn-item').forEach(btn => {
+        registerEventListener(btn, 'click', handlePlaylistCardClick);
     });
+
+    // 加载更多按钮
+    const loadMoreBtn = document.getElementById('loadMorePlaylistsBtn');
+    if (loadMoreBtn) {
+        registerEventListener(loadMoreBtn, 'click', handleLoadMorePlaylists);
+    }
 }
 
 // 格式化播放次数

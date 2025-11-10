@@ -4168,6 +4168,95 @@ body {
     font-size: 13px;
 }
 
+/* ========== 老王新增：加载更多按钮样式 ========== */
+
+/* 加载更多按钮容器 */
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-lg) 0;
+    margin-top: var(--spacing-md);
+}
+
+/* 加载更多按钮 */
+.load-more-btn {
+    padding: 12px 30px;
+    background: var(--bg-glass-medium);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-color);
+    font-size: var(--font-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-normal) ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.load-more-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.2), transparent);
+    transition: left var(--transition-slow) ease;
+}
+
+.load-more-btn:hover:not(:disabled) {
+    background: var(--bg-glass-heavy);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md), 0 0 20px rgba(255, 107, 107, 0.2);
+}
+
+.load-more-btn:hover:not(:disabled)::before {
+    left: 100%;
+}
+
+.load-more-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.load-more-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--bg-glass-light);
+    border-color: var(--border-light);
+}
+
+.load-more-btn i {
+    font-size: 16px;
+    transition: transform var(--transition-normal) ease;
+}
+
+.load-more-btn:hover:not(:disabled) i {
+    transform: translateY(2px);
+}
+
+/* 加载中状态 */
+.load-more-btn i.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    .load-more-container {
+        padding: var(--spacing-md) 0;
+    }
+
+    .load-more-btn {
+        padding: 10px 24px;
+        font-size: var(--font-sm);
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
 /* ========== 发现音乐模块样式 ========== */
 
 /* 发现音乐导航 */

@@ -86,21 +86,24 @@ const ARTIST_INITIALS = [
     ...Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(letter => ({ value: letter.toLowerCase(), label: letter, icon: letter }))
 ];
 
-// 导航状态
+// 老王大改：简化歌手模块状态，只保留列表和详情
 interface ArtistNavState {
-    type: number;
-    area: number;
-    initial: string | number;
-    stage: 'type' | 'area' | 'initial' | 'list' | 'detail';
+    stage: 'list' | 'detail';
     artistId?: string;
     artistName?: string;
+    // 分页状态
+    currentArtists: any[];
+    offset: number;
+    hasMore: boolean;
+    isLoading: boolean;
 }
 
 let currentState: ArtistNavState = {
-    type: -1,
-    area: -1,
-    initial: -1,
-    stage: 'type'
+    stage: 'list',
+    currentArtists: [],
+    offset: 0,
+    hasMore: true,
+    isLoading: false
 };
 
 // ========== 老王修复BUG：命名事件处理函数 ==========
@@ -127,7 +130,19 @@ function handleAreaButtonClick(e: Event): void {
  */
 function handleInitialButtonClick(e: Event): void {
     currentState.initial = (e.currentTarget as HTMLElement).dataset.value || '-1';
+    // 重置分页状态
+    currentState.currentArtists = [];
+    currentState.offset = 0;
+    currentState.hasMore = true;
     loadArtistList();
+}
+
+/**
+ * 处理加载更多按钮点击
+ */
+function handleLoadMoreArtists(): void {
+    if (currentState.isLoading || !currentState.hasMore) return;
+    loadMoreArtists();
 }
 
 /**
@@ -141,130 +156,18 @@ function handleArtistCardClick(e: Event): void {
     }
 }
 
-// 初始化歌手模块
+// 老王大改：初始化直接加载热门歌手，去掉分类导航
 export function initArtist() {
-    console.log('🎤 初始化歌手模块...');
-    showTypeSelection();
+    console.log('🎤 初始化歌手模块（热门歌手）...');
+    // 重置状态
+    currentState.currentArtists = [];
+    currentState.offset = 0;
+    currentState.hasMore = true;
+    loadArtistList();
     console.log('✅ 歌手模块初始化完成');
 }
 
-// 第1层：显示类型选择
-function showTypeSelection() {
-    const container = document.getElementById('artistContainer');
-    if (!container) return;
-
-    // 老王修复BUG：渲染前清理旧监听器
-    clearCurrentListeners();
-
-    currentState.stage = 'type';
-
-    container.innerHTML = `
-        <div class="nav-stage-container">
-            <div class="nav-stage-header">
-                <h3><i class="fas fa-user-music"></i> 选择歌手类型</h3>
-            </div>
-            <div class="nav-buttons-grid">
-                ${ARTIST_TYPES.map(type => `
-                    <button class="nav-button" data-value="${type.value}">
-                        <span class="nav-button-icon">${type.icon}</span>
-                        <span class="nav-button-label">${type.label}</span>
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    // 老王修复BUG：使用registerEventListener替换addEventListener
-    container.querySelectorAll('.nav-button').forEach(btn => {
-        registerEventListener(btn, 'click', handleTypeButtonClick);
-    });
-}
-
-// 第2层：显示地区选择
-function showAreaSelection() {
-    const container = document.getElementById('artistContainer');
-    if (!container) return;
-
-    // 老王修复BUG：渲染前清理旧监听器
-    clearCurrentListeners();
-
-    currentState.stage = 'area';
-    const selectedType = ARTIST_TYPES.find(t => t.value === currentState.type);
-
-    container.innerHTML = `
-        <div class="nav-stage-container">
-            <div class="nav-stage-header">
-                <button class="back-btn" id="backToType">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
-                <h3><i class="fas fa-globe-asia"></i> 选择地区 <span class="breadcrumb-hint">${selectedType?.label}</span></h3>
-            </div>
-            <div class="nav-buttons-grid">
-                ${ARTIST_AREAS.map(area => `
-                    <button class="nav-button" data-value="${area.value}">
-                        <span class="nav-button-icon">${area.icon}</span>
-                        <span class="nav-button-label">${area.label}</span>
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    // 老王修复BUG：返回按钮使用registerEventListener
-    const backBtn = document.getElementById('backToType');
-    if (backBtn) {
-        registerEventListener(backBtn, 'click', showTypeSelection);
-    }
-
-    // 老王修复BUG：地区按钮使用命名函数
-    container.querySelectorAll('.nav-button').forEach(btn => {
-        registerEventListener(btn, 'click', handleAreaButtonClick);
-    });
-}
-
-// 第3层：显示首字母选择
-function showInitialSelection() {
-    const container = document.getElementById('artistContainer');
-    if (!container) return;
-
-    // 老王修复BUG：渲染前清理旧监听器
-    clearCurrentListeners();
-
-    currentState.stage = 'initial';
-    const selectedType = ARTIST_TYPES.find(t => t.value === currentState.type);
-    const selectedArea = ARTIST_AREAS.find(a => a.value === currentState.area);
-
-    container.innerHTML = `
-        <div class="nav-stage-container">
-            <div class="nav-stage-header">
-                <button class="back-btn" id="backToArea">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
-                <h3><i class="fas fa-font"></i> 选择首字母 <span class="breadcrumb-hint">${selectedType?.label} / ${selectedArea?.label}</span></h3>
-            </div>
-            <div class="nav-buttons-grid alphabet-grid">
-                ${ARTIST_INITIALS.map(initial => `
-                    <button class="nav-button nav-button-small" data-value="${initial.value}">
-                        <span class="nav-button-label">${initial.label}</span>
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    // 老王修复BUG：返回按钮使用registerEventListener
-    const backBtn = document.getElementById('backToArea');
-    if (backBtn) {
-        registerEventListener(backBtn, 'click', showAreaSelection);
-    }
-
-    // 老王修复BUG：首字母按钮使用命名函数
-    container.querySelectorAll('.nav-button').forEach(btn => {
-        registerEventListener(btn, 'click', handleInitialButtonClick);
-    });
-}
-
-// 第4层：加载并显示歌手列表
+// 老王大改：加载热门歌手列表（首次加载）
 async function loadArtistList() {
     const container = document.getElementById('artistContainer');
     if (!container) return;
@@ -273,63 +176,110 @@ async function loadArtistList() {
     clearCurrentListeners();
 
     currentState.stage = 'list';
-    const selectedType = ARTIST_TYPES.find(t => t.value === currentState.type);
-    const selectedArea = ARTIST_AREAS.find(a => a.value === currentState.area);
-    const selectedInitial = ARTIST_INITIALS.find(i => String(i.value) === String(currentState.initial));
+    currentState.isLoading = true;
 
     try {
-        container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>正在加载歌手列表...</div></div>';
+        container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>正在加载热门歌手...</div></div>';
 
+        // 固定参数为热门歌手：type=-1, area=-1, initial=-1
         const result = await getArtistList(
-            currentState.type,
-            currentState.area,
-            currentState.initial,
-            50,
-            0
+            -1,  // 全部类型
+            -1,  // 全部地区
+            -1,  // 热门
+            50,  // 获取50个热门歌手
+            currentState.offset
         );
+
+        currentState.isLoading = false;
 
         if (!result || !result.artists || result.artists.length === 0) {
             container.innerHTML = `
                 <div class="error">
-                    <button class="back-btn" id="backToInitial">
-                        <i class="fas fa-arrow-left"></i> 返回
-                    </button>
                     <i class="fas fa-info-circle"></i>
                     <div>暂无歌手数据</div>
                 </div>
             `;
-            // 老王修复BUG：使用registerEventListener
-            const backBtn = document.getElementById('backToInitial');
-            if (backBtn) {
-                registerEventListener(backBtn, 'click', showInitialSelection);
-            }
             return;
         }
 
-        displayArtistList(result.artists, selectedType?.label, selectedArea?.label, selectedInitial?.label);
+        // 保存数据和分页状态
+        currentState.currentArtists = result.artists;
+        currentState.offset += result.artists.length;
+        currentState.hasMore = result.more || false;
+
+        displayArtistList(result.artists);
 
     } catch (error) {
-        console.error('加载歌手列表失败:', error);
+        console.error('加载热门歌手失败:', error);
+        currentState.isLoading = false;
         container.innerHTML = `
             <div class="error">
-                <button class="back-btn" id="backToInitial">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
                 <i class="fas fa-exclamation-triangle"></i>
                 <div>加载失败，请重试</div>
             </div>
         `;
-        // 老王修复BUG：使用registerEventListener
-        const backBtn = document.getElementById('backToInitial');
-        if (backBtn) {
-            registerEventListener(backBtn, 'click', showInitialSelection);
-        }
-        showNotification('加载歌手列表失败', 'error');
+        showNotification('加载热门歌手失败', 'error');
     }
 }
 
-// 显示歌手列表
-function displayArtistList(artists: any[], typeName?: string, areaName?: string, initialName?: string) {
+// 老王大改：加载更多热门歌手
+async function loadMoreArtists() {
+    if (currentState.isLoading || !currentState.hasMore) return;
+
+    const container = document.getElementById('artistContainer');
+    if (!container) return;
+
+    const loadMoreBtn = document.getElementById('loadMoreArtistsBtn') as HTMLButtonElement;
+
+    try {
+        currentState.isLoading = true;
+        if (loadMoreBtn) {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中...';
+        }
+
+        // 固定参数为热门歌手
+        const result = await getArtistList(
+            -1,  // 全部类型
+            -1,  // 全部地区
+            -1,  // 热门
+            50,
+            currentState.offset
+        );
+
+        currentState.isLoading = false;
+
+        if (result && result.artists && result.artists.length > 0) {
+            // 追加新数据
+            currentState.currentArtists.push(...result.artists);
+            currentState.offset += result.artists.length;
+            currentState.hasMore = result.more || false;
+
+            // 重新渲染整个列表
+            displayArtistList(currentState.currentArtists);
+
+            showNotification(`已加载 ${result.artists.length} 位歌手，当前共 ${currentState.currentArtists.length} 位`, 'success');
+        } else {
+            currentState.hasMore = false;
+            if (loadMoreBtn) {
+                loadMoreBtn.disabled = true;
+                loadMoreBtn.textContent = '已加载全部';
+            }
+        }
+
+    } catch (error) {
+        console.error('加载更多歌手失败:', error);
+        currentState.isLoading = false;
+        if (loadMoreBtn) {
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.innerHTML = '<i class="fas fa-redo"></i> 重试';
+        }
+        showNotification('加载更多失败，请重试', 'error');
+    }
+}
+
+// 老王大改：显示热门歌手列表（去掉面包屑）
+function displayArtistList(artists: any[]) {
     const container = document.getElementById('artistContainer');
     if (!container) return;
 
@@ -354,28 +304,32 @@ function displayArtistList(artists: any[], typeName?: string, areaName?: string,
     container.innerHTML = `
         <div class="nav-stage-container">
             <div class="nav-stage-header">
-                <button class="back-btn" id="backToInitial">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
-                <h3><i class="fas fa-users"></i> 歌手列表 <span class="breadcrumb-hint">${typeName} / ${areaName} / ${initialName}</span></h3>
-                <p class="result-count">共 ${artists.length} 位歌手</p>
+                <h3><i class="fas fa-fire"></i> 热门歌手</h3>
+                <p class="result-count">共 ${artists.length} 位歌手${currentState.hasMore ? ' (还有更多)' : ' (已全部加载)'}</p>
             </div>
             <div class="artist-grid">
                 ${artistGrid}
             </div>
+            ${currentState.hasMore ? `
+                <div class="load-more-container">
+                    <button class="load-more-btn" id="loadMoreArtistsBtn">
+                        <i class="fas fa-chevron-down"></i> 加载更多歌手
+                    </button>
+                </div>
+            ` : ''}
         </div>
     `;
-
-    // 老王修复BUG：返回按钮使用registerEventListener
-    const backBtn = document.getElementById('backToInitial');
-    if (backBtn) {
-        registerEventListener(backBtn, 'click', showInitialSelection);
-    }
 
     // 老王修复BUG：歌手卡片使用命名函数
     container.querySelectorAll('.artist-card').forEach(card => {
         registerEventListener(card, 'click', handleArtistCardClick);
     });
+
+    // 加载更多按钮
+    const loadMoreBtn = document.getElementById('loadMoreArtistsBtn');
+    if (loadMoreBtn) {
+        registerEventListener(loadMoreBtn, 'click', handleLoadMoreArtists);
+    }
 }
 
 // 第5层:加载歌手详情（热门歌曲）

@@ -52,11 +52,6 @@
                     </button>
                 </form>
             </div>
-            <div class="nav-actions">
-                <button class="nav-btn" id="apiSettingsBtn" title="API设置">
-                    <i class="fas fa-cog"></i>
-                </button>
-            </div>
         </div>
     </nav>
     
@@ -75,15 +70,15 @@
                 </button>
             </div>
 
-            <!-- 搜索结果标签页 - 包含每日推荐和刷新推荐 -->
+            <!-- 搜索结果标签页 - 包含热门音乐 -->
             <div id="searchTab" class="tab-content active">
-                <!-- 每日推荐和刷新按钮 -->
+                <!-- 热门音乐和刷新按钮 -->
                 <div class="daily-recommend-section">
                     <button class="daily-recommend-btn" id="dailyRecommendBtn">
-                        <i class="fas fa-calendar-day"></i> 每日推荐
+                        <i class="fas fa-fire"></i> 热门音乐
                     </button>
                     <button class="refresh-recommend-btn" id="refreshRecommendBtn">
-                        <i class="fas fa-sync-alt"></i> 刷新推荐
+                        <i class="fas fa-sync-alt"></i> 刷新热门
                     </button>
                 </div>
                 <!-- 搜索结果显示区域 -->
@@ -143,12 +138,6 @@
                     </button>
                 </div>
                 <div class="lyrics-container-inline" id="lyricsContainerInline">
-                    <div class="lyrics-header-inline">
-                        <button class="lyrics-download-btn" id="lyricsDownloadBtn" disabled title="下载当前歌词">
-                            <i class="fas fa-download"></i>
-                            <span>下载歌词</span>
-                        </button>
-                    </div>
                     <div class="lyric-line lyric-prev"></div>
                     <div class="lyric-line lyric-current active">暂无歌词</div>
                     <div class="lyric-line lyric-next"></div>
@@ -224,85 +213,6 @@
             <div class="playlist-modal-footer">
                 <button class="modal-btn" id="clearPlaylistBtn">
                     <i class="fas fa-trash"></i> 清空列表
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- API设置弹窗 -->
-    <div class="api-settings-modal" id="apiSettingsModal">
-        <div class="api-settings-modal-content">
-            <div class="api-settings-modal-header">
-                <h3><i class="fas fa-cog"></i> API设置</h3>
-                <button class="close-modal-btn" id="closeApiSettingsModal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="api-settings-modal-body">
-                <div class="api-setting-section">
-                    <h4>当前API状态</h4>
-                    <div class="api-status-info" id="apiStatusInfo">
-                        <div class="api-status-item">
-                            <span class="api-status-label">当前API源:</span>
-                            <span class="api-status-value" id="currentApiName">加载中...</span>
-                        </div>
-                        <div class="api-status-item">
-                            <span class="api-status-label">API地址:</span>
-                            <span class="api-status-value api-url" id="currentApiUrl">加载中...</span>
-                        </div>
-                        <div class="api-status-item">
-                            <span class="api-status-label">功能支持:</span>
-                            <div class="api-capabilities" id="apiCapabilities">
-                                <span class="capability-badge">检测中...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="api-setting-section">
-                    <h4>切换API源</h4>
-                    <p class="api-hint">
-                        <i class="fas fa-info-circle"></i>
-                        不同API源支持的功能不同，推荐使用NCM增强API获得完整功能
-                    </p>
-                    <div class="api-source-list" id="apiSourceList">
-                        <!-- API源列表将动态生成 -->
-                    </div>
-                </div>
-
-                <div class="api-setting-section">
-                    <h4>功能说明</h4>
-                    <div class="api-feature-explanation">
-                        <div class="feature-item">
-                            <i class="fas fa-check-circle" style="color: #4ecdc4;"></i>
-                            <div>
-                                <strong>NCM增强API</strong>
-                                <p>支持热门歌单、歌手分类、网友精选碟等完整功能</p>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <i class="fas fa-exclamation-circle" style="color: #ffa502;"></i>
-                            <div>
-                                <strong>GDStudio API</strong>
-                                <p>支持基础搜索和播放，使用内置推荐数据作为降级方案</p>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <i class="fas fa-info-circle" style="color: #95afc0;"></i>
-                            <div>
-                                <strong>Meting API</strong>
-                                <p>支持基础搜索和播放，使用内置推荐数据作为降级方案</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="api-settings-modal-footer">
-                <button class="modal-btn secondary" id="testAllApisBtn">
-                    <i class="fas fa-sync-alt"></i> 测试所有API
-                </button>
-                <button class="modal-btn" id="closeApiSettingsModalFooter">
-                    关闭
                 </button>
             </div>
         </div>
