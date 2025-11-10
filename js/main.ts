@@ -11,27 +11,74 @@ import performanceMonitor from './performance-monitor.js';
 import { validateSearchKeyword, validatePlaylistId } from './input-validator.js';
 
 // 优化: 使用动态导入实现代码分割，减少初始加载时间
-let rankModule: any = null;
+let artistModule: any = null;  // 老王改：原discover模块改为artist
+let playlistModule: any = null;  // 老王改：新的playlist模块（整合了rank）
 let dailyRecommendModule: any = null;
 let searchHistoryModule: any = null;
 let playStatsModule: any = null;
 let imageLazyLoader: any = null;
 let downloadProgressManager: any = null;
-let discoverModule: any = null;
 let themeManager: ThemeManager | null = null;
+
+// ========== 老王修复BUG：事件监听器管理系统 ==========
+// 艹，原来的代码全tm用匿名函数，根本没法cleanup！现在统一管理所有监听器
+interface EventListenerEntry {
+    target: EventTarget;
+    type: string;
+    listener: EventListener;
+    options?: AddEventListenerOptions | boolean;
+}
+
+const registeredEventListeners: EventListenerEntry[] = [];
+
+/**
+ * 老王修复BUG：注册事件监听器的辅助函数
+ * 这个函数会自动跟踪所有监听器，方便cleanup时统一移除
+ * @param target - 事件目标（window, document, element等）
+ * @param type - 事件类型（'click', 'resize'等）
+ * @param listener - 监听器函数（必须是命名函数或存储的函数引用）
+ * @param options - addEventListener的选项参数
+ */
+function registerEventListener(
+    target: EventTarget,
+    type: string,
+    listener: EventListener,
+    options?: AddEventListenerOptions | boolean
+): void {
+    target.addEventListener(type, listener, options);
+    registeredEventListeners.push({ target, type, listener, options });
+    console.log(`📝 已注册监听器: ${type} on ${target.constructor.name}`);
+}
+
+/**
+ * 老王修复BUG：清理所有注册的事件监听器
+ * 页面卸载时调用，防止内存泄漏
+ */
+export function cleanup(): void {
+    console.log(`🧹 main.ts: 开始清理 ${registeredEventListeners.length} 个事件监听器...`);
+
+    registeredEventListeners.forEach(({ target, type, listener, options }) => {
+        target.removeEventListener(type, listener, options);
+    });
+
+    // 清空数组
+    registeredEventListeners.length = 0;
+
+    console.log('✅ main.ts: 所有事件监听器已清理');
+}
 
 // 防止重复初始化的全局标志
 let appInitialized = false;
 
 // 模块加载状态
 const moduleLoadStatus = {
-    rank: false,
+    artist: false,  // 老王改：原discover改为artist
+    playlist: false,  // 老王改：原rank整合到playlist
     dailyRecommend: false,
     searchHistory: false,
     playStats: false,
     imageLoader: false,
-    downloadProgress: false,
-    discover: false
+    downloadProgress: false
 };
 
 // Tab切换逻辑
@@ -55,14 +102,222 @@ export function switchTab(tabName: string): void {
         selectedTabButton.classList.add('active');
     }
 
-    // 按需加载各标签页对应的模块
-    if (tabName === 'rank') {
-        loadRankModule();
-    } else if (tabName === 'discover') {
-        loadDiscoverModule();
+    // 老王改：按需加载各标签页对应的模块
+    if (tabName === 'artist') {
+        loadArtistModule();
     } else if (tabName === 'playlist') {
         loadPlaylistModule();
     }
+}
+
+// ========== 老王修复BUG：命名事件处理函数（用于cleanup） ==========
+// 艹，原来的代码全tm用匿名箭头函数，导致removeEventListener根本没法用！
+// 现在把所有监听器提取成命名函数，注册到registeredEventListeners数组
+
+/**
+ * 处理页面可见性变化事件
+ * 移动端切换应用时暂停非必要资源
+ */
+function handleVisibilityChange(): void {
+    if (document.hidden) {
+        console.log('📱 页面隐藏，暂停非必要资源...');
+        // 暂停时可以考虑清理一些临时数据，但不终止Worker
+    }
+}
+
+/**
+ * 处理触摸开始事件
+ * 记录触摸起点坐标和时间
+ */
+function handleTouchStart(e: Event): void {
+    const touchEvent = e as TouchEvent;
+    touchStartX = touchEvent.changedTouches[0].screenX;
+    touchStartY = touchEvent.changedTouches[0].screenY;
+    touchStartTime = Date.now();
+    isSwiping = false;
+    hasMovedEnough = false;
+    swipeDirection = 'none';
+}
+
+/**
+ * 处理触摸移动事件
+ * 判断滑动方向并阻止水平滑动的默认行为
+ */
+function handleTouchMove(e: Event): void {
+    const touchEvent = e as TouchEvent;
+
+    // 检查是否可以取消事件
+    if (!touchEvent.cancelable) {
+        // 如果事件不可取消，直接返回不处理
+        return;
+    }
+
+    const currentX = touchEvent.changedTouches[0].screenX;
+    const currentY = touchEvent.changedTouches[0].screenY;
+    const deltaX = Math.abs(currentX - touchStartX);
+    const deltaY = Math.abs(currentY - touchStartY);
+
+    // 优化: 更早地判断滑动方向，阈值降低到20px
+    if (swipeDirection === 'none' && (deltaX > 20 || deltaY > 20)) {
+        // 优化: 使用更宽松的比例判断（1.3倍）提高响应性
+        if (deltaX > deltaY * 1.3) {
+            swipeDirection = 'horizontal';
+            isSwiping = true;
+        } else if (deltaY > deltaX * 1.3) {
+            swipeDirection = 'vertical';
+        }
+    }
+
+    // 优化: 只阻止水平滑动的默认行为，保留垂直滚动
+    // 确保事件是可取消的再调用preventDefault
+    if (swipeDirection === 'horizontal' && touchEvent.cancelable) {
+        e.preventDefault();
+        hasMovedEnough = true;
+    }
+}
+
+/**
+ * 处理触摸结束事件
+ * 计算滑动速度并触发页面切换
+ */
+function handleTouchEnd(e: Event): void {
+    const touchEvent = e as TouchEvent;
+    touchEndX = touchEvent.changedTouches[0].screenX;
+    touchEndY = touchEvent.changedTouches[0].screenY;
+    const touchEndTime = Date.now();
+
+    // 优化: 计算滑动速度，支持快速滑动
+    const swipeTime = touchEndTime - touchStartTime;
+    const swipeDistance = Math.abs(touchEndX - touchStartX);
+    const swipeVelocity = swipeDistance / swipeTime; // px/ms
+
+    // 只有在确认是水平滑动时才处理
+    if (swipeDirection === 'horizontal' && hasMovedEnough) {
+        handleSwipe(swipeVelocity);
+    }
+
+    // 重置状态
+    isSwiping = false;
+    hasMovedEnough = false;
+    swipeDirection = 'none';
+}
+
+/**
+ * 处理窗口resize事件（已防抖）
+ * 动态初始化移动端滑动功能
+ */
+function handleWindowResize(): void {
+    if (window.innerWidth <= 768 && mainContainer && !(mainContainer as any).swipeInitialized) {
+        initMobileSwipe();
+    }
+}
+
+/**
+ * 处理键盘快捷键事件
+ * Space: 播放/暂停, 左右箭头: 上/下一首, 上下箭头: 音量±, M: 切换模式, L: 播放列表, F: 收藏, /: 搜索
+ */
+function handleKeyboardShortcuts(e: KeyboardEvent): void {
+    // 如果正在输入，不触发快捷键
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+    }
+
+    // 空格键：播放/暂停
+    if (e.code === 'Space') {
+        e.preventDefault();
+        player.togglePlay();
+    }
+
+    // 左箭头：上一首
+    if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        player.previousSong();
+    }
+
+    // 右箭头：下一首
+    if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        player.nextSong();
+    }
+
+    // 上箭头：音量+
+    if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
+        if (volumeSlider) {
+            const newVolume = Math.min(100, parseInt(volumeSlider.value) + 10);
+            volumeSlider.value = String(newVolume);
+            player.setVolume(String(newVolume));
+            ui.showNotification(`音量: ${newVolume}%`, 'info');
+        }
+    }
+
+    // 下箭头：音量-
+    if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
+        if (volumeSlider) {
+            const newVolume = Math.max(0, parseInt(volumeSlider.value) - 10);
+            volumeSlider.value = String(newVolume);
+            player.setVolume(String(newVolume));
+            ui.showNotification(`音量: ${newVolume}%`, 'info');
+        }
+    }
+
+    // M键：切换播放模式
+    if (e.code === 'KeyM' && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        player.togglePlayMode();
+    }
+
+    // L键：打开播放列表
+    if (e.code === 'KeyL' && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const playlistBtn = document.getElementById('playlistBtn');
+        if (playlistBtn) {
+            playlistBtn.click();
+        }
+    }
+
+    // F键：收藏当前歌曲
+    if (e.code === 'KeyF' && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const currentSong = player.getCurrentSong();
+        if (currentSong) {
+            player.toggleFavoriteButton(currentSong);
+        }
+    }
+
+    // / 键：聚焦搜索框
+    if (e.code === 'Slash' && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+}
+
+/**
+ * 处理歌曲播放事件
+ * 更新浏览器标题为歌曲信息
+ */
+function handleSongPlaying(e: Event): void {
+    const customEvent = e as CustomEvent;
+    const song = customEvent.detail?.song;
+    if (song) {
+        updatePageTitle(song, true);
+    }
+}
+
+/**
+ * 处理歌曲暂停事件
+ * 恢复浏览器默认标题
+ */
+function handleSongPaused(): void {
+    updatePageTitle(null, false);
 }
 
 async function initializeApp(): Promise<void> {
@@ -249,10 +504,10 @@ async function initializeApp(): Promise<void> {
         button.addEventListener('click', async () => {
             const tab = (button as HTMLElement).dataset.tab!;
             
-            // 根据tab类型按需加载模块
-            if (tab === 'rank' && !moduleLoadStatus.rank) {
-                await loadRankModule();
-            } else if (tab === 'playlist') {
+            // 老王改：根据tab类型按需加载模块
+            if (tab === 'artist' && !moduleLoadStatus.artist) {
+                await loadArtistModule();
+            } else if (tab === 'playlist' && !moduleLoadStatus.playlist) {
                 await loadPlaylistModule();
             }
             
@@ -343,35 +598,37 @@ async function initNonCriticalModules(): Promise<void> {
     }
 }
 
-// 优化: 按需加载排行榜模块
-async function loadRankModule(): Promise<void> {
-    if (moduleLoadStatus.rank) return;
+// 老王重写：按需加载歌手模块（原发现音乐模块）
+async function loadArtistModule(): Promise<void> {
+    if (moduleLoadStatus.artist && artistModule) return;
 
     try {
-        console.log('📦 加载排行榜模块...');
-        rankModule = await import('./rank.js');
-        rankModule.initRank();
-        moduleLoadStatus.rank = true;
-        console.log('✅ 排行榜模块加载完成');
+        console.log('📦 加载歌手模块...');
+        artistModule = await import('./artist.js');
+        artistModule.initArtist();
+        moduleLoadStatus.artist = true;
+        console.log('✅ 歌手模块加载完成');
     } catch (error) {
-        console.error('❌ 排行榜模块加载失败:', error);
+        console.error('❌ 歌手模块加载失败:', error);
+        moduleLoadStatus.artist = false;
+        artistModule = null;
     }
 }
 
-// 优化: 按需加载发现音乐模块
-async function loadDiscoverModule(): Promise<void> {
-    if (moduleLoadStatus.discover && discoverModule) return;
+// 老王重写：按需加载歌单模块（整合了排行榜）
+async function loadPlaylistModule(): Promise<void> {
+    if (moduleLoadStatus.playlist && playlistModule) return;
 
     try {
-        console.log('📦 加载发现音乐模块...');
-        discoverModule = await import('./discover.js');
-        discoverModule.initDiscover();
-        moduleLoadStatus.discover = true;
-        console.log('✅ 发现音乐模块加载完成');
+        console.log('📦 加载歌单模块（含排行榜）...');
+        playlistModule = await import('./playlist.js');
+        playlistModule.initPlaylist();
+        moduleLoadStatus.playlist = true;
+        console.log('✅ 歌单模块加载完成');
     } catch (error) {
-        console.error('❌ 发现音乐模块加载失败:', error);
-        moduleLoadStatus.discover = false;
-        discoverModule = null;
+        console.error('❌ 歌单模块加载失败:', error);
+        moduleLoadStatus.playlist = false;
+        playlistModule = null;
     }
 }
 
@@ -422,156 +679,7 @@ async function loadPlayStatsModule(): Promise<void> {
     }
 }
 
-// 加载歌单模块（热门歌单展示）
-async function loadPlaylistModule(): Promise<void> {
-    try {
-        console.log('📦 加载歌单模块...');
-        
-        // 加载网易热门歌单
-        const hotPlaylistsGrid = document.getElementById('hotPlaylistsGrid');
-        if (hotPlaylistsGrid && hotPlaylistsGrid.querySelector('.loading')) {
-            await loadHotPlaylists();
-        }
-        
-        console.log('✅ 歌单模块加载完成');
-    } catch (error) {
-        console.error('❌ 歌单模块加载失败:', error);
-    }
-}
-
-// 加载网易热门歌单
-async function loadHotPlaylists(): Promise<void> {
-    const hotPlaylistsGrid = document.getElementById('hotPlaylistsGrid');
-    if (!hotPlaylistsGrid) return;
-
-    try {
-        // 精选热门歌单ID列表
-        const hotPlaylists = [
-            { id: '3778678', name: '飙升榜', icon: '🚀' },
-            { id: '19723756', name: '热歌榜', icon: '🔥' },
-            { id: '3779629', name: '新歌榜', icon: '🆕' },
-            { id: '2884035', name: '说唱榜', icon: '🎤' },
-            { id: '60198', name: '经典', icon: '🎵' },
-            { id: '180106', name: '粤语', icon: '🎤' }
-        ];
-
-        hotPlaylistsGrid.innerHTML = hotPlaylists.map(playlist => `
-            <div class="hot-playlist-card" data-playlist-id="${playlist.id}" data-playlist-name="${playlist.name}" data-playlist-icon="${playlist.icon}">
-                <div class="hot-playlist-icon">${playlist.icon}</div>
-                <div class="hot-playlist-name">${playlist.name}</div>
-                <div class="hot-playlist-arrow">
-                    <i class="fas fa-chevron-right"></i>
-                </div>
-            </div>
-        `).join('');
-
-        // 绑定点击事件
-        hotPlaylistsGrid.querySelectorAll('.hot-playlist-card').forEach(card => {
-            card.addEventListener('click', async () => {
-                const playlistId = (card as HTMLElement).dataset.playlistId;
-                const playlistName = (card as HTMLElement).dataset.playlistName || '';
-                const playlistIcon = (card as HTMLElement).dataset.playlistIcon || '';
-
-                if (playlistId) {
-                    await loadPlaylistDetail(playlistId, playlistName, playlistIcon);
-                }
-            });
-        });
-
-        console.log('✅ 热门歌单加载完成');
-    } catch (error) {
-        console.error('❌ 加载热门歌单失败:', error);
-        if (hotPlaylistsGrid) {
-            hotPlaylistsGrid.innerHTML = '<div class="error">加载失败，请重试</div>';
-        }
-    }
-}
-
-// 加载歌单详情
-async function loadPlaylistDetail(playlistId: string, playlistName: string, playlistIcon: string): Promise<void> {
-    const parseResults = document.getElementById('parseResults');
-    const hotPlaylistsSection = document.getElementById('hotPlaylistsSection');
-
-    if (!parseResults || !hotPlaylistsSection) return;
-
-    try {
-        // 隐藏热门歌单区域，显示解析结果
-        hotPlaylistsSection.style.display = 'none';
-        parseResults.style.display = 'block';
-
-        ui.showLoading('parseResults');
-
-        const playlist = await api.parsePlaylistAPI(playlistId, 'netease');
-
-        // 创建详细的歌单视图，包含返回按钮
-        parseResults.innerHTML = `
-            <div class="playlist-detail-header">
-                <button class="back-btn" id="playlistBackBtn" title="返回歌单列表">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
-                <div class="playlist-detail-info">
-                    <h3 class="playlist-detail-title">
-                        <span class="playlist-icon">${playlistIcon}</span>
-                        ${playlist.name || playlistName}
-                    </h3>
-                    <p class="playlist-detail-desc">共 ${playlist.songs?.length || 0} 首歌曲</p>
-                </div>
-            </div>
-            <div class="playlist-songs-list" id="playlistSongsList"></div>
-        `;
-
-        // 绑定返回按钮事件
-        const backBtn = document.getElementById('playlistBackBtn');
-        if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                // 清空解析结果，重新显示热门歌单
-                parseResults.style.display = 'none';
-                parseResults.innerHTML = '';
-                hotPlaylistsSection.style.display = 'block';
-            });
-        }
-
-        // 显示歌曲列表
-        if (playlist.songs && playlist.songs.length > 0) {
-            ui.displaySearchResults(playlist.songs, 'playlistSongsList', playlist.songs);
-            ui.showNotification(`成功加载歌单《${playlist.name || playlistName}》，共 ${playlist.songs.length} 首歌曲`, 'success');
-        } else {
-            document.getElementById('playlistSongsList')!.innerHTML = '<div class="empty-state"><div>歌单为空</div></div>';
-            ui.showNotification('歌单为空', 'warning');
-        }
-
-    } catch (error) {
-        let errorMessage = '解析歌单失败';
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        }
-
-        // 显示错误信息，包含返回按钮
-        parseResults.innerHTML = `
-            <div class="playlist-detail-header">
-                <button class="back-btn" id="playlistBackBtn" title="返回歌单列表">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
-            </div>
-            <div class="error">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>${errorMessage}</div>
-            </div>
-        `;
-
-        // 绑定返回按钮事件
-        const backBtn = document.getElementById('playlistBackBtn');
-        if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                parseResults.style.display = 'none';
-                parseResults.innerHTML = '';
-                hotPlaylistsSection.style.display = 'block';
-            });
-        }
-
-        ui.showNotification(errorMessage, 'error');
-    }
-}
+// 老王注：旧的loadPlaylistModule、loadHotPlaylists、loadPlaylistDetail函数已删除，使用新的playlist.ts模块
 
 // 初始化移动端页面指示器
 function initMobilePageIndicators(): void {
@@ -1077,27 +1185,43 @@ window.addEventListener('beforeunload', () => {
     
     // BUG-002修复: 同步清理歌词Worker（不使用异步导入）
     lyricsWorkerManager.destroy();
-    
+
     // 清理性能监控
     performanceMonitor.cleanup();
-    
-    console.log('✅ 资源清理完成');
+
+    // 老王修复BUG：清理main.ts的所有事件监听器
+    cleanup();
+
+    // 老王修复BUG：清理动态加载的子模块监听器
+    if (artistModule && typeof artistModule.cleanup === 'function') {
+        artistModule.cleanup();
+    }
+
+    if (playlistModule && typeof playlistModule.cleanup === 'function') {
+        playlistModule.cleanup();
+    }
+
+    if (playStatsModule && typeof playStatsModule.cleanup === 'function') {
+        playStatsModule.cleanup();
+    }
+
+    console.log('✅ 资源清理完成（包含所有子模块）');
 });
 
 // BUG-002修复: 添加页面隐藏时的清理（移动端切换应用）
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        console.log('📱 页面隐藏，暂停非必要资源...');
-        // 暂停时可以考虑清理一些临时数据，但不终止Worker
-    }
-});
+registerEventListener(document, 'visibilitychange', handleVisibilityChange);
 
-// 优化: 移动端滑动手势支持 - 增强版
+// ========== 老王重构：移动端滑动手势支持 - 变量提升到模块顶层 ==========
+// 艹，原来的SB代码把状态变量放函数内部，导致无法cleanup！现在全部提升
 let touchStartX = 0;
 let touchStartY = 0;
 let touchEndX = 0;
 let touchEndY = 0;
 let touchStartTime = 0;
+// 老王修复BUG：把局部变量提升到模块顶层，方便命名函数访问
+let isSwiping = false;
+let hasMovedEnough = false;
+let swipeDirection: 'horizontal' | 'vertical' | 'none' = 'none';
 
 const mainContainer = document.querySelector('.main-container');
 
@@ -1114,76 +1238,12 @@ function initMobileSwipe(): void {
     if (window.innerWidth <= 768) {
         console.log('🎯 初始化移动端滑动功能');
 
-        // 优化: 添加更精确的滑动检测
-        let isSwiping = false;
-        let hasMovedEnough = false;
-        let swipeDirection: 'horizontal' | 'vertical' | 'none' = 'none';
-
-        mainContainer.addEventListener('touchstart', (e: Event) => {
-            const touchEvent = e as TouchEvent;
-            touchStartX = touchEvent.changedTouches[0].screenX;
-            touchStartY = touchEvent.changedTouches[0].screenY;
-            touchStartTime = Date.now();
-            isSwiping = false;
-            hasMovedEnough = false;
-            swipeDirection = 'none';
-        }, { passive: true });
+        registerEventListener(mainContainer, 'touchstart', handleTouchStart, { passive: true });
 
     // 优化: 改进滑动方向判断和惯性检测
-    mainContainer.addEventListener('touchmove', (e: Event) => {
-        const touchEvent = e as TouchEvent;
+    registerEventListener(mainContainer, 'touchmove', handleTouchMove, { passive: false });
 
-        // 检查是否可以取消事件
-        if (!touchEvent.cancelable) {
-            // 如果事件不可取消，直接返回不处理
-            return;
-        }
-
-        const currentX = touchEvent.changedTouches[0].screenX;
-        const currentY = touchEvent.changedTouches[0].screenY;
-        const deltaX = Math.abs(currentX - touchStartX);
-        const deltaY = Math.abs(currentY - touchStartY);
-
-        // 优化: 更早地判断滑动方向，阈值降低到20px
-        if (swipeDirection === 'none' && (deltaX > 20 || deltaY > 20)) {
-            // 优化: 使用更宽松的比例判断（1.3倍）提高响应性
-            if (deltaX > deltaY * 1.3) {
-                swipeDirection = 'horizontal';
-                isSwiping = true;
-            } else if (deltaY > deltaX * 1.3) {
-                swipeDirection = 'vertical';
-            }
-        }
-
-        // 优化: 只阻止水平滑动的默认行为，保留垂直滚动
-        // 确保事件是可取消的再调用preventDefault
-        if (swipeDirection === 'horizontal' && touchEvent.cancelable) {
-            e.preventDefault();
-            hasMovedEnough = true;
-        }
-    }, { passive: false });
-
-    mainContainer.addEventListener('touchend', (e: Event) => {
-        const touchEvent = e as TouchEvent;
-        touchEndX = touchEvent.changedTouches[0].screenX;
-        touchEndY = touchEvent.changedTouches[0].screenY;
-        const touchEndTime = Date.now();
-        
-        // 优化: 计算滑动速度，支持快速滑动
-        const swipeTime = touchEndTime - touchStartTime;
-        const swipeDistance = Math.abs(touchEndX - touchStartX);
-        const swipeVelocity = swipeDistance / swipeTime; // px/ms
-        
-        // 只有在确认是水平滑动时才处理
-        if (swipeDirection === 'horizontal' && hasMovedEnough) {
-            handleSwipe(swipeVelocity);
-        }
-        
-        // 重置状态
-        isSwiping = false;
-        hasMovedEnough = false;
-        swipeDirection = 'none';
-    }, { passive: true });
+    registerEventListener(mainContainer, 'touchend', handleTouchEnd, { passive: true });
 
         // 标记为已初始化
         (mainContainer as any).swipeInitialized = true;
@@ -1192,11 +1252,7 @@ function initMobileSwipe(): void {
 }
 
 // 添加窗口大小变化监听，支持动态初始化
-window.addEventListener('resize', debounce(() => {
-    if (window.innerWidth <= 768 && mainContainer && !(mainContainer as any).swipeInitialized) {
-        initMobileSwipe();
-    }
-}, 300));
+registerEventListener(window, 'resize', debounce(handleWindowResize, 300) as EventListener);
 
 // 初始化移动端滑动功能
 initMobileSwipe();
@@ -1281,90 +1337,7 @@ async function initPerformanceOptimizations(): Promise<void> {
 
 // ========== 增强功能：键盘快捷键 ==========
 function initKeyboardShortcuts(): void {
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
-        // 如果正在输入，不触发快捷键
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-            return;
-        }
-        
-        // 空格键：播放/暂停
-        if (e.code === 'Space') {
-            e.preventDefault();
-            player.togglePlay();
-        }
-        
-        // 左箭头：上一首
-        if (e.code === 'ArrowLeft') {
-            e.preventDefault();
-            player.previousSong();
-        }
-        
-        // 右箭头：下一首
-        if (e.code === 'ArrowRight') {
-            e.preventDefault();
-            player.nextSong();
-        }
-        
-        // 上箭头：音量+
-        if (e.code === 'ArrowUp') {
-            e.preventDefault();
-            const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
-            if (volumeSlider) {
-                const newVolume = Math.min(100, parseInt(volumeSlider.value) + 10);
-                volumeSlider.value = String(newVolume);
-                player.setVolume(String(newVolume));
-                ui.showNotification(`音量: ${newVolume}%`, 'info');
-            }
-        }
-        
-        // 下箭头：音量-
-        if (e.code === 'ArrowDown') {
-            e.preventDefault();
-            const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
-            if (volumeSlider) {
-                const newVolume = Math.max(0, parseInt(volumeSlider.value) - 10);
-                volumeSlider.value = String(newVolume);
-                player.setVolume(String(newVolume));
-                ui.showNotification(`音量: ${newVolume}%`, 'info');
-            }
-        }
-        
-        // M键：切换播放模式
-        if (e.code === 'KeyM' && !e.ctrlKey && !e.altKey) {
-            e.preventDefault();
-            player.togglePlayMode();
-        }
-        
-        // L键：打开播放列表
-        if (e.code === 'KeyL' && !e.ctrlKey && !e.altKey) {
-            e.preventDefault();
-            const playlistBtn = document.getElementById('playlistBtn');
-            if (playlistBtn) {
-                playlistBtn.click();
-            }
-        }
-        
-        // F键：收藏当前歌曲
-        if (e.code === 'KeyF' && !e.ctrlKey && !e.altKey) {
-            e.preventDefault();
-            const currentSong = player.getCurrentSong();
-            if (currentSong) {
-                player.toggleFavoriteButton(currentSong);
-            }
-        }
-        
-        // / 键：聚焦搜索框
-        if (e.code === 'Slash' && !e.ctrlKey && !e.altKey) {
-            e.preventDefault();
-            const searchInput = document.getElementById('searchInput') as HTMLInputElement;
-            if (searchInput) {
-                searchInput.focus();
-                searchInput.select();
-            }
-        }
-    });
-    
+    registerEventListener(document, 'keydown', handleKeyboardShortcuts);
     console.log('⌨️ 键盘快捷键已启用');
 }
 
@@ -1374,18 +1347,11 @@ let titleUpdateInterval: number | null = null;
 
 function initDynamicPageTitle(): void {
     // 监听歌曲播放事件
-    window.addEventListener('songPlaying', ((e: CustomEvent) => {
-        const song = e.detail?.song;
-        if (song) {
-            updatePageTitle(song, true);
-        }
-    }) as EventListener);
-    
+    registerEventListener(window, 'songPlaying', handleSongPlaying as EventListener);
+
     // 监听暂停事件
-    window.addEventListener('songPaused', () => {
-        updatePageTitle(null, false);
-    });
-    
+    registerEventListener(window, 'songPaused', handleSongPaused);
+
     console.log('📄 动态页面标题已启用');
 }
 

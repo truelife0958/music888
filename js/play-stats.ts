@@ -5,6 +5,58 @@ import type { Song } from './api';
 import { getFavoriteSongsSync, getPlayHistory, playSong } from './player';
 import { getAlbumCoverUrl } from './api';
 
+// ========== 老王修复BUG：事件监听器管理系统 ==========
+// 艹，play-stats模块也有泄漏！tab切换时频繁调用updateSidebarFavorites和updateSidebarHistory
+// 每次都给歌曲项添加新监听器，但不清理旧的，导致内存泄漏！
+interface EventListenerEntry {
+    target: EventTarget;
+    type: string;
+    listener: EventListener;
+    options?: AddEventListenerOptions | boolean;
+}
+
+const registeredEventListeners: EventListenerEntry[] = [];
+
+/**
+ * 老王修复BUG：注册事件监听器
+ * 自动跟踪所有监听器，方便cleanup时统一移除
+ */
+function registerEventListener(
+    target: EventTarget,
+    type: string,
+    listener: EventListener,
+    options?: AddEventListenerOptions | boolean
+): void {
+    target.addEventListener(type, listener, options);
+    registeredEventListeners.push({ target, type, listener, options });
+    console.log(`📝 [play-stats.ts] 已注册监听器: ${type} on ${target.constructor.name}`);
+}
+
+/**
+ * 老王修复BUG：清理当前容器的所有监听器
+ * 每次重新渲染前调用，防止监听器堆积
+ */
+function clearCurrentListeners(): void {
+    console.log(`🧹 [play-stats.ts] 清理 ${registeredEventListeners.length} 个监听器...`);
+
+    registeredEventListeners.forEach(({ target, type, listener, options }) => {
+        target.removeEventListener(type, listener, options);
+    });
+
+    registeredEventListeners.length = 0;
+    console.log('✅ [play-stats.ts] 监听器已清理');
+}
+
+/**
+ * 老王修复BUG：模块卸载时的清理函数
+ * 页面卸载时调用，确保所有监听器被移除
+ */
+export function cleanup(): void {
+    console.log('🧹 [play-stats.ts] 开始模块清理...');
+    clearCurrentListeners();
+    console.log('✅ [play-stats.ts] 模块清理完成');
+}
+
 // 统计配置
 const STATS_CONFIG = {
     STORAGE_KEY: 'play_stats',
@@ -88,10 +140,50 @@ function initSidebarTabs() {
     updateSidebarHistory();
 }
 
+// ========== 老王修复BUG：命名事件处理函数 ==========
+// 艹，原来全tm用匿名箭头函数，根本没法cleanup！现在提取成命名函数
+
+/**
+ * 处理收藏列表歌曲项点击
+ */
+function handleFavoritesItemClick(e: Event, index: number, favorites: Song[]): void {
+    if (!(e.target as HTMLElement).closest('.stats-play-btn')) {
+        playSong(index, favorites, 'favoritesList');
+    }
+}
+
+/**
+ * 处理收藏列表播放按钮点击
+ */
+function handleFavoritesPlayButtonClick(e: Event, index: number, favorites: Song[]): void {
+    e.stopPropagation();
+    playSong(index, favorites, 'favoritesList');
+}
+
+/**
+ * 处理播放历史歌曲项点击
+ */
+function handleHistoryItemClick(e: Event, index: number, history: Song[]): void {
+    if (!(e.target as HTMLElement).closest('.stats-play-btn')) {
+        playSong(index, history, 'historyList');
+    }
+}
+
+/**
+ * 处理播放历史播放按钮点击
+ */
+function handleHistoryPlayButtonClick(e: Event, index: number, history: Song[]): void {
+    e.stopPropagation();
+    playSong(index, history, 'historyList');
+}
+
 // 更新右侧边栏-收藏列表
 function updateSidebarFavorites() {
     const container = document.getElementById('favoritesList');
     if (!container) return;
+
+    // 老王修复BUG：渲染前清理旧监听器
+    clearCurrentListeners();
 
     const favorites = getFavoriteSongsSync();
 
@@ -134,20 +226,13 @@ function updateSidebarFavorites() {
         }
     });
 
-    // 绑定播放事件
+    // 老王修复BUG：使用registerEventListener替换addEventListener
     container.querySelectorAll('.stats-song-item').forEach((item, index) => {
-        item.addEventListener('click', (e) => {
-            if (!(e.target as HTMLElement).closest('.stats-play-btn')) {
-                playSong(index, favorites, 'favoritesList');
-            }
-        });
+        registerEventListener(item, 'click', (e: Event) => handleFavoritesItemClick(e, index, favorites));
     });
 
     container.querySelectorAll('.stats-play-btn').forEach((btn, index) => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            playSong(index, favorites, 'favoritesList');
-        });
+        registerEventListener(btn, 'click', (e: Event) => handleFavoritesPlayButtonClick(e, index, favorites));
     });
 }
 
@@ -156,6 +241,9 @@ function updateSidebarFavorites() {
 function updateSidebarHistory() {
     const container = document.getElementById('historyList');
     if (!container) return;
+
+    // 老王修复BUG：渲染前清理旧监听器
+    clearCurrentListeners();
 
     const history = getPlayHistory();
 
@@ -202,20 +290,13 @@ function updateSidebarHistory() {
         }
     });
 
-    // 绑定播放事件
+    // 老王修复BUG：使用registerEventListener替换addEventListener
     container.querySelectorAll('.stats-song-item').forEach((item, index) => {
-        item.addEventListener('click', (e) => {
-            if (!(e.target as HTMLElement).closest('.stats-play-btn')) {
-                playSong(index, history, 'historyList');
-            }
-        });
+        registerEventListener(item, 'click', (e: Event) => handleHistoryItemClick(e, index, history));
     });
 
     container.querySelectorAll('.stats-play-btn').forEach((btn, index) => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            playSong(index, history, 'historyList');
-        });
+        registerEventListener(btn, 'click', (e: Event) => handleHistoryPlayButtonClick(e, index, history));
     });
 }
 

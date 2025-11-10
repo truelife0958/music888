@@ -18,8 +18,8 @@ interface DOMElements {
     currentTime: HTMLElement;
     totalTime: HTMLElement;
     lyricsContainer: HTMLElement;
-    downloadSongBtn: HTMLButtonElement;
-    downloadLyricBtn: HTMLButtonElement;
+    downloadSongBtn: HTMLButtonElement | null;
+    downloadLyricBtn: HTMLButtonElement | null;
 }
 
 let DOM: DOMElements;
@@ -95,8 +95,8 @@ export function init(): void {
         totalTime: document.getElementById('totalTime')!,
         // 修复：确保歌词容器存在，不存在则抛出错误
         lyricsContainer: lyricsContainer!,
-        downloadSongBtn: document.getElementById('downloadSongBtn') as HTMLButtonElement,
-        downloadLyricBtn: document.getElementById('downloadLyricBtn') as HTMLButtonElement,
+        downloadSongBtn: document.getElementById('downloadSongBtn') as HTMLButtonElement | null,
+        downloadLyricBtn: document.getElementById('downloadLyricBtn') as HTMLButtonElement | null,
     };
 
     // 修复：验证所有关键元素
@@ -351,8 +351,8 @@ export function updateCurrentSongInfo(song: Song, coverUrl: string): void {
         tempImg.src = coverUrl;
     }
     
-    (DOM.downloadSongBtn as HTMLButtonElement).disabled = false;
-    (DOM.downloadLyricBtn as HTMLButtonElement).disabled = false;
+    if (DOM.downloadSongBtn) DOM.downloadSongBtn.disabled = false;
+    if (DOM.downloadLyricBtn) DOM.downloadLyricBtn.disabled = false;
 }
 
 export function updateProgress(currentTime: number, duration: number): void {

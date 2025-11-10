@@ -42,17 +42,20 @@ function detectApiFormat(apiUrl: string): {
     isGDStudio: boolean;
     isNCM: boolean;
     isMeting: boolean;
-    format: 'gdstudio' | 'ncm' | 'meting';
+    isClawCloud: boolean;
+    format: 'gdstudio' | 'ncm' | 'meting' | 'clawcloud';
 } {
     const isGDStudio = apiUrl.includes('gdstudio');
     const isNCM = apiUrl.includes('ncm-api.imixc.top');
     const isMeting = apiUrl.includes('meting');
+    const isClawCloud = apiUrl.includes('clawcloudrun.com');
 
     return {
         isGDStudio,
         isNCM,
         isMeting,
-        format: isGDStudio ? 'gdstudio' : isNCM ? 'ncm' : 'meting'
+        isClawCloud,
+        format: isGDStudio ? 'gdstudio' : isNCM ? 'ncm' : isClawCloud ? 'clawcloud' : 'meting'
     };
 }
 
@@ -69,6 +72,10 @@ const API_SOURCES: ApiSource[] = [
     {
         name: 'NCM增强API',
         url: 'https://ncm-api.imixc.top/'
+    },
+    {
+        name: 'ClawCloud API',
+        url: 'https://pkllzbbagoeg.ap-southeast-1.clawcloudrun.com/'
     },
     {
         name: 'Meting备用API',
@@ -719,11 +726,11 @@ export async function detectApiCapabilities(apiUrl?: string): Promise<{
     hotPlaylists: boolean;
     artistList: boolean;
     artistTopSongs: boolean;
-    format: 'gdstudio' | 'ncm' | 'meting';
+    format: 'gdstudio' | 'ncm' | 'meting' | 'clawcloud';
 }> {
     const url = apiUrl || API_BASE;
     const apiFormat = detectApiFormat(url);
-    
+
     // NCM API支持所有功能
     if (apiFormat.format === 'ncm') {
         return {
@@ -733,7 +740,17 @@ export async function detectApiCapabilities(apiUrl?: string): Promise<{
             format: 'ncm'
         };
     }
-    
+
+    // ClawCloud API = 网易云音乐API Enhanced,完全支持NCM的所有功能
+    if (apiFormat.format === 'clawcloud') {
+        return {
+            hotPlaylists: true,
+            artistList: true,
+            artistTopSongs: true,
+            format: 'clawcloud'
+        };
+    }
+
     // 其他API使用降级方案
     return {
         hotPlaylists: false, // 使用内置数据
@@ -911,6 +928,10 @@ export async function getSongUrl(song: Song, quality: string): Promise<{ url: st
                 // NCM API格式: /song/url?id=song_id&br=320
                 url = `${API_BASE}song/url?id=${song.id}&br=${quality}`;
                 break;
+            case 'clawcloud':
+                // ClawCloud API = 网易云音乐API Enhanced,使用song/url/v1接口获取更高音质
+                url = `${API_BASE}song/url/v1?id=${song.id}&level=${quality === '320' ? 'exhigh' : quality === '192' ? 'higher' : 'standard'}`;
+                break;
             case 'meting':
             default:
                 // Meting API格式: ?type=url&source=netease&id=song_id&br=320
@@ -1019,6 +1040,10 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
                 // NCM API格式: /lyric?id=song_id
                 url = `${API_BASE}lyric?id=${song.lyric_id || song.id}`;
                 break;
+            case 'clawcloud':
+                // ClawCloud API = 网易云音乐API Enhanced,完全兼容NCM歌词接口
+                url = `${API_BASE}lyric?id=${song.lyric_id || song.id}`;
+                break;
             case 'meting':
             default:
                 // Meting API格式: ?type=lyric&source=netease&id=song_id
@@ -1076,6 +1101,10 @@ export async function searchMusicAPI(keyword: string, source: string, limit: num
             case 'ncm':
                 // NCM API格式: /search?keywords=关键词&limit=30&type=netease
                 url = `${API_BASE}search?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=${source}`;
+                break;
+            case 'clawcloud':
+                // ClawCloud API = 网易云音乐API Enhanced,使用cloudsearch接口搜索
+                url = `${API_BASE}cloudsearch?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=1`;
                 break;
             case 'meting':
             default:
@@ -1229,6 +1258,10 @@ export async function parsePlaylistAPI(playlistUrlOrId: string, source: string =
             break;
         case 'ncm':
             // NCM API格式: /playlist/detail?id=playlist_id
+            apiUrl = `${API_BASE}playlist/detail?id=${playlistId}`;
+            break;
+        case 'clawcloud':
+            // ClawCloud API = 网易云音乐API Enhanced,完全兼容NCM歌单接口
             apiUrl = `${API_BASE}playlist/detail?id=${playlistId}`;
             break;
         case 'meting':
@@ -1550,6 +1583,18 @@ export async function getTopSongs(category: string = 'hot', source: string = 'ne
                 const listId = topListIds[category] || topListIds.hot;
                 url = `${API_BASE}top/list?id=${listId}`;
                 break;
+            case 'clawcloud':
+                // ClawCloud API = 网易云音乐API Enhanced,完全兼容NCM排行榜接口
+                const clawcloudTopListIds: { [key: string]: string } = {
+                    'hot': '3778678', // 热歌榜
+                    'new': '3779629', // 新歌榜
+                    'original': '2884035', // 原创榜
+                    'soar': '19723756', // 飙升榜
+                    'electronic': '10520166' // 电音榜
+                };
+                const clawcloudListId = clawcloudTopListIds[category] || clawcloudTopListIds.hot;
+                url = `${API_BASE}top/list?id=${clawcloudListId}`;
+                break;
             case 'gdstudio':
                 // GDStudio API可能不直接支持排行榜，使用搜索替代
                 const searchKeywords: { [key: string]: string } = {
@@ -1570,8 +1615,8 @@ export async function getTopSongs(category: string = 'hot', source: string = 'ne
         const data = await response.json();
 
         let songs: Song[] = [];
-        if (apiFormat.format === 'ncm') {
-            // NCM API格式: { playlist: { tracks: [...] }, code: 200 }
+        if (apiFormat.format === 'ncm' || apiFormat.format === 'clawcloud') {
+            // NCM/ClawCloud API格式: { playlist: { tracks: [...] }, code: 200 }
             if (data && data.playlist && data.playlist.tracks) {
                 songs = data.playlist.tracks.slice(0, limit);
             }
@@ -1943,6 +1988,10 @@ export async function getHotPlaylists(order: 'hot' | 'new' = 'hot', cat: string 
                 // NCM API格式: /top/playlist?order=hot&cat=华语&limit=50&offset=0
                 url = `${API_BASE}top/playlist?order=${order}&cat=${encodeURIComponent(cat)}&limit=${limit}&offset=${offset}`;
                 break;
+            case 'clawcloud':
+                // ClawCloud API = 网易云音乐API Enhanced,完全兼容NCM热门歌单接口
+                url = `${API_BASE}top/playlist?order=${order}&cat=${encodeURIComponent(cat)}&limit=${limit}&offset=${offset}`;
+                break;
             case 'gdstudio':
             case 'meting':
             default:
@@ -1960,8 +2009,8 @@ export async function getHotPlaylists(order: 'hot' | 'new' = 'hot', cat: string 
             more: false
         };
 
-        if (apiFormat.format === 'ncm') {
-            // NCM API格式: { playlists: [...], total: 0, more: false }
+        if (apiFormat.format === 'ncm' || apiFormat.format === 'clawcloud') {
+            // NCM/ClawCloud API格式: { playlists: [...], total: 0, more: false }
             if (data && data.playlists && Array.isArray(data.playlists)) {
                 result.playlists = data.playlists.map((playlist: any) => ({
                     id: playlist.id,
@@ -2011,6 +2060,10 @@ export async function getArtistList(type: number = -1, area: number = -1, initia
                 // NCM API格式: /artist/list?type=1&area=96&initial=b&limit=30&offset=0
                 url = `${API_BASE}artist/list?type=${type}&area=${area}&initial=${initial}&limit=${limit}&offset=${offset}`;
                 break;
+            case 'clawcloud':
+                // ClawCloud API = 网易云音乐API Enhanced,完全兼容NCM歌手分类接口
+                url = `${API_BASE}artist/list?type=${type}&area=${area}&initial=${initial}&limit=${limit}&offset=${offset}`;
+                break;
             case 'gdstudio':
             case 'meting':
             default:
@@ -2028,8 +2081,8 @@ export async function getArtistList(type: number = -1, area: number = -1, initia
             more: false
         };
 
-        if (apiFormat.format === 'ncm') {
-            // NCM API格式: { artists: [...], total: 0, more: false }
+        if (apiFormat.format === 'ncm' || apiFormat.format === 'clawcloud') {
+            // NCM/ClawCloud API格式: { artists: [...], total: 0, more: false }
             if (data && data.artists && Array.isArray(data.artists)) {
                 result.artists = data.artists.map((artist: any) => ({
                     id: artist.id,
@@ -2075,6 +2128,10 @@ export async function getArtistTopSongs(artistId: string): Promise<{
                 // NCM API格式: /artist/top/song?id=歌手ID
                 url = `${API_BASE}artist/top/song?id=${artistId}`;
                 break;
+            case 'clawcloud':
+                // ClawCloud API = 网易云音乐API Enhanced,完全兼容NCM歌手热门歌曲接口
+                url = `${API_BASE}artist/top/song?id=${artistId}`;
+                break;
             case 'gdstudio':
             case 'meting':
             default:
@@ -2095,8 +2152,8 @@ export async function getArtistTopSongs(artistId: string): Promise<{
             songs: [] as Song[]
         };
 
-        if (apiFormat.format === 'ncm') {
-            // NCM API格式: { artist: {...}, songs: [...] }
+        if (apiFormat.format === 'ncm' || apiFormat.format === 'clawcloud') {
+            // NCM/ClawCloud API格式: { artist: {...}, songs: [...] }
             if (data && data.artist) {
                 result.artist = {
                     id: data.artist.id || artistId,
