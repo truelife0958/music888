@@ -2623,6 +2623,7 @@ body {
     min-height: 100px;
     position: relative;
     overflow: hidden;
+    color: rgba(255, 255, 255, 0.9); /* 老王优化：按钮文字更亮 */
 }
 
 .nav-button::before {
@@ -2653,7 +2654,7 @@ body {
 
 .nav-button-label {
     font-size: var(--font-md);
-    color: var(--text-primary);
+    color: rgba(255, 255, 255, 0.95); /* 老王优化：标签文字更亮 */
     font-weight: 500;
     position: relative;
     z-index: 1;

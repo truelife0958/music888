@@ -395,7 +395,7 @@ async function loadArtistDetail(artistId: string, artistName: string) {
 
         const result = await getArtistTopSongs(artistId);
 
-        if (result.songs.length === 0) {
+        if (!result || !result.songs || result.songs.length === 0) {
             container.innerHTML = `
                 <div class="error">
                     <button class="back-btn" id="backToList">

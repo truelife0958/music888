@@ -540,7 +540,9 @@ async function loadRankSongs(rankId: string, source: string, rankName: string, r
         // 降级使用歌单API
         if (songs.length === 0) {
             const result = await parsePlaylistAPI(rankId, source);
-            songs = result.songs;
+            if (result && result.songs) {
+                songs = result.songs;
+            }
         }
 
         if (songs.length === 0) {
