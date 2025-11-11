@@ -504,8 +504,9 @@ async function initializeApp(): Promise<void> {
         });
     });
 
-    // 歌单解析
-    document.querySelector('.playlist-btn')!.addEventListener('click', handleParsePlaylist);
+    // 老王修复BUG：歌单解析功能的UI已被删除，注释掉监听器绑定避免空指针错误
+    // 如需恢复歌单解析功能，需要在HTML中添加对应的UI元素：playlistIdInput、playlistSourceSelect、playlist-btn
+    // document.querySelector('.playlist-btn')!.addEventListener('click', handleParsePlaylist);
 
     // 每日推荐按钮
     const dailyRecommendBtn = document.getElementById('dailyRecommendBtn');
