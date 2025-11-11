@@ -1414,7 +1414,7 @@ body {
 .lyrics-container-inline .lyric-line.lyric-prev,
 .lyrics-container-inline .lyric-line.lyric-next {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.5);
 }
 
 /* ========== 响应式设计 - 老王重构优化版 ========== */

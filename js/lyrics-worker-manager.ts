@@ -172,9 +172,17 @@ class LyricsWorkerManager {
         const lyricLines = lyric.split('\n');
         const timeRegex = /\[(\d{2,}):(\d{2})(?:\.(\d{2,3}))?\]/g;
 
+        // 老王修复BUG：提取offset偏移量（歌词时间校正）
+        let offsetMs = 0;
+        const offsetMatch = lyric.match(/\[offset:(-?\d+)\]/i);
+        if (offsetMatch) {
+            offsetMs = parseInt(offsetMatch[1], 10);
+            console.log(`🎵 [歌词偏移] 检测到offset: ${offsetMs}ms`);
+        }
+
         for (const line of lyricLines) {
             const text = line.replace(timeRegex, '').trim();
-            
+
             if (!text || /^\[(?:ti|ar|al|by|offset):/i.test(line)) {
                 continue;
             }
@@ -186,7 +194,8 @@ class LyricsWorkerManager {
                 const minutes = parseInt(match[1], 10);
                 const seconds = parseInt(match[2], 10);
                 const milliseconds = match[3] ? parseInt(match[3].padEnd(3, '0'), 10) : 0;
-                const totalTime = minutes * 60 + seconds + milliseconds / 1000;
+                // 老王修复BUG：应用offset偏移量（转换为秒）
+                const totalTime = minutes * 60 + seconds + milliseconds / 1000 + offsetMs / 1000;
                 times.push(totalTime);
             }
 
