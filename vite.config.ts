@@ -39,11 +39,9 @@ export default defineConfig({
           'ui': ['./js/ui.ts'],
           // 功能模块
           'features': [
-            './js/rank.ts',
             './js/daily-recommend.ts',
             './js/search-history.ts',
-            './js/play-stats.ts',
-            './js/artist-radio.ts'
+            './js/play-stats.ts'
           ]
         },
         // 优化: 资源文件命名
