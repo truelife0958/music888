@@ -2686,6 +2686,141 @@ body {
     font-weight: 600;
 }
 
+/* 老王新增：歌单按钮列表样式 - 更美观的列表式导航 */
+.nav-buttons-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.nav-btn-item {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all var(--transition-fast) ease;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    overflow: hidden;
+    color: var(--text-primary);
+    text-align: left;
+    width: 100%;
+}
+
+.nav-btn-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    opacity: 0;
+    transition: opacity var(--transition-fast) ease;
+    z-index: 0;
+}
+
+.nav-btn-item:hover {
+    border-color: var(--primary-color);
+    transform: translateX(5px);
+    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+}
+
+.nav-btn-item:hover::before {
+    opacity: 0.12;
+}
+
+.nav-btn-item .btn-icon {
+    font-size: 2em;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-sm);
+}
+
+.nav-btn-item:hover .btn-icon {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.nav-btn-item .btn-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    z-index: 1;
+    min-width: 0; /* 允许文本截断 */
+}
+
+.nav-btn-item .btn-title {
+    font-size: var(--font-md);
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+    /* 文本截断 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.nav-btn-item .btn-subtitle {
+    font-size: var(--font-sm);
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.nav-btn-item .btn-subtitle i {
+    font-size: 12px;
+}
+
+.nav-btn-item .btn-arrow {
+    font-size: 18px;
+    color: var(--text-tertiary);
+    transition: transform var(--transition-fast) ease;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+}
+
+.nav-btn-item:hover .btn-arrow {
+    color: var(--primary-color);
+    transform: translateX(5px);
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    .nav-btn-item {
+        padding: 15px 16px;
+        gap: 12px;
+    }
+
+    .nav-btn-item .btn-icon {
+        font-size: 1.6em;
+        width: 40px;
+        height: 40px;
+    }
+
+    .nav-btn-item .btn-title {
+        font-size: var(--font-sm);
+    }
+
+    .nav-btn-item .btn-subtitle {
+        font-size: 12px;
+    }
+}
+
 /* 每日推荐面板样式 */
 .recommend-panel {
     position: fixed;

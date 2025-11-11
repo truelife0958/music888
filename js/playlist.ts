@@ -355,6 +355,27 @@ function displayPlaylistGrid(playlists: any[]) {
     }
 }
 
+// 老王新增：返回歌单列表（恢复已保存的列表，不重新加载）
+function returnToPlaylistList() {
+    const container = document.getElementById('playlistContainer');
+    if (!container) return;
+
+    // 老王修复BUG：渲染前清理旧监听器
+    clearCurrentListeners();
+
+    currentState.stage = 'list';
+
+    // 如果有保存的列表数据，直接显示
+    if (currentState.currentPlaylists && currentState.currentPlaylists.length > 0) {
+        displayPlaylistGrid(currentState.currentPlaylists);
+        console.log(`✅ 恢复歌单列表，共 ${currentState.currentPlaylists.length} 个`);
+    } else {
+        // 如果没有保存的数据，重新加载
+        console.log('⚠️ 没有保存的歌单数据，重新加载...');
+        loadPlaylistsByGenre();
+    }
+}
+
 // 格式化播放次数
 function formatPlayCount(count: number): string {
     if (count >= 100000000) {
@@ -391,10 +412,10 @@ async function loadPlaylistDetail(playlistId: string) {
                     <div>暂无歌曲数据</div>
                 </div>
             `;
-            // 老王修复BUG：使用registerEventListener
+            // 老王修复BUG：使用registerEventListener + 返回到已保存的列表
             const backBtn = document.getElementById('backToList');
             if (backBtn) {
-                registerEventListener(backBtn, 'click', loadPlaylistsByGenre);
+                registerEventListener(backBtn, 'click', returnToPlaylistList);
             }
             return;
         }
@@ -412,10 +433,10 @@ async function loadPlaylistDetail(playlistId: string) {
             <div class="playlist-songs-container" id="playlistSongsContainer"></div>
         `;
 
-        // 老王修复BUG：返回按钮使用registerEventListener
+        // 老王修复BUG：返回按钮使用registerEventListener + 返回到已保存的列表
         const backBtn = document.getElementById('playlistBackBtn');
         if (backBtn) {
-            registerEventListener(backBtn, 'click', loadPlaylistsByGenre);
+            registerEventListener(backBtn, 'click', returnToPlaylistList);
         }
 
         // 显示歌曲列表
@@ -434,10 +455,10 @@ async function loadPlaylistDetail(playlistId: string) {
                 <div>加载失败，请重试</div>
             </div>
         `;
-        // 老王修复BUG：使用registerEventListener
+        // 老王修复BUG：使用registerEventListener + 返回到已保存的列表
         const backBtn = document.getElementById('backToList');
         if (backBtn) {
-            registerEventListener(backBtn, 'click', loadPlaylistsByGenre);
+            registerEventListener(backBtn, 'click', returnToPlaylistList);
         }
         showNotification('加载歌单失败', 'error');
     }

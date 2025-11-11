@@ -120,6 +120,13 @@
                         <p id="currentArtist">请搜索并选择要播放的歌曲</p>
                     </div>
                 </div>
+                <!-- 老王修改：音质按钮移到这里 - 控制按钮上方、专辑信息下方 -->
+                <div class="quality-control-container">
+                    <button class="quality-toggle-btn" id="qualityToggleBtn" title="点击切换音质">
+                        <i class="fas fa-music"></i>
+                        <span id="qualityText">高品质 320K</span>
+                    </button>
+                </div>
                 <div class="player-controls">
                     <button class="control-btn small" id="playlistBtn" title="播放列表">
                         <i class="fas fa-list-ul"></i>
@@ -154,12 +161,6 @@
                 <div class="volume-container">
                     <i class="fas fa-volume-up volume-icon"></i>
                     <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="80">
-                </div>
-                <div class="quality-control-container">
-                    <button class="quality-toggle-btn" id="qualityToggleBtn" title="点击切换音质">
-                        <i class="fas fa-music"></i>
-                        <span id="qualityText">高品质 320K</span>
-                    </button>
                 </div>
             </div>
             <audio id="audioPlayer" preload="metadata"></audio>

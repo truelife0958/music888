@@ -578,12 +578,14 @@ function updateLyricActiveState(container: HTMLElement | null, activeIndex: numb
     }
 }
 
+// 老王修复BUG：更新当前播放歌曲的高亮状态
 export function updateActiveItem(currentIndex: number, containerId: string): void {
     document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
-    
+
     const container = document.getElementById(containerId);
     if (container) {
-        const activeItem = container.querySelector(`.song-item:nth-child(${currentIndex + 1})`);
+        // 老王修复：使用 data-index 精确匹配，而不是 nth-child（会计算所有子元素导致索引错位）
+        const activeItem = container.querySelector(`.song-item[data-index="${currentIndex}"]`);
         if (activeItem) {
             activeItem.classList.add('active');
             activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
