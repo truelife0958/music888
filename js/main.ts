@@ -504,9 +504,12 @@ async function initializeApp(): Promise<void> {
         });
     });
 
-    // 老王修复BUG：歌单解析功能的UI已被删除，注释掉监听器绑定避免空指针错误
-    // 如需恢复歌单解析功能，需要在HTML中添加对应的UI元素：playlistIdInput、playlistSourceSelect、playlist-btn
-    // document.querySelector('.playlist-btn')!.addEventListener('click', handleParsePlaylist);
+    // 老王恢复：解析歌单功能 - 只支持网易云音乐
+    const parsePlaylistBtn = document.getElementById('parsePlaylistBtn');
+    if (parsePlaylistBtn) {
+        parsePlaylistBtn.addEventListener('click', handleParsePlaylist);
+        console.log('✅ 解析歌单按钮事件已绑定');
+    }
 
     // 每日推荐按钮
     const dailyRecommendBtn = document.getElementById('dailyRecommendBtn');
@@ -779,9 +782,9 @@ async function handleSearch(): Promise<void> {
     }
 }
 
+// 老王简化：解析歌单功能 - 只支持网易云音乐
 async function handleParsePlaylist(): Promise<void> {
     const playlistIdInput = (document.getElementById('playlistIdInput') as HTMLInputElement).value;
-    const playlistSourceSelect = (document.getElementById('playlistSourceSelect') as HTMLSelectElement).value;
 
     // 输入验证
     const validation = validatePlaylistId(playlistIdInput);
@@ -789,28 +792,62 @@ async function handleParsePlaylist(): Promise<void> {
         ui.showNotification(validation.error || '输入无效', 'warning');
         return;
     }
-    
+
     const playlistId = validation.value;
 
-    // 修复BUG-006: 使用统一的容器切换函数
-    switchResultsContainer('parse');
+    // 切换到歌单标签页
+    switchTab('playlist');
 
-    ui.showLoading('parseResults');
+    // 显示加载状态
+    const container = document.getElementById('playlistContainer');
+    if (container) {
+        container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>正在解析歌单...</div></div>';
+    }
 
     try {
-        const playlist = await api.parsePlaylistAPI(playlistId, playlistSourceSelect);
-        ui.displaySearchResults(playlist.songs, 'parseResults', playlist.songs);
+        const playlist = await api.parsePlaylistAPI(playlistId, 'netease');
 
-        if (playlist.name) {
-            const sourceName = playlistSourceSelect === 'netease' ? '网易云音乐' : 'QQ音乐';
-            ui.showNotification(`成功解析歌单《${playlist.name}》，共 ${playlist.count || 0} 首歌曲`, 'success');
+        if (!playlist || !playlist.songs || playlist.songs.length === 0) {
+            if (container) {
+                container.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>解析失败，请检查歌单ID是否正确</div>
+                    </div>
+                `;
+            }
+            ui.showNotification('解析歌单失败', 'error');
+            return;
         }
+
+        // 显示歌曲列表
+        if (container) {
+            container.innerHTML = `
+                <div class="playlist-detail-header">
+                    <div class="playlist-detail-info">
+                        <h3>${playlist.name || '未知歌单'}</h3>
+                        <p>共 ${playlist.count || 0} 首歌曲（已成功解析）</p>
+                    </div>
+                </div>
+                <div class="playlist-songs-container" id="parsePlaylistSongsContainer"></div>
+            `;
+        }
+
+        ui.displaySearchResults(playlist.songs, 'parsePlaylistSongsContainer', playlist.songs);
+        ui.showNotification(`成功解析歌单《${playlist.name}》，共 ${playlist.count || 0} 首歌曲`, 'success');
     } catch (error) {
         let errorMessage = '解析歌单失败';
         if (error instanceof Error) {
             errorMessage = error.message;
         }
-        ui.showError(errorMessage, 'parseResults');
+        if (container) {
+            container.innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>${errorMessage}</div>
+                </div>
+            `;
+        }
         ui.showNotification(errorMessage, 'error');
     }
 }

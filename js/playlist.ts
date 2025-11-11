@@ -169,8 +169,9 @@ function handleLoadMorePlaylists(): void {
  */
 function handlePlaylistCardClick(e: Event): void {
     const playlistId = (e.currentTarget as HTMLElement).dataset.playlistId;
+    const playlistName = (e.currentTarget as HTMLElement).querySelector('.btn-title')?.textContent || '';
     if (playlistId) {
-        loadPlaylistDetail(playlistId);
+        loadPlaylistDetail(playlistId, playlistName);
     }
 }
 
@@ -387,7 +388,7 @@ function formatPlayCount(count: number): string {
 }
 
 // 第4层：加载歌单详情（歌曲列表）
-async function loadPlaylistDetail(playlistId: string) {
+async function loadPlaylistDetail(playlistId: string, playlistName?: string) {
     const container = document.getElementById('playlistContainer');
     if (!container) return;
 
@@ -396,6 +397,7 @@ async function loadPlaylistDetail(playlistId: string) {
 
     currentState.stage = 'detail';
     currentState.playlistId = playlistId;
+    currentState.playlistName = playlistName; // 保存点击的歌单名称
 
     try {
         container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>正在加载歌单...</div></div>';
@@ -420,13 +422,16 @@ async function loadPlaylistDetail(playlistId: string) {
             return;
         }
 
+        // 老王修复BUG：优先使用保存的歌单名称，确保和按钮显示一致
+        const displayName = currentState.playlistName || result.name || '未知歌单';
+
         container.innerHTML = `
             <div class="playlist-detail-header">
                 <button class="back-btn" id="playlistBackBtn">
                     <i class="fas fa-arrow-left"></i> 返回
                 </button>
                 <div class="playlist-detail-info">
-                    <h3>${escapeHtml(result.name || '未知歌单')}</h3>
+                    <h3>${escapeHtml(displayName)}</h3>
                     <p>共 ${result.count} 首歌曲</p>
                 </div>
             </div>
