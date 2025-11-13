@@ -55,11 +55,6 @@
 
 **[🎵 立即体验 →](https://music8889.pages.dev/)** 无需安装，即刻使用
 
-### 🚀 一键部署
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/truelife0958/music888)
-[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/truelife0958/music888)
-
 ### 💻 本地运行
 
 ```bash
@@ -252,7 +247,19 @@ TypeScript + Vite + CSS3
 
 ## 🚀 部署指南
 
-### Cloudflare Pages（推荐）
+### 🚀 一键部署
+
+**Cloudflare Pages（推荐）**
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/truelife0958/music888)
+
+**Vercel**
+
+[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/truelife0958/music888)
+
+### 手动部署
+
+#### Cloudflare Pages
 
 1. Fork本仓库到你的GitHub账号
 2. 登录 [Cloudflare Pages](https://pages.cloudflare.com/)
@@ -265,12 +272,13 @@ TypeScript + Vite + CSS3
    ```
 5. 点击"保存并部署"，等待1-2分钟完成
 
-### Vercel
+#### Vercel
 
-1. 点击上方"Deploy to Vercel"按钮
-2. 授权GitHub并选择仓库
-3. 自动检测配置，点击"Deploy"
-4. 等待部署完成，获取部署地址
+1. 登录 [Vercel](https://vercel.com/)
+2. 点击"New Project"
+3. 导入你Fork的GitHub仓库
+4. 自动检测配置，点击"Deploy"
+5. 等待部署完成，获取部署地址
 
 ### 自定义域名
 
@@ -528,14 +536,7 @@ A: 移动端操作指南：
 - `perf`: 性能优化
 - `test`: 测试相关
 - `chore`: 构建/工具链相关
-- `ci`: 
-
-1. 在搜索框输入歌曲名、歌手或专辑
-2. 选择音乐平台（默认：网易云音乐）
-3. 点击搜索或按回车键
-4. 
-
-CI/CD相关
+- `ci`: CI/CD相关
 
 ### 开发环境
 
