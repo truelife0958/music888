@@ -1424,19 +1424,15 @@ body {
   text-align: center;
   font-size: 13px;
   line-height: 1.5;
-  /* 增强淡入淡出动画效果 */
-  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.8s ease-in-out,
-              transform 0.8s ease-in-out,
-              color 0.8s ease-in-out,
-              font-size 0.8s ease-in-out;
+  /* 统一从下到上的滚动淡入淡出效果 */
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   color: rgba(255, 255, 255, 0.35);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   height: 24px;
   opacity: 0.5;
-  transform: scale(0.93);
+  transform: translateY(0) scale(0.93);
   will-change: opacity, transform, color, font-size;
 }
 
@@ -1444,58 +1440,73 @@ body {
 .lyrics-container-inline .lyric-line.lyric-current,
 .lyrics-container-inline .lyric-line.active {
   color: var(--primary-color);
-  font-size: 17px; /* 进一步增大字号 */
-  font-weight: 800; /* 更加粗 */
+  font-size: 16px;
+  font-weight: 700;
   opacity: 1;
-  transform: scale(1.08); /* 更明显的放大 */
-  text-shadow: 0 0 15px rgba(255, 107, 107, 0.6), /* 增强发光效果 */
-               0 0 25px rgba(255, 107, 107, 0.4),
-               0 3px 6px rgba(0, 0, 0, 0.4);
-  letter-spacing: 0.8px; /* 增加字间距 */
-  filter: brightness(1.2); /* 增加亮度 */
+  transform: translateY(0) scale(1.05);
+  text-shadow: 0 0 12px rgba(255, 107, 107, 0.5),
+               0 0 20px rgba(255, 107, 107, 0.3),
+               0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+  filter: brightness(1.1);
+  animation: lyricHighlight 0.6s ease-out;
 }
 
-/* 上一句和下一句歌词 */
-.lyrics-container-inline .lyric-line.lyric-prev,
+/* 上一句歌词 - 向上滚动淡出 */
+.lyrics-container-inline .lyric-line.lyric-prev {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  opacity: 0.6;
+  transform: translateY(-8px) scale(0.90);
+  filter: blur(0.3px);
+  animation: scrollUpFadeOut 0.6s ease-out;
+}
+
+/* 下一句歌词 - 从下方滚动进入 */
 .lyrics-container-inline .lyric-line.lyric-next {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.4);
-  opacity: 0.65;
-  transform: scale(0.90);
-  filter: blur(0.3px); /* 轻微模糊增强层次感 */
+  opacity: 0.6;
+  transform: translateY(8px) scale(0.90);
+  filter: blur(0.3px);
+  animation: scrollUpFadeIn 0.6s ease-out;
 }
 
-/* 上一句歌词淡出效果 */
-.lyrics-container-inline .lyric-line.lyric-prev {
-  animation: fadeInFromTop 0.8s ease-out;
-}
-
-/* 下一句歌词准备进入 */
-.lyrics-container-inline .lyric-line.lyric-next {
-  animation: fadeInFromBottom 0.8s ease-out;
-}
-
-/* 关键帧动画 - 从上方淡入 */
-@keyframes fadeInFromTop {
+/* 当前歌词高亮动画 - 从下方滚动到中间并高亮 */
+@keyframes lyricHighlight {
   0% {
-    opacity: 0;
-    transform: translateY(-12px) scale(0.85);
+    opacity: 0.6;
+    transform: translateY(20px) scale(0.90);
+    color: rgba(255, 255, 255, 0.4);
   }
   100% {
-    opacity: 0.65;
-    transform: translateY(0) scale(0.90);
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+    color: var(--primary-color);
   }
 }
 
-/* 关键帧动画 - 从下方淡入 */
-@keyframes fadeInFromBottom {
+/* 上一句歌词向上滚动淡出 */
+@keyframes scrollUpFadeOut {
   0% {
-    opacity: 0;
-    transform: translateY(12px) scale(0.85);
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
   }
   100% {
-    opacity: 0.65;
-    transform: translateY(0) scale(0.90);
+    opacity: 0.6;
+    transform: translateY(-8px) scale(0.90);
+  }
+}
+
+/* 下一句歌词从下方滚动进入 */
+@keyframes scrollUpFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.85);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translateY(8px) scale(0.90);
   }
 }
 
@@ -1841,6 +1852,18 @@ body {
   }
 
   .lyrics-container-inline .lyric-translation {
+    font-size: 11px;
+  }
+
+  /* 移动端歌词样式优化 */
+  .lyrics-container-inline .lyric-line.lyric-current,
+  .lyrics-container-inline .lyric-line.active {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .lyrics-container-inline .lyric-line.lyric-prev,
+  .lyrics-container-inline .lyric-line.lyric-next {
     font-size: 11px;
   }
 
