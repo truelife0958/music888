@@ -149,11 +149,14 @@ function initAudioPlayer(): void {
     isPlaying = false;
     ui.updatePlayButton(false);
 
-    if (playMode === 'single') {
-      playSong(currentIndex, currentPlaylist, lastActiveContainer);
-    } else {
-      nextSong();
-    }
+    // 修复息屏自动下一曲：使用setTimeout确保在后台也能执行
+    setTimeout(() => {
+      if (playMode === 'single') {
+        playSong(currentIndex, currentPlaylist, lastActiveContainer);
+      } else {
+        nextSong();
+      }
+    }, 100); // 延迟100ms确保在后台也能触发
   };
   addManagedEventListener(audioPlayer as any, 'ended', endedHandler);
 
@@ -419,6 +422,43 @@ export async function playSong(
         })
       );
 
+      // 设置 Media Session API，支持息屏控制和自动下一曲
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.name,
+          artist: Array.isArray(song.artist) ? song.artist.join(', ') : song.artist,
+          album: song.album || '',
+          artwork: coverUrl ? [
+            { src: coverUrl, sizes: '96x96', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '128x128', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '192x192', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '256x256', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '384x384', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '512x512', type: 'image/jpeg' },
+          ] : [],
+        });
+
+        // 设置播放控制处理器
+        navigator.mediaSession.setActionHandler('play', () => {
+          audioPlayer.play();
+        });
+        
+        navigator.mediaSession.setActionHandler('pause', () => {
+          audioPlayer.pause();
+        });
+        
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          previousSong();
+        });
+        
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          nextSong();
+        });
+
+        // 设置播放状态
+        navigator.mediaSession.playbackState = 'playing';
+      }
+
       try {
         const playPromise = audioPlayer.play();
 
@@ -579,6 +619,11 @@ export function togglePlay(): void {
     isPlaying = false;
     ui.updatePlayButton(false);
     window.dispatchEvent(new Event('songPaused'));
+    
+    // 更新 Media Session 状态
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
   } else {
     const playPromise = audioPlayer.play();
     if (playPromise !== undefined) {
@@ -589,6 +634,11 @@ export function togglePlay(): void {
           isPlaying = true;
           ui.updatePlayButton(true);
           window.dispatchEvent(new Event('songPlaying'));
+          
+          // 更新 Media Session 状态
+          if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'playing';
+          }
         })
         .catch((error) => {
           console.error('播放失败:', error);
