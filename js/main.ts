@@ -50,7 +50,8 @@ function registerEventListener(
 ): void {
   target.addEventListener(type, listener, options);
   registeredEventListeners.push({ target, type, listener, options });
-  console.log(`📝 已注册监听器: ${type} on ${target.constructor.name}`);
+  // 优化：减少调试日志输出
+  // console.log(`📝 已注册监听器: ${type} on ${target.constructor.name}`);
 }
 
 /**
@@ -123,7 +124,8 @@ export function switchTab(tabName: string): void {
  */
 function handleVisibilityChange(): void {
   if (document.hidden) {
-    console.log('📱 页面隐藏，暂停非必要资源...');
+    // 优化：减少调试日志输出
+    // console.log('📱 页面隐藏，暂停非必要资源...');
     // 暂停时可以考虑清理一些临时数据，但不终止Worker
   }
 }
@@ -324,6 +326,11 @@ function handleSongPlaying(e: Event): void {
   const song = customEvent.detail?.song;
   if (song) {
     updatePageTitle(song, true);
+    
+    // 新增：移动端播放时自动跳转到播放器区域
+    if (window.innerWidth <= 768) {
+      (window as any).switchMobilePage(1); // 切换到第二页（播放器）
+    }
   }
 }
 
@@ -352,15 +359,15 @@ async function initializeApp(): Promise<void> {
 
   // 优化: 初始化主题管理器
   themeManager = new ThemeManager();
-  console.log('✅ 主题系统初始化成功');
+  // console.log('✅ 主题系统初始化成功');
 
   // 初始化新手引导（已在onboarding.ts中自动初始化）
-  console.log('✅ 新手引导系统已加载');
+  // console.log('✅ 新手引导系统已加载');
 
   // 优化: 初始化存储适配器（IndexedDB）
   try {
     await storageAdapter.initialize();
-    console.log('✅ 存储系统初始化成功');
+    // console.log('✅ 存储系统初始化成功');
   } catch (error) {
     console.error('❌ 存储系统初始化失败:', error);
   }
@@ -454,14 +461,8 @@ async function initializeApp(): Promise<void> {
   const searchInput = document.getElementById('searchInput') as HTMLInputElement;
   const searchForm = document.querySelector('.search-wrapper') as HTMLFormElement;
 
-  console.log('🔍 [搜索功能初始化] 元素检查:', {
-    searchBtn: searchBtn,
-    searchBtnExists: !!searchBtn,
-    searchInput: searchInput,
-    searchInputExists: !!searchInput,
-    searchForm: searchForm,
-    searchFormExists: !!searchForm,
-  });
+  // 优化：减少调试日志输出
+  // console.log('🔍 [搜索功能初始化] 元素检查:', { ... });
 
   if (!searchBtn) {
     console.error('❌ 搜索按钮未找到！选择器: .search-btn');
@@ -472,35 +473,32 @@ async function initializeApp(): Promise<void> {
   }
 
   if (searchBtn && searchInput) {
-    console.log('✅ 开始绑定搜索事件监听器...');
+    // console.log('✅ 开始绑定搜索事件监听器...');
 
     // 修复：阻止表单默认提交行为
     if (searchForm) {
       searchForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        console.log('📝 [表单提交] 触发搜索', e);
         handleSearch();
       });
-      console.log('✅ 表单submit事件已绑定');
+      // console.log('✅ 表单submit事件已绑定');
     }
 
     // 搜索按钮点击
     searchBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      console.log('🔘 [搜索按钮] 点击触发', e);
       handleSearch();
     });
-    console.log('✅ 搜索按钮click事件已绑定');
+    // console.log('✅ 搜索按钮click事件已绑定');
 
     // 回车键搜索
     searchInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        console.log('⌨️ [回车键] 触发搜索', e);
         handleSearch();
       }
     });
-    console.log('✅ 回车键事件已绑定');
+    // console.log('✅ 回车键事件已绑定');
   } else {
     console.error('❌ 搜索功能初始化失败：缺少必要元素');
   }
@@ -508,7 +506,6 @@ async function initializeApp(): Promise<void> {
   // 优化：启用实时搜索防抖，提升用户体验
   const debouncedSearch = debounce(() => {
     if (searchInput && searchInput.value.trim()) {
-      console.log('🔍 [防抖搜索] 触发搜索:', searchInput.value);
       handleSearch();
     }
   }, 300); // 300ms防抖延迟
@@ -517,7 +514,7 @@ async function initializeApp(): Promise<void> {
     searchInput.addEventListener('input', () => {
       debouncedSearch();
     });
-    console.log('✅ 实时搜索防抖已启用（300ms延迟）');
+    // console.log('✅ 实时搜索防抖已启用（300ms延迟）');
   }
 
   // 播放器控制 - 使用ID选择器更安全
@@ -560,7 +557,7 @@ async function initializeApp(): Promise<void> {
   const parsePlaylistBtn = document.getElementById('parsePlaylistBtn');
   if (parsePlaylistBtn) {
     parsePlaylistBtn.addEventListener('click', handleParsePlaylist);
-    console.log('✅ 解析歌单按钮事件已绑定');
+    // console.log('✅ 解析歌单按钮事件已绑定');
   }
 
   // 每日推荐按钮
@@ -569,40 +566,36 @@ async function initializeApp(): Promise<void> {
 
   if (dailyRecommendBtn) {
     dailyRecommendBtn.addEventListener('click', async () => {
-      console.log('🔘 每日推荐按钮被点击');
       try {
         await loadDailyRecommendModule();
         if (dailyRecommendModule && dailyRecommendModule.loadDailyRecommendInSearch) {
-          console.log('✅ 开始加载每日推荐...');
           await dailyRecommendModule.loadDailyRecommendInSearch();
         } else {
-          console.error('❌ 每日推荐模块或函数未找到', dailyRecommendModule);
+          console.error('❌ 每日推荐模块或函数未找到');
         }
       } catch (error) {
         console.error('❌ 每日推荐加载失败:', error);
       }
     });
-    console.log('✅ 每日推荐按钮事件已绑定');
+    // console.log('✅ 每日推荐按钮事件已绑定');
   } else {
     console.error('❌ 每日推荐按钮未找到');
   }
 
   if (refreshRecommendBtn) {
     refreshRecommendBtn.addEventListener('click', async () => {
-      console.log('🔘 刷新推荐按钮被点击');
       try {
         await loadDailyRecommendModule();
         if (dailyRecommendModule && dailyRecommendModule.loadDailyRecommendInSearch) {
-          console.log('✅ 开始刷新推荐...');
           await dailyRecommendModule.loadDailyRecommendInSearch(true);
         } else {
-          console.error('❌ 每日推荐模块或函数未找到', dailyRecommendModule);
+          console.error('❌ 每日推荐模块或函数未找到');
         }
       } catch (error) {
         console.error('❌ 刷新推荐失败:', error);
       }
     });
-    console.log('✅ 刷新推荐按钮事件已绑定');
+    // console.log('✅ 刷新推荐按钮事件已绑定');
   } else {
     console.error('❌ 刷新推荐按钮未找到');
   }
@@ -836,7 +829,7 @@ async function handleSearch(): Promise<void> {
             (window as any).switchMobilePage(0);
             // 滚动搜索结果容器到顶部
             searchResults.scrollTop = 0;
-            console.log('✅ 移动端已自动聚焦到搜索结果');
+            // console.log('✅ 移动端已自动聚焦到搜索结果');
           }
         }, 300);
       }
@@ -1144,7 +1137,7 @@ function initMobileSwipe(): void {
 
   // 只在移动端宽度初始化
   if (window.innerWidth <= 768) {
-    console.log('🎯 初始化移动端滑动功能');
+    // console.log('🎯 初始化移动端滑动功能');
 
     registerEventListener(mainContainer, 'touchstart', handleTouchStart, { passive: true });
 
@@ -1155,7 +1148,7 @@ function initMobileSwipe(): void {
 
     // 标记为已初始化
     (mainContainer as any).swipeInitialized = true;
-    console.log('✅ 移动端滑动功能初始化完成');
+    // console.log('✅ 移动端滑动功能初始化完成');
   }
 }
 
@@ -1197,20 +1190,20 @@ function handleSwipe(velocity: number = 0): void {
     if (deltaX < 0 && currentPage < sections.length - 1) {
       const targetPage = currentPage + pagesToSkip;
       (window as any).switchMobilePage(targetPage);
-      console.log(`📱 左滑：从第${currentPage + 1}页切换到第${targetPage + 1}页`);
+      // console.log(`📱 左滑：从第${currentPage + 1}页切换到第${targetPage + 1}页`);
     }
     // 右滑显示上一页
     else if (deltaX > 0 && currentPage > 0) {
       const targetPage = currentPage - pagesToSkip;
       (window as any).switchMobilePage(targetPage);
-      console.log(`📱 右滑：从第${currentPage + 1}页切换到第${targetPage + 1}页`);
+      // console.log(`📱 右滑：从第${currentPage + 1}页切换到第${targetPage + 1}页`);
     }
   }
 }
 
 // ========== 性能优化模块初始化 ==========
 async function initPerformanceOptimizations(): Promise<void> {
-  console.log('🚀 初始化性能优化模块...');
+  // console.log('🚀 初始化性能优化模块...');
 
   // 1. 初始化图片懒加载
   if (!moduleLoadStatus.imageLoader) {
@@ -1218,7 +1211,7 @@ async function initPerformanceOptimizations(): Promise<void> {
       const { ImageLazyLoader } = await import('./image-lazy-load.js');
       imageLazyLoader = new ImageLazyLoader();
       moduleLoadStatus.imageLoader = true;
-      console.log('✅ 图片懒加载已启用');
+      // console.log('✅ 图片懒加载已启用');
 
       // 为现有图片添加懒加载
       const images = document.querySelectorAll('img[loading="lazy"]');
@@ -1238,13 +1231,13 @@ async function initPerformanceOptimizations(): Promise<void> {
       const { DownloadProgressManager } = await import('./download-progress.js');
       downloadProgressManager = new DownloadProgressManager();
       moduleLoadStatus.downloadProgress = true;
-      console.log('✅ 下载进度管理器已启用');
+      // console.log('✅ 下载进度管理器已启用');
     } catch (error) {
       console.error('❌ 下载进度管理器初始化失败:', error);
     }
   }
 
-  console.log('✅ 性能优化模块初始化完成');
+  // console.log('✅ 性能优化模块初始化完成');
 }
 
 // ========== 增强功能：键盘快捷键 ==========
@@ -1264,7 +1257,7 @@ function initDynamicPageTitle(): void {
   // 监听暂停事件
   registerEventListener(window, 'songPaused', handleSongPaused);
 
-  console.log('📄 动态页面标题已启用');
+  // console.log('📄 动态页面标题已启用');
 }
 
 function updatePageTitle(song: any | null, isPlaying: boolean): void {
@@ -1299,11 +1292,11 @@ function initIOSAudioUnlock(): void {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
 
   if (!isIOS) {
-    console.log('ℹ️ 非iOS设备，跳过音频解锁');
+    // console.log('ℹ️ 非iOS设备，跳过音频解锁');
     return;
   }
 
-  console.log('📱 检测到iOS设备，初始化音频解锁机制');
+  // console.log('📱 检测到iOS设备，初始化音频解锁机制');
 
   // 创建音频解锁函数
   const unlockAudio = () => {
@@ -1316,7 +1309,7 @@ function initIOSAudioUnlock(): void {
         playPromise
           .then(() => {
             audioElement.pause();
-            console.log('✅ iOS音频已解锁');
+            // console.log('✅ iOS音频已解锁');
           })
           .catch((error: Error) => {
             console.warn('⚠️ iOS音频解锁失败:', error.message);

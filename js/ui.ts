@@ -410,7 +410,12 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
     }
     const inlineContainer = document.getElementById('lyricsContainerInline');
     if (inlineContainer) {
-      inlineContainer.innerHTML = '<div class="lyric-line">暂无歌词</div>';
+      // 修复：保持三行结构
+      inlineContainer.innerHTML = `
+        <div class="lyric-line lyric-prev"></div>
+        <div class="lyric-line lyric-current active">暂无歌词</div>
+        <div class="lyric-line lyric-next"></div>
+      `;
     }
     lastActiveLyricIndex = -1;
     lastRenderedLyrics = [];
@@ -424,6 +429,21 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
     renderLyricsList(lyrics);
     lastRenderedLyrics = lyrics;
     lastActiveLyricIndex = -1; // 重置索引
+    
+    // 修复：确保三行歌词容器的HTML结构存在
+    const inlineContainer = document.getElementById('lyricsContainerInline');
+    if (inlineContainer) {
+      const lines = inlineContainer.querySelectorAll('.lyric-line');
+      if (lines.length !== 3) {
+        // 重新创建三行结构
+        inlineContainer.innerHTML = `
+          <div class="lyric-line lyric-prev"></div>
+          <div class="lyric-line lyric-current active">加载中...</div>
+          <div class="lyric-line lyric-next"></div>
+        `;
+        console.log('✅ [updateLyrics] 重建三行歌词结构');
+      }
+    }
 
     // 修复: 首次渲染后立即更新激活状态
     const activeIndex = findActiveLyricIndex(lyrics, currentTime);
@@ -431,7 +451,6 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
       lastActiveLyricIndex = activeIndex;
       updateLyricActiveState(DOM.lyricsContainer, activeIndex);
 
-      const inlineContainer = document.getElementById('lyricsContainerInline');
       if (inlineContainer) {
         updateLyricActiveState(inlineContainer, activeIndex);
       }
@@ -485,7 +504,11 @@ function renderLyricsList(lyrics: LyricLine[]): void {
 }
 
 // 优化: 二分查找活动歌词
+// 修复：添加0.3秒的延迟补偿，使歌词更准确地跟随音乐
 function findActiveLyricIndex(lyrics: LyricLine[], currentTime: number): number {
+  // 添加300ms的延迟补偿
+  const adjustedTime = currentTime + 0.3;
+  
   let left = 0;
   let right = lyrics.length - 1;
   let result = -1;
@@ -493,7 +516,7 @@ function findActiveLyricIndex(lyrics: LyricLine[], currentTime: number): number 
   while (left <= right) {
     const mid = Math.floor((left + right) / 2);
 
-    if (lyrics[mid].time <= currentTime) {
+    if (lyrics[mid].time <= adjustedTime) {
       result = mid;
       left = mid + 1;
     } else {
