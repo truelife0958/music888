@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+package-lock.json
+
+# Build outputs
+dist
+build
+*.min.js
+*.min.css
+
+# Config files
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+
+# Test coverage
+coverage
+
+# Documentation
+docs/reports/*.md
+
+# Public assets
+public/service-worker.js
+
+# Functions
+functions

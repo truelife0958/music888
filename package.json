@@ -12,7 +12,11 @@
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
   "keywords": [
     "music",
@@ -26,12 +30,20 @@
   "license": "MIT",
   "type": "module",
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.56.1",
     "@testing-library/dom": "^10.4.1",
-    "@vitest/ui": "^4.0.8",
+    "@typescript-eslint/eslint-plugin": "^8.46.4",
+    "@typescript-eslint/parser": "^8.46.4",
+    "@vitest/coverage-v8": "^2.1.0",
+    "@vitest/ui": "^2.1.0",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
     "happy-dom": "^20.0.10",
+    "prettier": "^3.6.2",
     "typescript": "^5.9.3",
     "vite": "^5.4.11",
-    "vitest": "^4.0.8"
+    "vitest": "^2.1.0"
   }
 }

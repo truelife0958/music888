@@ -4,58 +4,58 @@
  * Bilibili 搜索结果项
  */
 export interface BilibiliSearchItem {
-    bvid: string;
-    aid: string;
-    title: string;
-    artist?: string;
-    album?: string;
-    pic?: string;
-    duration: number;
+  bvid: string;
+  aid: string;
+  title: string;
+  artist?: string;
+  album?: string;
+  pic?: string;
+  duration: number;
 }
 
 /**
  * Bilibili API 响应
  */
 export interface BilibiliApiResponse {
-    code: number;
-    message?: string;
-    data: BilibiliSearchItem[];
+  code: number;
+  message?: string;
+  data: BilibiliSearchItem[];
 }
 
 /**
  * 音乐平台源名称映射
  */
 export interface SourceNameMap {
-    [key: string]: string;
+  [key: string]: string;
 }
 
 /**
  * 品质名称映射
  */
 export interface QualityNameMap {
-    [key: string]: string;
+  [key: string]: string;
 }
 
 /**
  * 播放列表数据
  */
 export interface PlaylistData {
-    name: string;
-    songs: any[];
-    id: string;
-    createTime: string;
-    isFavorites?: boolean;
-    createdAt?: number;
+  name: string;
+  songs: any[];
+  id: string;
+  createTime: string;
+  isFavorites?: boolean;
+  createdAt?: number;
 }
 
 /**
  * 存储检查结果
  */
 export interface StorageCheckResult {
-    available: boolean;
-    quota?: number;
-    usage?: number;
-    error?: string;
+  available: boolean;
+  quota?: number;
+  usage?: number;
+  error?: string;
 }
 
 /**
@@ -72,9 +72,9 @@ export type NotificationType = 'info' | 'success' | 'warning' | 'error';
  * 歌词行接口
  */
 export interface LyricLine {
-    time: number;
-    text: string;
-    translation?: string; // 翻译文本（可选）
+  time: number;
+  text: string;
+  translation?: string; // 翻译文本（可选）
 }
 
 /**

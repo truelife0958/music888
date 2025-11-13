@@ -10,6 +10,6 @@
     "moduleResolution": "node",
     "types": ["vitest/globals"]
   },
-  "include": ["js/**/*.ts", "js/**/__tests__/**/*.ts", "*.ts"],
+  "include": ["js/**/*.ts", "js/**/__tests__/**/*.ts", "tests/**/*.ts", "*.ts"],
   "exclude": ["node_modules", "dist"]
 }
