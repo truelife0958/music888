@@ -504,10 +504,10 @@ function renderLyricsList(lyrics: LyricLine[]): void {
 }
 
 // 优化: 二分查找活动歌词
-// 修复：添加0.3秒的延迟补偿，使歌词更准确地跟随音乐
+// 修复：添加0.6秒的提前补偿，使歌词提前显示，解决"歌词唱完了才出现"的问题
 function findActiveLyricIndex(lyrics: LyricLine[], currentTime: number): number {
-  // 添加300ms的延迟补偿
-  const adjustedTime = currentTime + 0.3;
+  // 提前600ms显示歌词（减去时间，而不是加上）
+  const adjustedTime = currentTime - 0.6;
   
   let left = 0;
   let right = lyrics.length - 1;
