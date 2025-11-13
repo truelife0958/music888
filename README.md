@@ -253,9 +253,6 @@ TypeScript + Vite + CSS3
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/truelife0958/music888)
 
-**Vercel**
-
-[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/truelife0958/music888)
 
 ### 手动部署
 
@@ -273,6 +270,9 @@ TypeScript + Vite + CSS3
 5. 点击"保存并部署"，等待1-2分钟完成
 
 #### Vercel
+
+[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/truelife0958/music888)
+
 
 1. 登录 [Vercel](https://vercel.com/)
 2. 点击"New Project"
