@@ -674,6 +674,22 @@ export function toggleQuality(): void {
   }
 
   ui.showNotification(`音质已切换到 ${QUALITY_LABELS[quality]}`, 'success');
+
+  // 修复BUG-P2-02: 如果正在播放，询问是否立即应用新音质
+  if (currentIndex >= 0 && currentPlaylist.length > 0 && !audioPlayer.paused) {
+    setTimeout(() => {
+      const shouldReload = confirm(
+        `音质已切换到 ${QUALITY_LABELS[quality]}\n\n是否立即应用到当前播放的歌曲？\n（点击"取消"将在下一首歌曲生效）`
+      );
+      if (shouldReload) {
+        const currentTime = audioPlayer.currentTime;
+        playSong(currentIndex, currentPlaylist, lastActiveContainer).then(() => {
+          // 恢复播放进度
+          audioPlayer.currentTime = currentTime;
+        });
+      }
+    }, 500);
+  }
 }
 
 // 获取当前音质

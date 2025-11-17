@@ -1,7 +1,7 @@
 // 老王注释：Service Worker - PWA离线缓存和资源管理
 // 遵循最佳实践，智能缓存策略
 
-const CACHE_VERSION = 'music888-v3.0.1';
+const CACHE_VERSION = 'music888-v3.0.2'; // 强制更新版本号，触发Service Worker更新
 const CACHE_STATIC = `${CACHE_VERSION}-static`;
 const CACHE_DYNAMIC = `${CACHE_VERSION}-dynamic`;
 const CACHE_API = `${CACHE_VERSION}-api`;
@@ -64,9 +64,22 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // 跨域请求直接放行，不缓存
+  // 跨域音乐API白名单 - 完全不拦截这些域名的请求
+  const CORS_WHITELIST = [
+    'music.163.com',
+    'music-api.gdstudio.org',
+    'api.injahow.cn',
+    'lx.sycdn.kuwo.cn',
+    'api.gdstudio.xyz'
+  ];
+
+  // 如果是白名单域名，完全不拦截，让浏览器直接处理
+  if (CORS_WHITELIST.some(domain => url.hostname.includes(domain))) {
+    return; // 早返回，不添加任何处理
+  }
+
+  // 其他跨域请求也不拦截
   if (url.origin !== location.origin) {
-    event.respondWith(fetch(request));
     return;
   }
 

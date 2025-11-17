@@ -217,9 +217,9 @@ export function displaySearchResults(
     container.removeEventListener('click', oldListener);
   }
 
-  // 判断是否需要使用虚拟滚动（超过1000首歌曲时启用）
-  // 老王修改：提高阈值以确保排行榜等功能也能使用批量操作
-  const USE_VIRTUAL_SCROLL_THRESHOLD = 1000;
+  // 判断是否需要使用虚拟滚动（超过500首歌曲时启用）
+  // 修复BUG-P3-02: 降低阈值以提升500-1000首歌曲时的性能
+  const USE_VIRTUAL_SCROLL_THRESHOLD = 500;
 
   if (songs.length > USE_VIRTUAL_SCROLL_THRESHOLD) {
     // 使用虚拟滚动优化性能
@@ -507,7 +507,8 @@ function renderLyricsList(lyrics: LyricLine[]): void {
 // 修复：添加0.6秒的提前补偿，使歌词提前显示并与歌曲同步
 function findActiveLyricIndex(lyrics: LyricLine[], currentTime: number): number {
   // 提前600ms显示歌词（减去时间，而不是加上）
-  const adjustedTime = currentTime - 0.6;
+  // 修复：防止负数时间导致索引错误
+  const adjustedTime = Math.max(0, currentTime - 0.6);
   
   let left = 0;
   let right = lyrics.length - 1;

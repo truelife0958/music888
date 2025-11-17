@@ -327,9 +327,15 @@ function handleSongPlaying(e: Event): void {
   if (song) {
     updatePageTitle(song, true);
     
-    // 新增：移动端播放时自动跳转到播放器区域
+    // 修复BUG-P2-04: 移动端播放时延迟跳转，避免打断用户浏览
     if (window.innerWidth <= 768) {
-      (window as any).switchMobilePage(1); // 切换到第二页（播放器）
+      setTimeout(() => {
+        // 再次检查是否仍在播放且在移动端
+        const audioPlayer = document.getElementById('audioPlayer') as HTMLAudioElement;
+        if (audioPlayer && !audioPlayer.paused && window.innerWidth <= 768) {
+          (window as any).switchMobilePage(1); // 切换到第二页（播放器）
+        }
+      }, 1500); // 延迟1.5秒，给用户反应时间
     }
   }
 }
@@ -506,7 +512,11 @@ async function initializeApp(): Promise<void> {
   // 优化：启用实时搜索防抖，提升用户体验
   const debouncedSearch = debounce(() => {
     if (searchInput && searchInput.value.trim()) {
-      handleSearch();
+      handleSearch().catch((error) => {
+        // handleSearch 内部已经处理了UI反馈，这里只需捕获Promise的拒绝状态，防止程序崩溃
+        // 仍然可以记录一个日志，以便调试
+        logger.warn('[Debounced Search] Catched error to prevent crash:', error);
+      });
     }
   }, 300); // 300ms防抖延迟
 
@@ -751,7 +761,8 @@ function _switchResultsContainer(activeContainer: 'search' | 'parse'): void {
 
 async function handleSearch(): Promise<void> {
   const keywordInput = (document.getElementById('searchInput') as HTMLInputElement).value;
-  const source = (document.getElementById('sourceSelect') as HTMLSelectElement).value;
+  // 修复：界面上没有 sourceSelect 元素，硬编码默认源
+  const source = 'netease';
 
   // 输入验证
   const validation = validateSearchKeyword(keywordInput);
@@ -796,13 +807,17 @@ async function handleSearch(): Promise<void> {
         if (extraSongs.length > 0) {
           console.log(`✅ 聚合搜索找到${extraSongs.length}首歌曲`);
 
-          // 合并结果并去重（基于歌曲名+艺术家）
+          // 修复BUG-P2-03: 合并结果并去重（基于歌曲名+排序后的艺术家）
           const existingSongKeys = new Set(
-            songs.map((s) => `${s.name}_${Array.isArray(s.artist) ? s.artist.join(',') : s.artist}`)
+            songs.map((s) => {
+              const artists = Array.isArray(s.artist) ? s.artist.sort().join(',') : s.artist;
+              return `${s.name}_${artists}`;
+            })
           );
 
           const uniqueExtraSongs = extraSongs.filter((s) => {
-            const key = `${s.name}_${Array.isArray(s.artist) ? s.artist.join(',') : s.artist}`;
+            const artists = Array.isArray(s.artist) ? s.artist.sort().join(',') : s.artist;
+            const key = `${s.name}_${artists}`;
             return !existingSongKeys.has(key);
           });
 

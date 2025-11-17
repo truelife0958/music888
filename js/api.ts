@@ -4,10 +4,11 @@ export interface Song {
   id: string;
   name: string;
   artist: string[];
-  album: string;
+  album: any;
   pic_id: string;
   lyric_id: string;
   source: string;
+  [key: string]: any;
 }
 
 interface ApiSource {
@@ -59,7 +60,7 @@ function detectApiFormat(apiUrl: string): {
   };
 }
 
-// 音乐API配置 - 老王调整：恢复GDStudio主API为默认，解决版权和数据问题
+// 音乐API配置 - 修复：移除失效的CORS代理，直接请求API
 const API_SOURCES: ApiSource[] = [
   {
     name: 'GDStudio 主API',
@@ -86,16 +87,11 @@ const API_SOURCES: ApiSource[] = [
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
 
-// 老王优化：播放专用API源优先级列表（避免版权限制）
-// 数据获取用ClawCloud API，播放优先用备用API规避版权问题
+// 播放专用API源优先级列表 - 修复：使用正确的GDStudio API地址(仅.xyz有效)
 const PLAYBACK_API_SOURCES: ApiSource[] = [
   {
     name: 'GDStudio 主API',
     url: 'https://music-api.gdstudio.xyz/api.php',
-  },
-  {
-    name: 'GDStudio 备用API',
-    url: 'https://music-api.gdstudio.org/api.php',
   },
   {
     name: 'Meting备用API',
@@ -1341,31 +1337,27 @@ export async function searchMusicAPI(
 
   // 优化: 使用请求去重
   return requestDeduplicator.dedupe(cacheKey, async () => {
-    const apiFormat = detectApiFormat(API_BASE);
-    let url: string;
-
-    // 根据不同API格式构建请求URL
-    switch (apiFormat.format) {
-      case 'gdstudio':
-        // GDStudio API格式: ?types=search&source=netease&name=关键词&count=30
-        url = `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
-        break;
-      case 'ncm':
-        // NCM API格式: /search?keywords=关键词&limit=30&type=netease
-        url = `${API_BASE}search?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=${source}`;
-        break;
-      case 'clawcloud':
-        // ClawCloud API = 网易云音乐API Enhanced,使用cloudsearch接口搜索
-        url = `${API_BASE}cloudsearch?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=1`;
-        break;
-      case 'meting':
-      default:
-        // Meting API格式: ?type=search&source=netease&keywords=关键词&limit=30
-        url = `${API_BASE}?type=search&source=${source}&keywords=${encodeURIComponent(keyword)}&limit=${limit}`;
-        break;
-    }
-
     try {
+      const apiFormat = detectApiFormat(API_BASE);
+      let url: string;
+
+      // 根据不同API格式构建请求URL
+      switch (apiFormat.format) {
+        case 'gdstudio':
+          url = `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
+          break;
+        case 'ncm':
+          url = `${API_BASE}search?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=${source}`;
+          break;
+        case 'clawcloud':
+          url = `${API_BASE}cloudsearch?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=1`;
+          break;
+        case 'meting':
+        default:
+          url = `${API_BASE}?type=search&source=${source}&keywords=${encodeURIComponent(keyword)}&limit=${limit}`;
+          break;
+      }
+
       const response = await fetchWithRetry(url);
 
       if (!response.ok) {
