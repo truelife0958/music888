@@ -225,6 +225,19 @@ body {
   box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
 }
 
+.search-source-badge {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--border-light);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
 .search-input {
   flex: 1;
   padding: 12px 20px;
@@ -1581,6 +1594,11 @@ body {
     overflow: hidden; /* 修复：防止内部元素溢出 */
   }
 
+  .search-source-badge {
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
   .search-input {
     font-size: 16px; /* 防止iOS自动放大 */
     min-width: 0; /* 允许收缩 */
@@ -1601,15 +1619,6 @@ body {
     flex-shrink: 0;
   }
 
-  .search-history-container {
-    max-height: 200px;
-  }
-
-  .search-history-tag {
-    font-size: 12px;
-    padding: 5px 10px;
-  }
-
   /* 主容器 - 横向滚动 */
   .main-container {
     display: flex;
@@ -1621,6 +1630,7 @@ body {
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     width: 100vw;
@@ -1648,6 +1658,7 @@ body {
     overflow-y: auto;
     overflow-x: hidden; /* 严格禁止横向滚动 */
     scroll-snap-align: start;
+    scroll-snap-stop: always;
     border-radius: 0;
     padding: 12px;
     margin: 0;
@@ -1655,6 +1666,41 @@ body {
     overscroll-behavior-x: none; /* 禁止横向过度滚动 */
     -webkit-overflow-scrolling: touch;
     box-sizing: border-box; /* 确保padding不影响宽度 */
+  }
+
+  .player-section {
+    overflow-y: hidden;
+    padding: 12px 14px 18px;
+  }
+
+  .player-section .player-content {
+    padding: 6px 0 10px;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .player-section .current-song {
+    margin-bottom: 8px;
+  }
+
+  .player-section .player-controls {
+    margin-bottom: 8px;
+    gap: 16px;
+  }
+
+  .player-section .lyrics-container-inline {
+    margin-bottom: 10px;
+    min-height: 80px;
+    max-height: 80px;
+    padding: 8px 14px;
+  }
+
+  .player-section .progress-container {
+    margin-bottom: 10px;
+  }
+
+  .player-section .volume-container {
+    margin-bottom: 8px;
   }
 
   /* 显示统计栏 */
@@ -3457,136 +3503,6 @@ body {
     width: 100%;
     right: -100%;
   }
-}
-
-/* 搜索历史样式 */
-.search-history-container {
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 0;
-  right: 0;
-  background: rgba(30, 30, 30, 0.98);
-  backdrop-filter: blur(30px);
-  border-radius: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  padding: 15px;
-  z-index: 100;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-10px);
-  transition: all 0.3s ease;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.search-history-container.active {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.search-history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.search-history-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.search-history-title i {
-  color: #ff6b6b;
-}
-
-.search-history-clear {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  padding: 5px 12px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.search-history-clear:hover {
-  background: rgba(244, 67, 54, 0.3);
-  border-color: rgba(244, 67, 54, 0.5);
-  color: #fff;
-}
-
-.search-history-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.search-history-empty {
-  text-align: center;
-  padding: 20px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 13px;
-}
-
-.search-history-tag {
-  display: inline-flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 13px;
-  transition: all 0.3s ease;
-  gap: 8px;
-}
-
-.search-history-tag:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 107, 107, 0.5);
-}
-
-.search-history-tag-text {
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.9);
-  user-select: none;
-}
-
-.search-history-tag-text:hover {
-  color: #ff6b6b;
-}
-
-.search-history-tag-remove {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  padding: 0;
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-  font-size: 12px;
-}
-
-.search-history-tag-remove:hover {
-  background: rgba(244, 67, 54, 0.3);
-  color: #fff;
 }
 
 /* 播放统计面板样式 */

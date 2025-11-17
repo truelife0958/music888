@@ -17,7 +17,6 @@ import { onboardingManager } from './onboarding.js';
 let artistModule: any = null; // 老王改：原discover模块改为artist
 let playlistModule: any = null; // 老王改：新的playlist模块（整合了rank）
 let dailyRecommendModule: any = null;
-let searchHistoryModule: any = null;
 let playStatsModule: any = null;
 let imageLazyLoader: any = null;
 let downloadProgressManager: any = null;
@@ -79,7 +78,6 @@ const moduleLoadStatus = {
   artist: false, // 老王改：原discover改为artist
   playlist: false, // 老王改：原rank整合到playlist
   dailyRecommend: false,
-  searchHistory: false,
   playStats: false,
   imageLoader: false,
   downloadProgress: false,
@@ -633,7 +631,7 @@ async function initializeApp(): Promise<void> {
 async function initNonCriticalModules(): Promise<void> {
   try {
     // 并行加载所有非关键模块
-    await Promise.all([loadSearchHistoryModule(), loadPlayStatsModule()]);
+    await Promise.all([loadPlayStatsModule()]);
     console.log('✅ 非关键模块加载完成');
   } catch (error) {
     console.error('❌ 非关键模块加载失败:', error);
@@ -688,21 +686,6 @@ async function loadDailyRecommendModule(): Promise<void> {
     console.error('❌ 每日推荐模块加载失败:', error);
     moduleLoadStatus.dailyRecommend = false;
     dailyRecommendModule = null;
-  }
-}
-
-// 优化: 按需加载搜索历史模块
-async function loadSearchHistoryModule(): Promise<void> {
-  if (moduleLoadStatus.searchHistory) return;
-
-  try {
-    console.log('📦 加载搜索历史模块...');
-    searchHistoryModule = await import('./search-history.js');
-    searchHistoryModule.initSearchHistory();
-    moduleLoadStatus.searchHistory = true;
-    console.log('✅ 搜索历史模块加载完成');
-  } catch (error) {
-    console.error('❌ 搜索历史模块加载失败:', error);
   }
 }
 
@@ -779,16 +762,6 @@ async function handleSearch(): Promise<void> {
   // 移动端：同时切换到搜索结果页面
   if (window.innerWidth <= 768) {
     (window as any).switchMobilePage(0); // 切换到第一页（搜索结果）
-  }
-
-  // 确保搜索历史模块已加载
-  if (!moduleLoadStatus.searchHistory) {
-    await loadSearchHistoryModule();
-  }
-
-  // 添加到搜索历史
-  if (searchHistoryModule && searchHistoryModule.addSearchHistory) {
-    searchHistoryModule.addSearchHistory(keyword.trim());
   }
 
   ui.showLoading('searchResults');
