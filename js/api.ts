@@ -1,4 +1,4 @@
-// js/api.ts - 优化版音乐API
+﻿// js/api.ts - 优化版音乐API
 
 export interface Song {
   id: string;
@@ -80,7 +80,7 @@ const API_SOURCES: ApiSource[] = [
   },
   {
     name: 'ClawCloud API (网易云增强)',
-    url: 'https://pkllzbbagoeg.ap-southeast-1.clawcloudrun.com/',
+    url: 'https://ncm-api-latest.onrender.com/',
   },
 ];
 
@@ -103,7 +103,7 @@ const PLAYBACK_API_SOURCES: ApiSource[] = [
   },
   {
     name: 'ClawCloud API (网易云增强)',
-    url: 'https://pkllzbbagoeg.ap-southeast-1.clawcloudrun.com/',
+    url: 'https://ncm-api-latest.onrender.com/',
   },
 ];
 

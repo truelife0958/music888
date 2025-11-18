@@ -1,26 +1,18 @@
-// js/play-stats.ts - 播放统计功能
-
+// js/play-stats.ts - 播放统计与侧边栏
 import { showNotification } from './ui';
 import type { Song } from './api';
 import { getFavoriteSongsSync, getPlayHistory, playSong } from './player';
 import { getAlbumCoverUrl } from './api';
 
-// ========== 老王修复BUG：事件监听器管理系统 ==========
-// 艹，play-stats模块也有泄漏！tab切换时频繁调用updateSidebarFavorites和updateSidebarHistory
-// 每次都给歌曲项添加新监听器，但不清理旧的，导致内存泄漏！
+// 简单事件监听器管理，避免重复绑定
 interface EventListenerEntry {
   target: EventTarget;
   type: string;
   listener: EventListener;
   options?: AddEventListenerOptions | boolean;
 }
-
 const registeredEventListeners: EventListenerEntry[] = [];
 
-/**
- * 老王修复BUG：注册事件监听器
- * 自动跟踪所有监听器，方便cleanup时统一移除
- */
 function registerEventListener(
   target: EventTarget,
   type: string,
@@ -29,46 +21,26 @@ function registerEventListener(
 ): void {
   target.addEventListener(type, listener, options);
   registeredEventListeners.push({ target, type, listener, options });
-  console.log(`📝 [play-stats.ts] 已注册监听器: ${type} on ${target.constructor.name}`);
 }
 
-/**
- * 老王修复BUG：清理当前容器的所有监听器
- * 每次重新渲染前调用，防止监听器堆积
- */
 function clearCurrentListeners(): void {
-  console.log(`🧹 [play-stats.ts] 清理 ${registeredEventListeners.length} 个监听器...`);
-
   registeredEventListeners.forEach(({ target, type, listener, options }) => {
     target.removeEventListener(type, listener, options);
   });
-
   registeredEventListeners.length = 0;
-  console.log('✅ [play-stats.ts] 监听器已清理');
 }
 
-/**
- * 老王修复BUG：模块卸载时的清理函数
- * 页面卸载时调用，确保所有监听器被移除
- */
 export function cleanup(): void {
-  console.log('🧹 [play-stats.ts] 开始模块清理...');
   clearCurrentListeners();
-  console.log('✅ [play-stats.ts] 模块清理完成');
 }
 
-// 统计配置
-const STATS_CONFIG = {
-  STORAGE_KEY: 'play_stats',
-  TOP_COUNT: 10, // 显示前10名
-};
-
+// 数据结构
 interface PlayRecord {
   songId: string;
   songName: string;
   artist: string;
   playCount: number;
-  totalDuration: number; // 总播放时长（秒）
+  totalDuration: number; // 秒
   lastPlayTime: number;
 }
 
@@ -78,12 +50,15 @@ interface ArtistStats {
   songCount: number;
 }
 
-interface PlayStats {
+export interface PlayStats {
   totalPlays: number;
   totalDuration: number;
   songs: { [key: string]: PlayRecord };
   firstPlayDate: number;
 }
+
+const STATS_KEY = 'play_stats';
+const TOP_COUNT = 10;
 
 let currentStats: PlayStats = {
   totalPlays: 0,
@@ -94,23 +69,93 @@ let currentStats: PlayStats = {
 
 let isStatsVisible = false;
 
-// 初始化播放统计
-export function initPlayStats() {
+// 初始化
+export function initPlayStats(): void {
   loadStats();
   createStatsPanel();
-
-  // 老王新增：初始化右侧边栏的标签
   initSidebarTabs();
 
-  // 添加统计按钮
   const statsBtn = document.getElementById('statsBtn');
   if (statsBtn) {
     statsBtn.addEventListener('click', toggleStatsPanel);
   }
+
+  // 默认填充侧边栏
+  updateSidebarHistory();
 }
 
-// 初始化右侧边栏标签
-function initSidebarTabs() {
+function loadStats(): void {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as PlayStats;
+      currentStats = {
+        totalPlays: parsed.totalPlays || 0,
+        totalDuration: parsed.totalDuration || 0,
+        songs: parsed.songs || {},
+        firstPlayDate: parsed.firstPlayDate || Date.now(),
+      };
+    }
+  } catch (error) {
+    console.warn('加载播放统计失败，使用默认值', error);
+  }
+}
+
+function saveStats(): void {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(currentStats));
+  } catch (error) {
+    console.warn('保存播放统计失败', error);
+  }
+}
+
+// 记录一次播放
+export function recordPlay(song: Song, duration: number = 0): void {
+  if (!song || !song.id) return;
+  const id = String(song.id);
+  const artist =
+    Array.isArray(song.artist) && song.artist.length > 0
+      ? song.artist.join(', ')
+      : song.artist || '未知';
+
+  if (!currentStats.songs[id]) {
+    currentStats.songs[id] = {
+      songId: id,
+      songName: song.name || '未知歌曲',
+      artist,
+      playCount: 0,
+      totalDuration: 0,
+      lastPlayTime: Date.now(),
+    };
+  }
+
+  const record = currentStats.songs[id];
+  record.playCount += 1;
+  record.totalDuration += Math.max(0, duration);
+  record.lastPlayTime = Date.now();
+
+  currentStats.totalPlays += 1;
+  currentStats.totalDuration += Math.max(0, duration);
+  if (!currentStats.firstPlayDate) currentStats.firstPlayDate = Date.now();
+
+  saveStats();
+
+  // 若面板已开，更新展示
+  if (isStatsVisible) {
+    updateStatsDisplay();
+  }
+}
+
+export function getStats(): PlayStats {
+  return currentStats;
+}
+
+export function exportStats(): string {
+  return JSON.stringify(currentStats, null, 2);
+}
+
+// 侧边栏标签（播放历史 / 收藏）
+function initSidebarTabs(): void {
   const tabs = document.querySelectorAll('.stats-tabs-inline .stats-tab');
   const contents = document.querySelectorAll('.stats-content-inline .stats-tab-content');
 
@@ -118,14 +163,10 @@ function initSidebarTabs() {
     tab.addEventListener('click', () => {
       const tabName = (tab as HTMLElement).dataset.statsTab;
 
-      // 移除所有active状态
       tabs.forEach((t) => t.classList.remove('active'));
       contents.forEach((c) => c.classList.remove('active'));
-
-      // 添加当前active状态
       tab.classList.add('active');
 
-      // 显示对应内容
       if (tabName === 'history') {
         document.getElementById('historyContent')?.classList.add('active');
         updateSidebarHistory();
@@ -135,66 +176,22 @@ function initSidebarTabs() {
       }
     });
   });
-
-  // 默认显示播放历史
-  updateSidebarHistory();
 }
 
-// ========== 老王修复BUG：命名事件处理函数 ==========
-// 艹，原来全tm用匿名箭头函数，根本没法cleanup！现在提取成命名函数
-
-/**
- * 处理收藏列表歌曲项点击
- */
-function handleFavoritesItemClick(e: Event, index: number, favorites: Song[]): void {
-  if (!(e.target as HTMLElement).closest('.stats-play-btn')) {
-    playSong(index, favorites, 'favoritesList');
-  }
-}
-
-/**
- * 处理收藏列表播放按钮点击
- */
-function handleFavoritesPlayButtonClick(e: Event, index: number, favorites: Song[]): void {
-  e.stopPropagation();
-  playSong(index, favorites, 'favoritesList');
-}
-
-/**
- * 处理播放历史歌曲项点击
- */
-function handleHistoryItemClick(e: Event, index: number, history: Song[]): void {
-  if (!(e.target as HTMLElement).closest('.stats-play-btn')) {
-    playSong(index, history, 'historyList');
-  }
-}
-
-/**
- * 处理播放历史播放按钮点击
- */
-function handleHistoryPlayButtonClick(e: Event, index: number, history: Song[]): void {
-  e.stopPropagation();
-  playSong(index, history, 'historyList');
-}
-
-// 更新右侧边栏-收藏列表
-function updateSidebarFavorites() {
+// 侧边收藏列表
+function updateSidebarFavorites(): void {
   const container = document.getElementById('favoritesList');
   if (!container) return;
 
-  // 老王修复BUG：渲染前清理旧监听器
   clearCurrentListeners();
 
   const favorites = getFavoriteSongsSync();
-
   if (favorites.length === 0) {
     container.innerHTML = '<div class="stats-empty">暂无收藏</div>';
     return;
   }
 
-  // 只显示最近收藏的10首
   const recentFavorites = favorites.slice(0, 10);
-
   container.innerHTML = recentFavorites
     .map(
       (song, index) => `
@@ -205,17 +202,17 @@ function updateSidebarFavorites() {
             </div>
             <div class="stats-song-info">
                 <div class="stats-song-name">${song.name}</div>
-                <div class="stats-song-meta">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist}</div>
+                <div class="stats-song-meta">${
+                  Array.isArray(song.artist) ? song.artist.join(', ') : song.artist
+                }</div>
             </div>
             <button class="stats-play-btn" title="播放">
                 <i class="fas fa-play"></i>
             </button>
-        </div>
-    `
+        </div>`
     )
     .join('');
 
-  // 异步加载封面
   recentFavorites.forEach(async (song, index) => {
     try {
       const coverUrl = await getAlbumCoverUrl(song, 40);
@@ -223,70 +220,63 @@ function updateSidebarFavorites() {
         const coverElement = container.querySelector(
           `.stats-song-item:nth-child(${index + 1}) .stats-cover-img`
         ) as HTMLImageElement;
-        if (coverElement) {
-          coverElement.src = coverUrl;
-        }
+        if (coverElement) coverElement.src = coverUrl;
       }
     } catch (error) {
       console.warn(`加载收藏歌曲封面失败: ${song.name}`, error);
     }
   });
 
-  // 老王修复BUG：使用registerEventListener替换addEventListener
   container.querySelectorAll('.stats-song-item').forEach((item, index) => {
-    registerEventListener(item, 'click', (e: Event) =>
-      handleFavoritesItemClick(e, index, favorites)
-    );
+    registerEventListener(item, 'click', (e: Event) => {
+      if (!(e.target as HTMLElement).closest('.stats-play-btn')) {
+        playSong(index, favorites, 'favoritesList');
+      }
+    });
   });
-
   container.querySelectorAll('.stats-play-btn').forEach((btn, index) => {
-    registerEventListener(btn, 'click', (e: Event) =>
-      handleFavoritesPlayButtonClick(e, index, favorites)
-    );
+    registerEventListener(btn, 'click', (e: Event) => {
+      e.stopPropagation();
+      playSong(index, favorites, 'favoritesList');
+    });
   });
 }
 
-// 更新右侧边栏-播放历史
-function updateSidebarHistory() {
+// 侧边播放历史
+function updateSidebarHistory(): void {
   const container = document.getElementById('historyList');
   if (!container) return;
 
-  // 老王修复BUG：渲染前清理旧监听器
   clearCurrentListeners();
 
   const history = getPlayHistory();
-
-  if (history.length === 0) {
+  if (!history || history.length === 0) {
     container.innerHTML = '<div class="stats-empty">暂无播放历史</div>';
     return;
   }
 
-  // 只显示最近播放的15首
-  const recentHistory = history.slice(0, 15);
-
+  const recentHistory = history.slice(-10).reverse();
   container.innerHTML = recentHistory
-    .map((song, index) => {
-      // 从song对象中安全地获取timestamp
-      const timestamp = (song as any).timestamp || Date.now();
-      return `
-            <div class="stats-song-item clickable" data-song-index="${index}">
-                <div class="stats-song-rank">${index + 1}</div>
-                <div class="stats-song-cover">
-                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yMCAxMkwyOCAyMEgyNFYzMkgxNlYyMEgxMkwyMCAxMloiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSIvPgo8L3N2Zz4K" alt="封面" class="stats-cover-img" loading="lazy">
-                </div>
-                <div class="stats-song-info">
-                    <div class="stats-song-name">${song.name}</div>
-                    <div class="stats-song-meta">${Array.isArray(song.artist) ? song.artist.join(', ') : song.artist} • ${formatRelativeTime(timestamp)}</div>
-                </div>
-                <button class="stats-play-btn" title="播放">
-                    <i class="fas fa-play"></i>
-                </button>
+    .map(
+      (song, index) => `
+        <div class="stats-song-item clickable" data-song-index="${index}">
+            <div class="stats-song-rank">${index + 1}</div>
+            <div class="stats-song-cover">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yMCAxMkwyOCAyMEgyNFYzMkgxNlYyMEgxMkwyMCAxMloiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSIvPgo8L3N2Zz4K" alt="封面" class="stats-cover-img" loading="lazy">
             </div>
-        `;
-    })
+            <div class="stats-song-info">
+                <div class="stats-song-name">${song.name}</div>
+                <div class="stats-song-meta">${
+                  Array.isArray(song.artist) ? song.artist.join(', ') : song.artist
+                }</div>
+            </div>
+            <button class="stats-play-btn" title="播放">
+                <i class="fas fa-play"></i>
+            </button>
+        </div>`
+    )
     .join('');
 
-  // 异步加载封面
   recentHistory.forEach(async (song, index) => {
     try {
       const coverUrl = await getAlbumCoverUrl(song, 40);
@@ -294,114 +284,83 @@ function updateSidebarHistory() {
         const coverElement = container.querySelector(
           `.stats-song-item:nth-child(${index + 1}) .stats-cover-img`
         ) as HTMLImageElement;
-        if (coverElement) {
-          coverElement.src = coverUrl;
-        }
+        if (coverElement) coverElement.src = coverUrl;
       }
     } catch (error) {
       console.warn(`加载历史歌曲封面失败: ${song.name}`, error);
     }
   });
 
-  // 老王修复BUG：使用registerEventListener替换addEventListener
   container.querySelectorAll('.stats-song-item').forEach((item, index) => {
-    registerEventListener(item, 'click', (e: Event) => handleHistoryItemClick(e, index, history));
+    registerEventListener(item, 'click', (e: Event) => {
+      if (!(e.target as HTMLElement).closest('.stats-play-btn')) {
+        playSong(index, recentHistory, 'historyList');
+      }
+    });
   });
-
   container.querySelectorAll('.stats-play-btn').forEach((btn, index) => {
-    registerEventListener(btn, 'click', (e: Event) =>
-      handleHistoryPlayButtonClick(e, index, history)
-    );
+    registerEventListener(btn, 'click', (e: Event) => {
+      e.stopPropagation();
+      playSong(index, recentHistory, 'historyList');
+    });
   });
 }
 
-// 格式化相对时间
-function formatRelativeTime(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (seconds < 60) {
-    return '刚刚';
-  } else if (minutes < 60) {
-    return `${minutes}分钟前`;
-  } else if (hours < 24) {
-    return `${hours}小时前`;
-  } else if (days < 7) {
-    return `${days}天前`;
-  } else {
-    const date = new Date(timestamp);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-  }
-}
-
-// 创建统计面板
-function createStatsPanel() {
+// 统计面板 UI
+function createStatsPanel(): void {
   const panel = document.createElement('div');
   panel.id = 'statsPanel';
   panel.className = 'stats-panel';
   panel.innerHTML = `
-        <div class="stats-header">
-            <h3>📊 播放统计</h3>
-            <button class="stats-close" id="statsCloseBtn">×</button>
-        </div>
-        <div class="stats-overview" id="statsOverview"></div>
-        <div class="stats-tabs">
-            <button class="stats-tab active" data-tab="songs">热门歌曲</button>
-            <button class="stats-tab" data-tab="artists">热门艺术家</button>
-        </div>
-        <div class="stats-content">
-            <div class="stats-tab-content active" id="statsSongsTab"></div>
-            <div class="stats-tab-content" id="statsArtistsTab"></div>
-        </div>
-        <div class="stats-footer">
-            <button class="stats-clear-btn" id="statsClearBtn">
-                <i class="fas fa-trash-alt"></i> 清除统计数据
-            </button>
-        </div>
-    `;
+    <div class="stats-header">
+      <h3>📊 播放统计</h3>
+      <button class="stats-close" id="statsCloseBtn">×</button>
+    </div>
+    <div class="stats-overview" id="statsOverview"></div>
+    <div class="stats-tabs">
+      <button class="stats-tab active" data-tab="songs">热门歌曲</button>
+      <button class="stats-tab" data-tab="artists">热门艺术家</button>
+    </div>
+    <div class="stats-content">
+      <div class="stats-tab-content active" id="statsSongsTab"></div>
+      <div class="stats-tab-content" id="statsArtistsTab"></div>
+    </div>
+    <div class="stats-footer">
+      <button class="stats-clear-btn" id="statsClearBtn">
+        <i class="fas fa-trash-alt"></i> 清除统计数据
+      </button>
+    </div>
+  `;
   document.body.appendChild(panel);
 
-  // 绑定关闭按钮
   const closeBtn = document.getElementById('statsCloseBtn');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', closeStatsPanel);
-  }
+  if (closeBtn) closeBtn.addEventListener('click', closeStatsPanel);
 
-  // 绑定清除按钮
   const clearBtn = document.getElementById('statsClearBtn');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', clearStats);
-  }
+  if (clearBtn) clearBtn.addEventListener('click', clearStats);
 
-  // 绑定标签切换
   panel.querySelectorAll('.stats-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       panel.querySelectorAll('.stats-tab').forEach((t) => t.classList.remove('active'));
       panel.querySelectorAll('.stats-tab-content').forEach((c) => c.classList.remove('active'));
       tab.classList.add('active');
       const tabName = (tab as HTMLElement).dataset.tab;
-      panel
-        .querySelector(`#stats${tabName?.charAt(0).toUpperCase()}${tabName?.slice(1)}Tab`)
-        ?.classList.add('active');
+      panel.querySelector(`#stats${capitalize(tabName || '')}Tab`)?.classList.add('active');
     });
   });
 }
 
-// 显示/隐藏统计面板
-function toggleStatsPanel() {
-  if (isStatsVisible) {
-    closeStatsPanel();
-  } else {
-    openStatsPanel();
-  }
+function capitalize(str: string): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// 打开统计面板
-function openStatsPanel() {
+function toggleStatsPanel(): void {
+  if (isStatsVisible) closeStatsPanel();
+  else openStatsPanel();
+}
+
+function openStatsPanel(): void {
   const panel = document.getElementById('statsPanel');
   if (panel) {
     updateStatsDisplay();
@@ -410,276 +369,120 @@ function openStatsPanel() {
   }
 }
 
-// 关闭统计面板
-function closeStatsPanel() {
+function closeStatsPanel(): void {
   const panel = document.getElementById('statsPanel');
   if (panel) {
     panel.classList.remove('active');
-    isStatsVisible = false;
   }
+  isStatsVisible = false;
 }
 
-// 加载统计数据
-function loadStats() {
-  try {
-    const saved = localStorage.getItem(STATS_CONFIG.STORAGE_KEY);
-    if (saved) {
-      currentStats = JSON.parse(saved);
-    }
-  } catch (error) {
-    console.error('加载统计数据失败:', error);
-  }
-}
-
-// 保存统计数据
-function saveStats() {
-  try {
-    localStorage.setItem(STATS_CONFIG.STORAGE_KEY, JSON.stringify(currentStats));
-  } catch (error: any) {
-    console.error('保存统计数据失败:', error);
-
-    // 处理配额超限
-    if (error.name === 'QuotaExceededError' || error.code === 22) {
-      console.warn('localStorage配额已满，尝试清理旧数据');
-      try {
-        // 只保留播放次数最多的前50首歌
-        const topSongs = Object.values(currentStats.songs)
-          .sort((a, b) => b.playCount - a.playCount)
-          .slice(0, 50);
-
-        const newSongsMap: { [key: string]: PlayRecord } = {};
-        topSongs.forEach((song) => {
-          newSongsMap[song.songId] = song;
-        });
-
-        currentStats.songs = newSongsMap;
-        localStorage.setItem(STATS_CONFIG.STORAGE_KEY, JSON.stringify(currentStats));
-        showNotification('已清理部分统计数据以释放空间', 'info');
-      } catch (retryError) {
-        console.error('清理后仍然无法保存:', retryError);
-        showNotification('存储空间不足，统计数据未保存', 'warning');
-      }
-    }
-  }
-}
-
-// 记录播放
-export function recordPlay(song: Song, duration: number = 0) {
-  if (!song || !song.id) return;
-
-  // 播放时长少于5秒不记录（可能是误点击或快速切歌）
-  if (duration < 5) return;
-
-  const songId = song.id;
-  const artist = Array.isArray(song.artist) ? song.artist.join(', ') : song.artist;
-
-  // 更新总统计
-  currentStats.totalPlays++;
-  currentStats.totalDuration += duration;
-
-  // 更新歌曲统计
-  if (!currentStats.songs[songId]) {
-    currentStats.songs[songId] = {
-      songId,
-      songName: song.name,
-      artist,
-      playCount: 0,
-      totalDuration: 0,
-      lastPlayTime: Date.now(),
-    };
-  }
-
-  currentStats.songs[songId].playCount++;
-  currentStats.songs[songId].totalDuration += duration;
-  currentStats.songs[songId].lastPlayTime = Date.now();
-
+function clearStats(): void {
+  if (!confirm('确认要清除所有播放统计数据吗？此操作不可恢复')) return;
+  currentStats = {
+    totalPlays: 0,
+    totalDuration: 0,
+    songs: {},
+    firstPlayDate: Date.now(),
+  };
   saveStats();
-
-  // 统计面板打开时实时更新显示
-  if (isStatsVisible) {
-    updateStatsDisplay();
-  }
+  updateStatsDisplay();
+  showNotification('播放统计已清除', 'success');
 }
 
-// 更新统计显示
-function updateStatsDisplay() {
-  updateOverview();
+function formatDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours > 0) return `${hours} 小时 ${minutes} 分钟`;
+  return `${minutes} 分钟`;
+}
+
+function formatDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+// 面板渲染
+function updateStatsDisplay(): void {
+  const overview = document.getElementById('statsOverview');
+  if (overview) {
+    overview.innerHTML = `
+      <div class="stats-card">
+        <div class="stats-card-title">总播放次数</div>
+        <div class="stats-card-value">${currentStats.totalPlays}</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">总播放时长</div>
+        <div class="stats-card-value">${formatDuration(Math.floor(currentStats.totalDuration))}</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">首次播放日期</div>
+        <div class="stats-card-value">${formatDate(currentStats.firstPlayDate)}</div>
+      </div>
+    `;
+  }
+
   updateTopSongs();
   updateTopArtists();
 }
 
-// 更新概览
-function updateOverview() {
-  const overview = document.getElementById('statsOverview');
-  if (!overview) return;
-
-  const days = Math.ceil((Date.now() - currentStats.firstPlayDate) / (1000 * 60 * 60 * 24));
-  const avgPerDay = days > 0 ? (currentStats.totalPlays / days).toFixed(1) : '0';
-
-  overview.innerHTML = `
-        <div class="stats-card">
-            <div class="stats-card-icon">🎵</div>
-            <div class="stats-card-info">
-                <div class="stats-card-value">${currentStats.totalPlays}</div>
-                <div class="stats-card-label">总播放次数</div>
-            </div>
-        </div>
-        <div class="stats-card">
-            <div class="stats-card-icon">⏱️</div>
-            <div class="stats-card-info">
-                <div class="stats-card-value">${formatDuration(currentStats.totalDuration)}</div>
-                <div class="stats-card-label">总播放时长</div>
-            </div>
-        </div>
-        <div class="stats-card">
-            <div class="stats-card-icon">📅</div>
-            <div class="stats-card-info">
-                <div class="stats-card-value">${days}</div>
-                <div class="stats-card-label">使用天数</div>
-            </div>
-        </div>
-        <div class="stats-card">
-            <div class="stats-card-icon">📈</div>
-            <div class="stats-card-info">
-                <div class="stats-card-value">${avgPerDay}</div>
-                <div class="stats-card-label">日均播放</div>
-            </div>
-        </div>
-    `;
-}
-
-// 更新热门歌曲
-function updateTopSongs() {
+function updateTopSongs(): void {
   const container = document.getElementById('statsSongsTab');
   if (!container) return;
 
-  const topSongs = Object.values(currentStats.songs)
-    .sort((a, b) => b.playCount - a.playCount)
-    .slice(0, STATS_CONFIG.TOP_COUNT);
+  const songsArray = Object.values(currentStats.songs).sort((a, b) => b.playCount - a.playCount);
+  const topSongs = songsArray.slice(0, TOP_COUNT);
 
   if (topSongs.length === 0) {
-    container.innerHTML = '<div class="stats-empty">暂无播放记录</div>';
+    container.innerHTML = '<div class="stats-empty">暂无数据</div>';
     return;
   }
 
-  container.innerHTML = `
-        <div class="stats-list">
-            ${topSongs
-              .map(
-                (song, index) => `
-                <div class="stats-item">
-                    <div class="stats-rank ${index < 3 ? 'top-' + (index + 1) : ''}">${index + 1}</div>
-                    <div class="stats-item-info">
-                        <div class="stats-item-name">${song.songName}</div>
-                        <div class="stats-item-artist">${song.artist}</div>
-                    </div>
-                    <div class="stats-item-data">
-                        <div class="stats-item-count">${song.playCount} 次</div>
-                        <div class="stats-item-duration">${formatDuration(song.totalDuration)}</div>
-                    </div>
-                </div>
-            `
-              )
-              .join('')}
-        </div>
-    `;
+  container.innerHTML = topSongs
+    .map(
+      (record, index) => `
+        <div class="stats-item">
+          <div class="stats-rank">${index + 1}</div>
+          <div class="stats-info">
+            <div class="stats-title">${record.songName}</div>
+            <div class="stats-meta">${record.artist} · 播放 ${record.playCount} 次</div>
+          </div>
+        </div>`
+    )
+    .join('');
 }
 
-// 更新热门艺术家
-function updateTopArtists() {
+function updateTopArtists(): void {
   const container = document.getElementById('statsArtistsTab');
   if (!container) return;
 
-  // 统计艺术家
-  const artistsMap = new Map<string, ArtistStats>();
-
-  Object.values(currentStats.songs).forEach((song) => {
-    const artists = song.artist.split(',').map((a) => a.trim());
-    artists.forEach((artist) => {
-      if (!artistsMap.has(artist)) {
-        artistsMap.set(artist, {
-          name: artist,
-          playCount: 0,
-          songCount: 0,
-        });
-      }
-      const stats = artistsMap.get(artist)!;
-      stats.playCount += song.playCount;
-      stats.songCount++;
-    });
+  const map = new Map<string, ArtistStats>();
+  Object.values(currentStats.songs).forEach((record) => {
+    const name = record.artist || '未知';
+    const entry = map.get(name) || { name, playCount: 0, songCount: 0 };
+    entry.playCount += record.playCount;
+    entry.songCount += 1;
+    map.set(name, entry);
   });
 
-  const topArtists = Array.from(artistsMap.values())
-    .sort((a, b) => b.playCount - a.playCount)
-    .slice(0, STATS_CONFIG.TOP_COUNT);
+  const artists = Array.from(map.values()).sort((a, b) => b.playCount - a.playCount);
+  const topArtists = artists.slice(0, TOP_COUNT);
 
   if (topArtists.length === 0) {
-    container.innerHTML = '<div class="stats-empty">暂无播放记录</div>';
+    container.innerHTML = '<div class="stats-empty">暂无数据</div>';
     return;
   }
 
-  container.innerHTML = `
-        <div class="stats-list">
-            ${topArtists
-              .map(
-                (artist, index) => `
-                <div class="stats-item">
-                    <div class="stats-rank ${index < 3 ? 'top-' + (index + 1) : ''}">${index + 1}</div>
-                    <div class="stats-item-info">
-                        <div class="stats-item-name">${artist.name}</div>
-                        <div class="stats-item-artist">${artist.songCount} 首歌曲</div>
-                    </div>
-                    <div class="stats-item-data">
-                        <div class="stats-item-count">${artist.playCount} 次播放</div>
-                    </div>
-                </div>
-            `
-              )
-              .join('')}
-        </div>
-    `;
-}
-
-// 清除统计数据
-function clearStats() {
-  if (currentStats.totalPlays === 0) {
-    showNotification('暂无统计数据', 'info');
-    return;
-  }
-
-  if (confirm('确定要清除所有播放统计数据吗？此操作不可恢复！')) {
-    currentStats = {
-      totalPlays: 0,
-      totalDuration: 0,
-      songs: {},
-      firstPlayDate: Date.now(),
-    };
-    saveStats();
-    updateStatsDisplay();
-    showNotification('已清除统计数据', 'success');
-  }
-}
-
-// 格式化时长
-function formatDuration(seconds: number): string {
-  if (seconds < 60) {
-    return `${Math.round(seconds)}秒`;
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}分钟`;
-  } else {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}小时${minutes}分钟`;
-  }
-}
-
-// 获取统计数据
-export function getStats(): PlayStats {
-  return { ...currentStats };
-}
-
-// 导出统计数据
-export function exportStats(): string {
-  return JSON.stringify(currentStats, null, 2);
+  container.innerHTML = topArtists
+    .map(
+      (artist, index) => `
+        <div class="stats-item">
+          <div class="stats-rank">${index + 1}</div>
+          <div class="stats-info">
+            <div class="stats-title">${artist.name}</div>
+            <div class="stats-meta">播放 ${artist.playCount} 次 · ${artist.songCount} 首歌曲</div>
+          </div>
+        </div>`
+    )
+    .join('');
 }

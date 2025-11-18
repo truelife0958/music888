@@ -1,17 +1,20 @@
 // 老王注释：Service Worker - PWA离线缓存和资源管理
 // 遵循最佳实践，智能缓存策略
 
-const CACHE_VERSION = 'music888-v3.0.2'; // 强制更新版本号，触发Service Worker更新
+const CACHE_VERSION = 'music888-v3.1.0'; // 强制更新版本号，触发Service Worker更新
 const CACHE_STATIC = `${CACHE_VERSION}-static`;
 const CACHE_DYNAMIC = `${CACHE_VERSION}-dynamic`;
 const CACHE_API = `${CACHE_VERSION}-api`;
 
 // 静态资源列表 - 需要预缓存的核心文件
+// 优化：添加CSS和关键JavaScript文件到预缓存，提升FCP性能
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/ytmusic.ico',
-  '/manifest.json'
+  '/manifest.json',
+  '/css/style.css', // 预缓存主要CSS文件，减少FCP时间
+  // 注意：JS文件由Vite构建后动态生成，不适合硬编码预缓存
 ];
 
 // 老王注释：安装阶段 - 预缓存核心静态资源
@@ -158,7 +161,13 @@ async function cacheFirstStrategy(request, cacheName) {
 
 // 老王注释：判断是否为静态资源
 function isStaticAsset(pathname) {
-  const staticExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf'];
+  // 优化：添加更多静态资源扩展名，提升缓存命中率
+  const staticExtensions = [
+    '.css', '.js', '.mjs', '.ts',
+    '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp',
+    '.woff', '.woff2', '.ttf', '.eot', '.otf',
+    '.json', '.xml'
+  ];
   return staticExtensions.some(ext => pathname.endsWith(ext));
 }
 

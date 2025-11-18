@@ -36,6 +36,8 @@ let consecutiveFailures: number = 0; // 连续播放失败计数
 let currentLyrics: LyricLine[] = []; // 存储当前歌曲的歌词
 let playStartTime: number = 0; // 记录播放开始时间
 let lastRecordedSong: Song | null = null; // 上一首记录统计的歌曲
+let sleepTimerId: number | null = null; // 定时停止计时器
+let sleepTimerEndTime: number | null = null; // 定时停止截止时间戳（ms）
 
 // 音质管理
 const QUALITY_OPTIONS = ['128', '320', '999'];
@@ -73,6 +75,13 @@ export function cleanup(): void {
   if (stateCheckInterval !== null && stateCheckInterval !== undefined) {
     clearInterval(stateCheckInterval);
     (window as any).playerStateCheckInterval = null;
+  }
+
+  // 清理定时停止
+  if (sleepTimerId !== null) {
+    clearTimeout(sleepTimerId);
+    sleepTimerId = null;
+    sleepTimerEndTime = null;
   }
 
   // 移除所有记录的事件监听器
@@ -709,6 +718,45 @@ export function togglePlayMode(): void {
   btn.querySelector('i')!.className = modeIcons[playMode];
   btn.title = modeTitles[playMode];
   ui.showNotification(`切换到${modeTitles[playMode]}`, 'info');
+}
+
+// 定时停止播放（分钟）。0 表示关闭
+export function setSleepTimer(minutes: number): void {
+  if (sleepTimerId !== null) {
+    clearTimeout(sleepTimerId);
+    sleepTimerId = null;
+    sleepTimerEndTime = null;
+  }
+
+  if (!audioPlayer) {
+    ui.showNotification('播放器尚未准备好，稍后再试', 'warning');
+    return;
+  }
+
+  if (minutes <= 0) {
+    ui.showNotification('定时停止已关闭', 'info');
+    return;
+  }
+
+  const timeoutMs = minutes * 60 * 1000;
+  sleepTimerEndTime = Date.now() + timeoutMs;
+  sleepTimerId = window.setTimeout(() => {
+    audioPlayer.pause();
+    isPlaying = false;
+    ui.updatePlayButton(false);
+    sleepTimerId = null;
+    sleepTimerEndTime = null;
+    ui.showNotification(`已到定时 ${minutes} 分钟，播放已暂停`, 'info');
+  }, timeoutMs);
+
+  ui.showNotification(`已设定 ${minutes} 分钟后自动暂停`, 'success');
+}
+
+export function getSleepTimerRemaining(): number | null {
+  if (sleepTimerEndTime === null) return null;
+  const remainingMs = sleepTimerEndTime - Date.now();
+  if (remainingMs <= 0) return null;
+  return Math.ceil(remainingMs / 60000);
 }
 
 export function downloadSongByData(song: Song | null): void {

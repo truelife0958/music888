@@ -294,7 +294,7 @@ body {
   margin: 0 auto;
   padding: 20px;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr; /* 等比例三分 */
+  grid-template-columns: 2fr 1.5fr 1fr; /* 优化比例：内容区更宽 */
   gap: 20px;
   min-height: calc(100vh - 200px);
 }

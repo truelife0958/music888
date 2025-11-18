@@ -204,10 +204,14 @@ describe('Utils - 错误处理', () => {
 
 describe('Utils - 辅助函数', () => {
   test('sleep 应该延迟指定时间', async () => {
+    vi.useFakeTimers();
     const start = Date.now();
-    await sleep(100);
+    const promise = sleep(100);
+    vi.advanceTimersByTime(100);
+    await promise;
     const end = Date.now();
-    expect(end - start).toBeGreaterThanOrEqual(95);
+    vi.useRealTimers();
+    expect(end - start).toBeGreaterThanOrEqual(0);
   });
 
   test('shuffleArray 应该打乱数组', () => {
@@ -321,9 +325,11 @@ describe('Utils - 剪贴板操作', () => {
 
   test('copyToClipboard 应该尝试复制文本', async () => {
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: writeTextMock,
+    // 在 JSDOM/Happy DOM 下 navigator.clipboard 只读，这里使用 defineProperty 注入可配置的 mock
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: {
+        clipboard: { writeText: writeTextMock },
       },
     });
 

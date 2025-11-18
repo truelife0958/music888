@@ -316,6 +316,36 @@ function handleKeyboardShortcuts(e: KeyboardEvent): void {
 }
 
 /**
+ * 处理搜索表单提交事件
+ */
+function handleSearchFormSubmit(e: Event): void {
+  console.log('🔍 [表单submit] 事件触发');
+  e.preventDefault();
+  handleSearch();
+}
+
+/**
+ * 处理搜索按钮点击事件
+ */
+function handleSearchButtonClick(e: Event): void {
+  console.log('🔍 [搜索按钮click] 事件触发');
+  e.preventDefault();
+  handleSearch();
+}
+
+/**
+ * 处理搜索输入框按键事件
+ */
+function handleSearchInputKeypress(e: Event): void {
+  const keyboardEvent = e as KeyboardEvent;
+  if (keyboardEvent.key === 'Enter') {
+    console.log('🔍 [回车键] 事件触发');
+    e.preventDefault();
+    handleSearch();
+  }
+}
+
+/**
  * 处理歌曲播放事件
  * 更新浏览器标题为歌曲信息
  */
@@ -465,46 +495,45 @@ async function initializeApp(): Promise<void> {
   const searchInput = document.getElementById('searchInput') as HTMLInputElement;
   const searchForm = document.querySelector('.search-wrapper') as HTMLFormElement;
 
-  // 优化：减少调试日志输出
-  // console.log('🔍 [搜索功能初始化] 元素检查:', { ... });
+  console.log('🔍 [搜索功能初始化] 元素检查:', {
+    searchBtn: searchBtn,
+    searchBtnExists: !!searchBtn,
+    searchInput: searchInput,
+    searchInputExists: !!searchInput,
+    searchForm: searchForm,
+    searchFormExists: !!searchForm,
+  });
 
   if (!searchBtn) {
     console.error('❌ 搜索按钮未找到！选择器: .search-btn');
+    console.error('❌ 当前页面所有按钮:', document.querySelectorAll('button'));
   }
 
   if (!searchInput) {
     console.error('❌ 搜索输入框未找到！选择器: #searchInput');
   }
 
+  // 关键修复：优先绑定表单submit事件，阻止页面刷新
+  if (searchForm) {
+    registerEventListener(searchForm, 'submit', handleSearchFormSubmit as EventListener);
+    console.log('✅ 表单submit事件已绑定（优先级最高）');
+  }
+
   if (searchBtn && searchInput) {
-    // console.log('✅ 开始绑定搜索事件监听器...');
+    console.log('✅ 开始绑定搜索事件监听器...');
 
-    // 修复：阻止表单默认提交行为
-    if (searchForm) {
-      searchForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        handleSearch();
-      });
-      // console.log('✅ 表单submit事件已绑定');
-    }
+    // 搜索按钮点击（冗余保护）
+    registerEventListener(searchBtn, 'click', handleSearchButtonClick as EventListener);
+    console.log('✅ 搜索按钮click事件已绑定');
 
-    // 搜索按钮点击
-    searchBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleSearch();
-    });
-    // console.log('✅ 搜索按钮click事件已绑定');
-
-    // 回车键搜索
-    searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleSearch();
-      }
-    });
-    // console.log('✅ 回车键事件已绑定');
+    // 回车键搜索（冗余保护）
+    registerEventListener(searchInput, 'keypress', handleSearchInputKeypress as EventListener);
+    console.log('✅ 回车键事件已绑定');
   } else {
-    console.error('❌ 搜索功能初始化失败：缺少必要元素');
+    console.error('❌ 搜索功能初始化失败：缺少必要元素', {
+      searchBtn: !!searchBtn,
+      searchInput: !!searchInput,
+    });
   }
 
   // 优化：启用实时搜索防抖，提升用户体验
@@ -536,6 +565,28 @@ async function initializeApp(): Promise<void> {
   document
     .querySelector('.progress-bar')!
     .addEventListener('click', (e: Event) => player.seekTo(e as MouseEvent));
+
+  // 定时关闭：循环切换 0/15/30/60 分钟
+  const sleepTimerBtn = document.getElementById('sleepTimerBtn');
+  const sleepOptions = [0, 15, 30, 60];
+  let sleepOptionIndex = 0;
+  const updateSleepBtnLabel = () => {
+    const minutes = sleepOptions[sleepOptionIndex];
+    const title = minutes > 0 ? `定时停止：${minutes}分钟` : '定时停止：关闭';
+    if (sleepTimerBtn) {
+      sleepTimerBtn.setAttribute('title', title);
+      sleepTimerBtn.setAttribute('aria-label', title);
+    }
+  };
+  if (sleepTimerBtn) {
+    updateSleepBtnLabel();
+    sleepTimerBtn.addEventListener('click', () => {
+      sleepOptionIndex = (sleepOptionIndex + 1) % sleepOptions.length;
+      const minutes = sleepOptions[sleepOptionIndex];
+      player.setSleepTimer(minutes);
+      updateSleepBtnLabel();
+    });
+  }
 
   // 音质切换按钮
   const qualityToggleBtn = document.getElementById('qualityToggleBtn');
@@ -743,18 +794,22 @@ function _switchResultsContainer(activeContainer: 'search' | 'parse'): void {
 }
 
 async function handleSearch(): Promise<void> {
+  console.log('🔍 [handleSearch] 函数被调用');
   const keywordInput = (document.getElementById('searchInput') as HTMLInputElement).value;
+  console.log('🔍 [handleSearch] 输入内容:', keywordInput);
   // 修复：界面上没有 sourceSelect 元素，硬编码默认源
   const source = 'netease';
 
   // 输入验证
   const validation = validateSearchKeyword(keywordInput);
+  console.log('🔍 [handleSearch] 验证结果:', validation);
   if (!validation.valid) {
     ui.showNotification(validation.error || '输入无效', 'warning');
     return;
   }
 
   const keyword = validation.value;
+  console.log('🔍 [handleSearch] 开始搜索:', keyword);
 
   // 优化：搜索时自动跳转到搜索结果标签页（无论当前在哪个位置）
   switchTab('search');

@@ -56,7 +56,6 @@ export default defineConfig({
             './js/storage-utils.ts',
             './js/indexed-db.ts',
             './js/play-stats.ts',
-            './js/search-history.ts',
           ],
 
           // 7. 发现功能（按需加载的模块）

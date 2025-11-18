@@ -391,13 +391,7 @@ let lastActiveLyricIndex = -1;
 let lastRenderedLyrics: LyricLine[] = [];
 
 export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
-  console.log('🔧 [UI.updateLyrics] 开始更新歌词', {
-    lyricsCount: lyrics.length,
-    currentTime,
-    hasDOM: !!DOM.lyricsContainer,
-    hasParent: !!DOM.lyricsContainer?.parentNode,
-  });
-
+  // 优化：减少日志输出，只在出错时记录
   // 修复：增强安全检查
   if (!DOM.lyricsContainer || !DOM.lyricsContainer.parentNode) {
     console.warn('⚠️ 歌词容器不可用，跳过更新');
@@ -481,7 +475,7 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
 function renderLyricsList(lyrics: LyricLine[]): void {
   // 老王修复BUG-LYRICS-002：不要破坏三行歌词容器的固定结构！
   // 三行歌词容器只有3个固定div，不应该被替换成所有歌词的列表
-  console.log('📋 [renderLyricsList] 渲染歌词列表，共', lyrics.length, '行');
+  // 优化：减少日志输出
 
   // 对于标准歌词容器（如果有的话），渲染完整列表
   if (DOM.lyricsContainer && DOM.lyricsContainer.parentNode) {
@@ -495,12 +489,12 @@ function renderLyricsList(lyrics: LyricLine[]): void {
         )
         .join('');
       DOM.lyricsContainer.innerHTML = lyricsHTML;
-      console.log('✅ [renderLyricsList] 已渲染标准歌词容器');
+      // 优化：减少日志输出
     }
   }
 
   // 三行歌词容器不需要重新渲染HTML，只需要在updateLyricActiveState中更新内容
-  console.log('⏩ [renderLyricsList] 跳过三行歌词容器的HTML渲染，保持固定结构');
+  // 优化：减少日志输出
 }
 
 // 优化: 二分查找活动歌词
@@ -536,12 +530,8 @@ function updateLyricActiveState(container: HTMLElement | null, activeIndex: numb
   }
 
   const lines = container.querySelectorAll('.lyric-line');
-  console.log('🎯 [updateLyricActiveState]', {
-    containerId: container.id,
-    linesCount: lines.length,
-    activeIndex,
-    allLyricsCount: lastRenderedLyrics.length,
-  });
+  // 优化：减少日志输出，只在调试时启用
+  // console.log('🎯 [updateLyricActiveState]', {...});
 
   if (lines.length === 0) {
     console.warn('⚠️ [updateLyricActiveState] 没有找到歌词行元素');
@@ -552,7 +542,7 @@ function updateLyricActiveState(container: HTMLElement | null, activeIndex: numb
   const isInlineContainer = container.id === 'lyricsContainerInline';
 
   if (isInlineContainer && lines.length >= 3) {
-    console.log('✨ [updateLyricActiveState] 三行歌词模式');
+    // 优化：减少日志输出
 
     // 三行歌词模式：上一句、当前句、下一句
     const prevLine = lines[0] as HTMLElement;
@@ -570,7 +560,7 @@ function updateLyricActiveState(container: HTMLElement | null, activeIndex: numb
       prevLine.textContent = '';
       currentLine.textContent = '暂无歌词';
       nextLine.textContent = '';
-      console.log('⚠️ [updateLyricActiveState] 歌词数组为空');
+      // 优化：减少日志输出
       return;
     }
 
@@ -593,11 +583,8 @@ function updateLyricActiveState(container: HTMLElement | null, activeIndex: numb
         nextLine.textContent = '';
       }
 
-      console.log('✅ [updateLyricActiveState] 三行歌词已更新', {
-        prev: prevLine.textContent,
-        current: currentLine.textContent,
-        next: nextLine.textContent,
-      });
+      // 优化：减少日志输出，只在开发调试时启用
+      // console.log('✅ [updateLyricActiveState] 三行歌词已更新', {...});
     } else {
       prevLine.textContent = '';
       currentLine.textContent = '暂无歌词';
@@ -605,7 +592,7 @@ function updateLyricActiveState(container: HTMLElement | null, activeIndex: numb
       console.warn('⚠️ [updateLyricActiveState] activeIndex超出范围');
     }
   } else {
-    console.log('📜 [updateLyricActiveState] 标准歌词模式');
+    // 优化：减少日志输出
 
     // 标准歌词容器：滚动模式
     // 移除之前的激活状态
