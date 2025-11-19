@@ -3,7 +3,7 @@
 
 一个功能强大、现代化的在线音乐播放器，支持多平台音乐搜索、播放和歌单管理。
 
-[![在线演示](https://img.shields.io/badge/在线演示-music8889.pages.dev-ff6b6b?style=for-the-badge&logo=cloudflare)](https://music8889.pages.dev/)
+[![在线演示](https://img.shields.io/badge/在线演示-music888.pages.dev-ff6b6b?style=for-the-badge&logo=cloudflare)](https://music8889.pages.dev/)
 [![GitHub stars](https://img.shields.io/github/stars/truelife0958/music888?style=social)](https://github.com/truelife0958/music888)
 [![License](https://img.shields.io/github/license/truelife0958/music888)](LICENSE)
 
@@ -53,7 +53,7 @@
 
 ### 🌐 在线体验
 
-**[🎵 立即体验 →](https://music8889.pages.dev/)** 无需安装，即刻使用
+**[🎵 立即体验 →](https://music888.pages.dev/)** 无需安装，即刻使用
 
 ### 💻 本地运行
 
