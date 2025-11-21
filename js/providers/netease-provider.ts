@@ -1,167 +1,188 @@
 /**
- * 网易云音乐Provider
- *
- * 老王实现：基于网易云公开API
- * 支持搜索、播放链接、歌词获取
+ * 老王集成：网易云音乐 Provider
+ * 参考 Listen 1 实现，简化并适配代理架构
  */
 
-import { BaseProvider, ProviderError, type ProviderConfig } from './base-provider';
-import type { Song } from '../api';
-// 老王修复CORS：导入代理模块
-import { getProxiedUrl } from '../proxy-handler';
+import { BaseProvider, type SearchResult, type PlayUrlResult, type LyricResult } from './base-provider.js';
+import type { Song } from '../api.js';
+import { proxyFetch, getProxiedUrl } from '../proxy-handler.js';
+import { normalizeArtistField, normalizeSongName, normalizeAlbumName } from '../api.js';
 
-/**
- * 网易云音乐Provider
- */
 export class NeteaseProvider extends BaseProvider {
-  readonly id = 'netease';
-  readonly name = '网易云音乐';
-  readonly color = '#C20C0C';
-
-  // 网易云API端点
-  private readonly endpoints = {
-    search: 'https://music.163.com/api/search/get/web',
-    songDetail: 'https://music.163.com/api/song/detail',
-    songUrl: 'https://music.163.com/song/media/outer/url',
-    lyric: 'https://music.163.com/api/song/lyric',
-  };
-
-  constructor(config: ProviderConfig = {}) {
-    super(config);
+  constructor() {
+    super({
+      id: 'netease',
+      name: '网易云音乐',
+      enabled: true,
+      color: '#EC4141',
+      supportedQualities: ['128k', '192k', '320k', 'flac'],
+    });
   }
 
   /**
    * 搜索歌曲
    */
-  async search(keyword: string, limit: number = 30): Promise<Song[]> {
+  async search(keyword: string, limit: number = 30): Promise<SearchResult> {
     try {
-      this.log(`搜索歌曲: ${keyword}`);
+      const url = 'https://music.163.com/api/search/pc';
+      const data = new URLSearchParams({
+        s: keyword,
+        type: '1', // 1 = 单曲
+        limit: String(limit),
+        offset: '0',
+      });
 
-      // 构造搜索URL
-      const url = `${this.endpoints.search}?s=${encodeURIComponent(keyword)}&type=1&limit=${limit}&offset=0`;
+      const response = await proxyFetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Referer': 'https://music.163.com',
+        },
+        body: data,
+      }, 'netease');
 
-      const response = await this.fetch(url);
-      const data = await response.json();
-
-      if (data.code !== 200 || !data.result?.songs) {
-        throw new Error('搜索失败或无结果');
+      const json = await response.json();
+      
+      if (!json.result || !json.result.songs) {
+        return { songs: [], total: 0 };
       }
 
-      const songs = data.result.songs.map((item: any) => this.parseSong(item));
-
-      this.log(`搜索成功，找到 ${songs.length} 首歌曲`);
-      return songs;
+      const songs: Song[] = json.result.songs.map((rawSong: any) => this.normalizeSong(rawSong));
+      
+      return {
+        songs: songs.filter((song) => this.isPlayable(song)),
+        total: json.result.songCount || songs.length,
+      };
     } catch (error) {
-      this.error('搜索失败', error);
-      throw new ProviderError(this.name, '搜索失败', error);
+      this.handleError(error, '搜索歌曲');
+      return { songs: [], total: 0 };
     }
   }
 
   /**
-   * 获取歌曲播放URL
+   * 获取播放 URL
    */
-  async getSongUrl(song: Song, quality: string = '320k'): Promise<{ url: string; br: string }> {
+  async getSongUrl(song: Song, quality: string = '320k'): Promise<PlayUrlResult> {
     try {
-      this.log(`获取播放链接: ${song.name}`);
+      const songId = this.extractPlatformId(song.id);
+      
+      // 网易云音乐 URL 接口
+      const url = 'https://music.163.com/weapi/song/enhance/player/url?csrf_token=';
+      
+      // 音质映射
+      const qualityMap: Record<string, number> = {
+        '128k': 128000,
+        '192k': 192000,
+        '320k': 320000,
+        'flac': 999000,
+      };
+      
+      const br = qualityMap[quality] || 320000;
+      
+      const data = new URLSearchParams({
+        ids: '[' + songId + ']',
+        br: String(br),
+        csrf_token: '',
+      });
 
-      // 网易云外链URL（有限制，但简单可用）
-      const songId = song.id;
-      const url = `${this.endpoints.songUrl}?id=${songId}.mp3`;
+      const response = await proxyFetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Referer': 'https://music.163.com',
+        },
+        body: data,
+      }, 'netease');
 
-      // 验证URL是否有效（尝试HEAD请求）
-      // 老王修复CORS：使用代理
-      try {
-        const proxiedUrl = getProxiedUrl(url, this.id);
-        const headResponse = await fetch(proxiedUrl, { method: 'HEAD' });
-        if (headResponse.ok) {
-          this.log(`获取播放链接成功`);
-          return { url, br: quality };
-        }
-      } catch (e) {
-        // HEAD请求失败，可能是跨域问题，直接返回URL试试
+      const json = await response.json();
+      
+      if (json.data && json.data[0] && json.data[0].url) {
+        const resultUrl = json.data[0].url;
+        const resultBr = json.data[0].br || br;
+        
+        return {
+          url: resultUrl,
+          br: Math.floor(resultBr / 1000) + 'kbps',
+          quality: quality,
+        };
       }
 
-      // 返回URL（即使验证失败也返回，让播放器尝试）
-      return { url, br: quality };
+      // 失败时尝试网易云直链
+      const directUrl = 'https://music.163.com/song/media/outer/url?id=' + songId + '.mp3';
+      return {
+        url: directUrl,
+        br: '128kbps', // 直链通常是 128kbps
+        quality: '128k',
+      };
     } catch (error) {
-      this.error('获取播放链接失败', error);
-      throw new ProviderError(this.name, '获取播放链接失败', error);
+      this.handleError(error, '获取播放URL');
+      return { url: '', br: '' };
     }
   }
 
   /**
    * 获取歌词
    */
-  async getLyric(song: Song): Promise<{ lyric: string }> {
+  async getLyric(song: Song): Promise<LyricResult> {
     try {
-      this.log(`获取歌词: ${song.name}`);
+      const songId = this.extractPlatformId(song.id);
+      const url = 'https://music.163.com/api/song/lyric?id=' + songId + '&lv=-1&tv=-1';
 
-      const songId = song.lyric_id || song.id;
-      const url = `${this.endpoints.lyric}?id=${songId}&lv=-1&kv=-1&tv=-1`;
+      const response = await proxyFetch(url, {
+        headers: {
+          'Referer': 'https://music.163.com',
+        },
+      }, 'netease');
 
-      const response = await this.fetch(url);
-      const data = await response.json();
+      const json = await response.json();
+      
+      const lyric = json.lrc?.lyric || '';
+      const tlyric = json.tlyric?.lyric || '';
 
-      if (data.code !== 200) {
-        throw new Error('获取歌词失败');
-      }
-
-      const lyric = data.lrc?.lyric || '';
-
-      this.log(`获取歌词成功，长度: ${lyric.length}`);
-      return { lyric };
+      return { lyric, tlyric };
     } catch (error) {
-      this.error('获取歌词失败', error);
-      // 歌词获取失败不抛出异常，返回空字符串
+      this.handleError(error, '获取歌词');
       return { lyric: '' };
     }
   }
 
   /**
-   * 获取歌曲详情
+   * 判断歌曲是否可播放
+   * fee: 0=免费, 1=VIP, 4=付费专辑, 8=非会员可免费播放低音质
    */
-  async getSongInfo(songId: string): Promise<Song | null> {
-    try {
-      this.log(`获取歌曲详情: ${songId}`);
-
-      const url = `${this.endpoints.songDetail}?ids=[${songId}]`;
-
-      const response = await this.fetch(url);
-      const data = await response.json();
-
-      if (data.code !== 200 || !data.songs || data.songs.length === 0) {
-        throw new Error('获取歌曲详情失败');
-      }
-
-      const song = this.parseSong(data.songs[0]);
-
-      this.log(`获取歌曲详情成功`);
-      return song;
-    } catch (error) {
-      this.error('获取歌曲详情失败', error);
-      return null;
-    }
+  isPlayable(song: any): boolean {
+    if (song.fee === undefined) return true;
+    return song.fee === 0 || song.fee === 8;
   }
 
   /**
-   * 解析网易云歌曲数据为统一格式
+   * 规范化网易云歌曲数据
    */
-  private parseSong(data: any): Song {
+  protected normalizeSong(rawSong: any): Song {
+    const songId = String(rawSong.id);
+    
+    // 提取艺术家信息
+    const artists = rawSong.artists || rawSong.ar || [];
+    const artistNames = artists.map((a: any) => a.name || '未知艺术家');
+    
+    // 提取专辑信息
+    const album = rawSong.album || rawSong.al || {};
+    const albumName = album.name || '未知专辑';
+    
+    // 提取封面ID
+    const picId = album.picStr || album.pic_str || String(album.picId || album.pic || '');
+    
     return {
-      id: String(data.id || ''),
-      name: data.name || '',
-      artist: data.artists ? data.artists.map((a: any) => a.name) : [],
-      album: {
-        id: String(data.album?.id || ''),
-        name: data.album?.name || '',
-        pic: data.album?.picUrl || data.album?.blurPicUrl || '',
-      },
-      pic_id: String(data.album?.id || ''),
-      lyric_id: String(data.id || ''),
+      id: this.generateTrackId(songId),
+      name: normalizeSongName(rawSong.name),
+      artist: normalizeArtistField(artistNames),
+      album: normalizeAlbumName(albumName),
+      pic_id: picId,
+      lyric_id: songId,
       source: 'netease',
-      // 额外信息
-      duration: data.duration || 0,
-      mvId: data.mvid || 0,
-    };
+      duration: rawSong.duration || rawSong.dt || 0,
+      fee: rawSong.fee,
+      rawData: rawSong,
+    } as Song;
   }
 }

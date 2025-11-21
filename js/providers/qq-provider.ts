@@ -1,164 +1,215 @@
 /**
- * QQ音乐Provider
- *
- * 老王实现：基于QQ音乐公开API
- * 支持搜索、播放链接、歌词获取
+ * 老王集成：QQ音乐 Provider
+ * 参考 Listen 1 实现
  */
 
-import { BaseProvider, ProviderError, type ProviderConfig } from './base-provider';
-import type { Song } from '../api';
+import { BaseProvider, type SearchResult, type PlayUrlResult, type LyricResult } from './base-provider.js';
+import type { Song } from '../api.js';
+import { proxyFetch } from '../proxy-handler.js';
+import { normalizeArtistField, normalizeSongName, normalizeAlbumName } from '../api.js';
 
-/**
- * QQ音乐Provider
- */
-export class QQMusicProvider extends BaseProvider {
-  readonly id = 'qq';
-  readonly name = 'QQ音乐';
-  readonly color = '#31C27C';
-
-  // QQ音乐API端点
-  private readonly endpoints = {
-    search: 'https://c.y.qq.com/soso/fcgi-bin/client_search_cp',
-    songUrl: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
-    lyric: 'https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg',
-    songDetail: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
-  };
-
-  constructor(config: ProviderConfig = {}) {
-    super(config);
+export class QQProvider extends BaseProvider {
+  constructor() {
+    super({
+      id: 'qq',
+      name: 'QQ音乐',
+      enabled: true,
+      color: '#31C27C',
+      supportedQualities: ['128k', '320k', 'flac'],
+    });
   }
 
   /**
    * 搜索歌曲
    */
-  async search(keyword: string, limit: number = 30): Promise<Song[]> {
+  async search(keyword: string, limit: number = 30): Promise<SearchResult> {
     try {
-      this.log(`搜索歌曲: ${keyword}`);
+      const url = 'https://u.y.qq.com/cgi-bin/musicu.fcg';
+      
+      const reqData = {
+        comm: {
+          ct: 20,
+          cv: 1577,
+        },
+        req_1: {
+          method: 'DoSearchForQQMusicDesktop',
+          module: 'music.search.SearchCgiService',
+          param: {
+            num_per_page: limit,
+            page_num: 1,
+            query: keyword,
+            search_type: 0, // 0 = 单曲
+          },
+        },
+      };
 
-      // 构造搜索URL
-      const url = `${this.endpoints.search}?w=${encodeURIComponent(keyword)}&p=1&n=${limit}&format=json`;
+      const response = await proxyFetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Referer': 'https://y.qq.com',
+        },
+        body: JSON.stringify(reqData),
+      });
 
-      const response = await this.fetch(url);
-      const data = await response.json();
-
-      if (data.code !== 0 || !data.data?.song?.list) {
-        throw new Error('搜索失败或无结果');
+      const json = await response.json();
+      
+      if (!json.req_1 || !json.req_1.data || !json.req_1.data.body || !json.req_1.data.body.song || !json.req_1.data.body.song.list) {
+        return { songs: [], total: 0 };
       }
 
-      const songs = data.data.song.list.map((item: any) => this.parseSong(item));
-
-      this.log(`搜索成功，找到 ${songs.length} 首歌曲`);
-      return songs;
+      const songs: Song[] = json.req_1.data.body.song.list.map((rawSong: any) => this.normalizeSong(rawSong));
+      
+      return {
+        songs: songs.filter((song) => this.isPlayable(song)),
+        total: json.req_1.data.body.song.totalnum || songs.length,
+      };
     } catch (error) {
-      this.error('搜索失败', error);
-      throw new ProviderError(this.name, '搜索失败', error);
+      this.handleError(error, '搜索歌曲');
+      return { songs: [], total: 0 };
     }
   }
 
   /**
-   * 获取歌曲播放URL
+   * 获取播放 URL
    */
-  async getSongUrl(song: Song, quality: string = '320k'): Promise<{ url: string; br: string }> {
+  async getSongUrl(song: Song, quality: string = '320k'): Promise<PlayUrlResult> {
     try {
-      this.log(`获取播放链接: ${song.name}`);
-
-      const songMid = song.id;
-
-      // 使用QQ音乐的获取vkey接口
-      const requestData = {
-        req_0: {
+      const songId = this.extractPlatformId(song.id);
+      const url = 'https://u.y.qq.com/cgi-bin/musicu.fcg';
+      
+      // 音质配置
+      const fileConfig: Record<string, { s: string; e: string; bitrate: string }> = {
+        '128k': { s: 'M500', e: '.mp3', bitrate: '128kbps' },
+        '320k': { s: 'M800', e: '.mp3', bitrate: '320kbps' },
+        'flac': { s: 'F000', e: '.flac', bitrate: 'FLAC' },
+      };
+      
+      const fileInfo = fileConfig[quality] || fileConfig['320k'];
+      const file = fileInfo.s + songId + songId + fileInfo.e;
+      
+      const reqData = {
+        req_1: {
           module: 'vkey.GetVkeyServer',
           method: 'CgiGetVkey',
           param: {
-            guid: '0',
-            songmid: [songMid],
+            filename: [file],
+            guid: '10000',
+            songmid: [songId],
             songtype: [0],
             uin: '0',
             loginflag: 1,
             platform: '20',
           },
         },
+        loginUin: '0',
+        comm: {
+          uin: '0',
+          format: 'json',
+          ct: 24,
+          cv: 0,
+        },
       };
 
-      const url = `${this.endpoints.songUrl}?data=${encodeURIComponent(JSON.stringify(requestData))}`;
+      const response = await proxyFetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Referer': 'https://y.qq.com',
+        },
+        body: JSON.stringify(reqData),
+      });
 
-      const response = await this.fetch(url);
-      const data = await response.json();
-
-      if (data.req_0?.data?.midurlinfo?.[0]?.purl) {
-        const purl = data.req_0.data.midurlinfo[0].purl;
-        const sip = data.req_0.data.sip?.[0] || 'http://ws.stream.qqmusic.qq.com/';
+      const json = await response.json();
+      
+      if (json.req_1 && json.req_1.data && json.req_1.data.midurlinfo && json.req_1.data.midurlinfo[0]) {
+        const purl = json.req_1.data.midurlinfo[0].purl;
+        
+        if (purl === '') {
+          // VIP 歌曲或版权限制
+          return { url: '', br: '' };
+        }
+        
+        const sip = json.req_1.data.sip && json.req_1.data.sip[0] ? json.req_1.data.sip[0] : 'https://ws.stream.qqmusic.qq.com/';
         const playUrl = sip + purl;
-
-        this.log(`获取播放链接成功`);
-        return { url: playUrl, br: quality };
+        
+        return {
+          url: playUrl,
+          br: fileInfo.bitrate,
+          quality: quality,
+        };
       }
 
-      throw new Error('无法获取播放链接');
+      return { url: '', br: '' };
     } catch (error) {
-      this.error('获取播放链接失败', error);
-      throw new ProviderError(this.name, '获取播放链接失败', error);
+      this.handleError(error, '获取播放URL');
+      return { url: '', br: '' };
     }
   }
 
   /**
    * 获取歌词
    */
-  async getLyric(song: Song): Promise<{ lyric: string }> {
+  async getLyric(song: Song): Promise<LyricResult> {
     try {
-      this.log(`获取歌词: ${song.name}`);
+      const songId = this.extractPlatformId(song.id);
+      const url = 'https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=' + songId + '&g_tk=5381&format=json&inCharset=utf8&outCharset=utf-8&nobase64=1';
 
-      const songId = song.lyric_id || song.id;
-      const url = `${this.endpoints.lyric}?songmid=${songId}&format=json&nobase64=1`;
-
-      const response = await this.fetch(url, {
+      const response = await proxyFetch(url, {
         headers: {
-          Referer: 'https://y.qq.com/',
+          'Referer': 'https://y.qq.com',
         },
       });
 
-      const data = await response.json();
+      const json = await response.json();
+      
+      const lyric = json.lyric || '';
+      const tlyric = json.trans || '';
 
-      if (data.retcode !== 0) {
-        throw new Error('获取歌词失败');
-      }
-
-      // QQ音乐歌词可能是base64编码的
-      const lyric = data.lyric || '';
-
-      this.log(`获取歌词成功，长度: ${lyric.length}`);
-      return { lyric };
+      return { lyric, tlyric };
     } catch (error) {
-      this.error('获取歌词失败', error);
+      this.handleError(error, '获取歌词');
       return { lyric: '' };
     }
   }
 
   /**
-   * 解析QQ音乐歌曲数据为统一格式
+   * 判断歌曲是否可播放
    */
-  private parseSong(data: any): Song {
+  isPlayable(song: any): boolean {
+    if (!song.pay || !song.pay.pay_play) return true;
+    // pay_play: 0=免费, 1=VIP
+    return song.pay.pay_play === 0;
+  }
+
+  /**
+   * 规范化 QQ 音乐歌曲数据
+   */
+  protected normalizeSong(rawSong: any): Song {
+    const songId = rawSong.mid || rawSong.songmid;
+    
+    // 提取艺术家信息
+    const singers = rawSong.singer || [];
+    const artistNames = singers.map((s: any) => s.name || '未知艺术家');
+    
+    // 提取专辑信息
+    const albumName = rawSong.album?.name || '未知专辑';
+    const albumMid = rawSong.album?.mid || '';
+    
+    // QQ 音乐封面 URL 格式
+    const picUrl = albumMid ? 'https://y.gtimg.cn/music/photo_new/T002R300x300M000' + albumMid + '.jpg' : '';
+    
     return {
-      id: data.songmid || String(data.songid || ''),
-      name: data.songname || data.name || '',
-      artist: data.singer
-        ? data.singer.map((s: any) => s.name)
-        : data.artist
-        ? [data.artist]
-        : [],
-      album: {
-        id: String(data.albummid || data.albumid || ''),
-        name: data.albumname || '',
-        pic: data.albummid
-          ? `https://y.gtimg.cn/music/photo_new/T002R300x300M000${data.albummid}.jpg`
-          : '',
-      },
-      pic_id: String(data.albummid || ''),
-      lyric_id: data.songmid || String(data.songid || ''),
+      id: this.generateTrackId(songId),
+      name: normalizeSongName(rawSong.name || rawSong.songname),
+      artist: normalizeArtistField(artistNames),
+      album: normalizeAlbumName(albumName),
+      pic_id: albumMid,
+      lyric_id: songId,
       source: 'qq',
-      // 额外信息
-      duration: data.interval || 0,
-      mvId: data.vid || '',
-    };
+      duration: rawSong.interval ? rawSong.interval * 1000 : 0,
+      pay: rawSong.pay,
+      rawData: rawSong,
+    } as Song;
   }
 }

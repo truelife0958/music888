@@ -1,192 +1,172 @@
 /**
- * Provider架构类型定义
- *
- * 老王实现：借鉴Listen 1的多平台Provider架构
- * 支持网易云、QQ音乐、酷狗、酷我、Bilibili等平台
+ * 老王集成：Listen 1 Provider 架构
+ * 多平台音乐提供商的基类和接口定义
  */
 
-import type { Song } from '../api';
-// 老王修复CORS：导入代理模块
-import { getProxiedUrl } from '../proxy-handler';
+import type { Song } from '../api.js';
 
 /**
- * 平台Provider接口
- * 每个音乐平台都需要实现这个接口
+ * 搜索结果接口
  */
-export interface MusicProvider {
-  /** 平台ID */
-  readonly id: string;
+export interface SearchResult {
+  songs: Song[];
+  total: number;
+}
 
-  /** 平台名称 */
-  readonly name: string;
+/**
+ * 播放URL结果接口
+ */
+export interface PlayUrlResult {
+  url: string;
+  br: string; // 码率，如 "320kbps"
+  quality?: string; // 音质描述
+}
 
-  /** 平台颜色（UI显示） */
-  readonly color: string;
+/**
+ * 歌词结果接口
+ */
+export interface LyricResult {
+  lyric: string;
+  tlyric?: string; // 翻译歌词
+}
 
-  /** 是否启用 */
-  enabled: boolean;
+/**
+ * Provider 配置接口
+ */
+export interface ProviderConfig {
+  id: string; // Provider ID，如 'netease', 'qq', 'bilibili'
+  name: string; // 显示名称，如 '网易云音乐'
+  enabled: boolean; // 是否启用
+  color: string; // 主题色，用于UI显示
+  supportedQualities?: string[]; // 支持的音质列表
+}
+
+/**
+ * Provider 抽象基类
+ * 所有平台 Provider 必须继承此类并实现核心方法
+ */
+export abstract class BaseProvider {
+  protected config: ProviderConfig;
+
+  constructor(config: ProviderConfig) {
+    this.config = config;
+  }
+
+  /**
+   * 获取 Provider ID
+   */
+  getId(): string {
+    return this.config.id;
+  }
+
+  /**
+   * 获取 Provider 名称
+   */
+  getName(): string {
+    return this.config.name;
+  }
+
+  /**
+   * 获取主题色
+   */
+  getColor(): string {
+    return this.config.color;
+  }
+
+  /**
+   * 是否启用
+   */
+  isEnabled(): boolean {
+    return this.config.enabled;
+  }
+
+  /**
+   * 启用 Provider
+   */
+  enable(): void {
+    this.config.enabled = true;
+  }
+
+  /**
+   * 禁用 Provider
+   */
+  disable(): void {
+    this.config.enabled = false;
+  }
 
   /**
    * 搜索歌曲
    * @param keyword 搜索关键词
    * @param limit 返回数量限制
+   * @returns 搜索结果
    */
-  search(keyword: string, limit?: number): Promise<Song[]>;
+  abstract search(keyword: string, limit?: number): Promise<SearchResult>;
 
   /**
-   * 获取歌曲播放URL
+   * 获取歌曲播放 URL
    * @param song 歌曲对象
-   * @param quality 音质 (128k/320k/flac)
+   * @param quality 音质要求
+   * @returns 播放 URL 和码率
    */
-  getSongUrl(song: Song, quality?: string): Promise<{ url: string; br: string }>;
+  abstract getSongUrl(song: Song, quality?: string): Promise<PlayUrlResult>;
 
   /**
    * 获取歌词
    * @param song 歌曲对象
+   * @returns 歌词（含翻译）
    */
-  getLyric(song: Song): Promise<{ lyric: string }>;
+  abstract getLyric(song: Song): Promise<LyricResult>;
 
   /**
-   * 获取歌曲详情
-   * @param songId 歌曲ID
+   * 判断歌曲是否可播放（可选实现）
+   * @param song 歌曲对象
+   * @returns 是否可播放
    */
-  getSongInfo?(songId: string): Promise<Song | null>;
-
-  /**
-   * 获取歌单详情
-   * @param playlistId 歌单ID
-   */
-  getPlaylist?(playlistId: string): Promise<{ name: string; songs: Song[] }>;
-
-  /**
-   * 获取热门歌单
-   */
-  getHotPlaylists?(): Promise<any[]>;
-}
-
-/**
- * Provider配置
- */
-export interface ProviderConfig {
-  /** 基础URL（可选） */
-  baseUrl?: string;
-
-  /** Cookie（可选，网易云等需要） */
-  cookie?: string;
-
-  /** Token（可选，QQ音乐等需要） */
-  token?: string;
-
-  /** 超时时间（毫秒） */
-  timeout?: number;
-
-  /** 重试次数 */
-  retries?: number;
-}
-
-/**
- * Provider基类
- * 提供通用功能和工具方法
- */
-export abstract class BaseProvider implements MusicProvider {
-  abstract readonly id: string;
-  abstract readonly name: string;
-  abstract readonly color: string;
-
-  public enabled: boolean = true;
-  protected config: ProviderConfig;
-
-  constructor(config: ProviderConfig = {}) {
-    this.config = {
-      timeout: 10000,
-      retries: 2,
-      ...config,
-    };
+  isPlayable(song: Song): boolean {
+    // 默认实现：检查是否有 URL 或者没有明确标记为不可播放
+    if (song.url === '') return false;
+    return true;
   }
 
-  abstract search(keyword: string, limit?: number): Promise<Song[]>;
-  abstract getSongUrl(song: Song, quality?: string): Promise<{ url: string; br: string }>;
-  abstract getLyric(song: Song): Promise<{ lyric: string }>;
+  /**
+   * 规范化歌曲数据格式（可选实现）
+   * 将平台特定格式转换为统一的 Song 格式
+   * @param rawSong 原始歌曲数据
+   * @returns 规范化后的 Song 对象
+   */
+  protected normalizeSong(rawSong: any): Song {
+    // 默认实现，子类可以覆盖
+    return rawSong as Song;
+  }
 
   /**
-   * 通用fetch方法，带超时和重试
-   * 老王修复CORS：添加代理支持
+   * 生成唯一的歌曲 ID
+   * @param platformId 平台内部 ID
+   * @returns 格式化的唯一 ID，如 "netrack_12345"
    */
-  protected async fetch(url: string, options: RequestInit = {}): Promise<Response> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+  protected generateTrackId(platformId: string): string {
+    return `${this.config.id}track_${platformId}`;
+  }
 
-    // 老王修复CORS：自动使用代理URL
-    const proxiedUrl = getProxiedUrl(url, this.id);
-    if (url !== proxiedUrl) {
-      console.log(`🌐 [代理] Provider(${this.id}) fetch:`, url);
+  /**
+   * 从带前缀的 ID 中提取平台内部 ID
+   * @param trackId 带前缀的 ID，如 "netrack_12345"
+   * @returns 平台内部 ID，如 "12345"
+   */
+  protected extractPlatformId(trackId: string): string {
+    const prefix = `${this.config.id}track_`;
+    if (trackId.startsWith(prefix)) {
+      return trackId.slice(prefix.length);
     }
-
-    try {
-      const response = await fetch(proxiedUrl, {
-        ...options,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
-    }
+    return trackId;
   }
 
   /**
-   * 从歌曲对象创建统一的Song格式
+   * 处理 API 错误（可选实现）
+   * @param error 错误对象
+   * @param context 错误上下文描述
    */
-  protected createSong(data: any, source: string): Song {
-    return {
-      id: data.id || '',
-      name: data.name || data.title || '',
-      artist: Array.isArray(data.artist)
-        ? data.artist
-        : data.artist
-        ? [data.artist]
-        : data.artists
-        ? data.artists.map((a: any) => a.name)
-        : [],
-      album: data.album || { id: '', name: '' },
-      pic_id: data.pic_id || data.albumId || data.album?.id || '',
-      lyric_id: data.lyric_id || data.id || '',
-      source: source,
-    };
-  }
-
-  /**
-   * 日志输出
-   */
-  protected log(message: string, ...args: any[]) {
-    console.log(`[${this.name}] ${message}`, ...args);
-  }
-
-  /**
-   * 错误日志
-   */
-  protected error(message: string, error?: any) {
-    console.error(`[${this.name}] ${message}`, error);
-  }
-}
-
-/**
- * Provider错误类型
- */
-export class ProviderError extends Error {
-  constructor(
-    public provider: string,
-    message: string,
-    public originalError?: any
-  ) {
-    super(`[${provider}] ${message}`);
-    this.name = 'ProviderError';
+  protected handleError(error: unknown, context: string): void {
+    console.error(`[${this.config.name}] ${context} 失败:`, error);
   }
 }

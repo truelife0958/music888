@@ -1,138 +1,151 @@
 /**
- * Bilibili音频Provider
- *
- * 老王实现：基于Bilibili公开API
- * 支持搜索音频、播放链接、简介（代替歌词）
+ * 老王集成：Bilibili Provider
+ * B站音频区，版权互补资源
  */
 
-import { BaseProvider, ProviderError, type ProviderConfig } from './base-provider';
-import type { Song } from '../api';
+import { BaseProvider, type SearchResult, type PlayUrlResult, type LyricResult } from './base-provider.js';
+import type { Song } from '../api.js';
+import { proxyFetch } from '../proxy-handler.js';
+import { normalizeArtistField, normalizeSongName, normalizeAlbumName } from '../api.js';
 
-/**
- * Bilibili音频Provider
- */
 export class BilibiliProvider extends BaseProvider {
-  readonly id = 'bilibili';
-  readonly name = 'Bilibili音频';
-  readonly color = '#00A1D6';
-
-  // Bilibili API端点
-  private readonly endpoints = {
-    search: 'https://api.bilibili.com/audio/music-service-c/s',
-    audioInfo: 'https://www.bilibili.com/audio/music-service-c/web/song/info',
-    audioUrl: 'https://api.bilibili.com/audio/music-service-c/url',
-  };
-
-  constructor(config: ProviderConfig = {}) {
-    super(config);
+  constructor() {
+    super({
+      id: 'bilibili',
+      name: 'Bilibili音频',
+      enabled: true,
+      color: '#00A1D6',
+      supportedQualities: ['128k', '192k'],
+    });
   }
 
   /**
-   * 搜索音频
+   * 搜索歌曲（B站音频区）
    */
-  async search(keyword: string, limit: number = 30): Promise<Song[]> {
+  async search(keyword: string, limit: number = 30): Promise<SearchResult> {
     try {
-      this.log(`搜索音频: ${keyword}`);
+      const url = 'https://api.bilibili.com/audio/music-service-c/s';
+      
+      const params = new URLSearchParams({
+        search_type: 'music',
+        page: '1',
+        pagesize: String(limit),
+        keyword: keyword,
+      });
 
-      // 构造搜索URL
-      const url = `${this.endpoints.search}?search_type=music&page=1&pagesize=${limit}&keyword=${encodeURIComponent(keyword)}`;
+      const response = await proxyFetch(url + '?' + params.toString(), {
+        headers: {
+          'Referer': 'https://www.bilibili.com',
+        },
+      }, 'bilibili');
 
-      const response = await this.fetch(url);
-      const data = await response.json();
-
-      if (data.code !== 0 || !data.data?.result) {
-        throw new Error('搜索失败或无结果');
+      const json = await response.json();
+      
+      if (!json.data || !json.data.result) {
+        return { songs: [], total: 0 };
       }
 
-      const songs = data.data.result.map((item: any) => this.parseSong(item));
-
-      this.log(`搜索成功，找到 ${songs.length} 首音频`);
-      return songs;
+      const songs: Song[] = json.data.result.map((rawSong: any) => this.normalizeSong(rawSong));
+      
+      return {
+        songs,
+        total: json.data.totalCount || songs.length,
+      };
     } catch (error) {
-      this.error('搜索失败', error);
-      throw new ProviderError(this.name, '搜索失败', error);
+      this.handleError(error, '搜索歌曲');
+      return { songs: [], total: 0 };
     }
   }
 
   /**
-   * 获取音频播放URL
+   * 获取播放 URL
    */
-  async getSongUrl(song: Song, quality: string = '320k'): Promise<{ url: string; br: string }> {
+  async getSongUrl(song: Song, quality: string = '192k'): Promise<PlayUrlResult> {
     try {
-      this.log(`获取播放链接: ${song.name}`);
+      const songId = this.extractPlatformId(song.id);
+      const url = 'https://www.bilibili.com/audio/music-service-c/web/url?sid=' + songId;
 
-      const songId = song.id;
+      const response = await proxyFetch(url, {
+        headers: {
+          'Referer': 'https://www.bilibili.com',
+        },
+      }, 'bilibili');
 
-      // 获取音频URL
-      const url = `${this.endpoints.audioUrl}?sid=${songId}&privilege=2&quality=2`;
-
-      const response = await this.fetch(url);
-      const data = await response.json();
-
-      if (data.code !== 0 || !data.data?.cdns || data.data.cdns.length === 0) {
-        throw new Error('无法获取播放链接');
+      const json = await response.json();
+      
+      if (json.data && json.data.cdns && json.data.cdns.length > 0) {
+        // B站返回多个CDN链接，选择第一个
+        const playUrl = json.data.cdns[0];
+        
+        return {
+          url: playUrl,
+          br: '192kbps', // B站默认192k
+          quality: '192k',
+        };
       }
 
-      // 使用第一个CDN链接
-      const playUrl = data.data.cdns[0];
-
-      this.log(`获取播放链接成功`);
-      return { url: playUrl, br: quality };
+      return { url: '', br: '' };
     } catch (error) {
-      this.error('获取播放链接失败', error);
-      throw new ProviderError(this.name, '获取播放链接失败', error);
+      this.handleError(error, '获取播放URL');
+      return { url: '', br: '' };
     }
   }
 
   /**
-   * 获取音频简介（Bilibili音频没有标准歌词）
+   * 获取歌词
    */
-  async getLyric(song: Song): Promise<{ lyric: string }> {
+  async getLyric(song: Song): Promise<LyricResult> {
     try {
-      this.log(`获取音频简介: ${song.name}`);
+      const songId = this.extractPlatformId(song.id);
+      const url = 'https://www.bilibili.com/audio/music-service-c/web/song/info?sid=' + songId;
 
-      const songId = song.lyric_id || song.id;
-      const url = `${this.endpoints.audioInfo}?sid=${songId}`;
+      const response = await proxyFetch(url, {
+        headers: {
+          'Referer': 'https://www.bilibili.com',
+        },
+      }, 'bilibili');
 
-      const response = await this.fetch(url);
-      const data = await response.json();
+      const json = await response.json();
+      
+      const lyric = json.data?.lyric || '';
 
-      if (data.code !== 0 || !data.data) {
-        throw new Error('获取音频信息失败');
-      }
-
-      // Bilibili音频没有歌词，返回简介
-      const intro = data.data.intro || '';
-      const lyric = intro ? `[00:00.00]${intro}` : '';
-
-      this.log(`获取音频简介成功`);
       return { lyric };
     } catch (error) {
-      this.error('获取音频简介失败', error);
+      this.handleError(error, '获取歌词');
       return { lyric: '' };
     }
   }
 
   /**
-   * 解析Bilibili音频数据为统一格式
+   * 判断歌曲是否可播放
    */
-  private parseSong(data: any): Song {
+  isPlayable(song: any): boolean {
+    // B站音频区通常都可播放
+    return true;
+  }
+
+  /**
+   * 规范化 Bilibili 歌曲数据
+   */
+  protected normalizeSong(rawSong: any): Song {
+    const songId = String(rawSong.id);
+    
+    // B站音频区艺术家信息
+    const artistName = rawSong.author || '未知艺术家';
+    
+    // 提取封面
+    const cover = rawSong.cover || '';
+    
     return {
-      id: String(data.id || ''),
-      name: data.title || '',
-      artist: data.author ? [data.author] : data.uname ? [data.uname] : [],
-      album: {
-        id: '',
-        name: '',
-        pic: data.cover || '',
-      },
-      pic_id: '',
-      lyric_id: String(data.id || ''),
+      id: this.generateTrackId(songId),
+      name: normalizeSongName(rawSong.title),
+      artist: normalizeArtistField([artistName]),
+      album: normalizeAlbumName('Bilibili音频'),
+      pic_id: cover,
+      lyric_id: songId,
       source: 'bilibili',
-      // 额外信息
-      duration: data.duration || 0,
-      bvid: data.bvid || '',
-      intro: data.intro || '',
-    };
+      duration: rawSong.duration ? rawSong.duration * 1000 : 0,
+      rawData: rawSong,
+    } as Song;
   }
 }
