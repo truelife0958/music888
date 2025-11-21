@@ -68,12 +68,8 @@ function detectApiFormat(apiUrl: string): {
   };
 }
 
-// 音乐API配置 - 老王更新：精简为3个有效源
+// 音乐API配置 - 老王更新：GDStudio被Cloudflare阻止，切换Vercel为主API
 const API_SOURCES: ApiSource[] = [
-  {
-    name: 'GDStudio 主API',
-    url: 'https://music-api.gdstudio.xyz/api.php',
-  },
   {
     name: 'Vercel增强API',
     url: 'https://api-enhanced-three-indol.vercel.app/',
@@ -81,6 +77,10 @@ const API_SOURCES: ApiSource[] = [
   {
     name: 'Meting备用API',
     url: 'https://api.injahow.cn/meting/',
+  },
+  {
+    name: 'GDStudio API',
+    url: 'https://music-api.gdstudio.xyz/api.php',
   },
 ];
 
