@@ -10,7 +10,10 @@ import { PROXY_CONFIG, API_CONFIG } from './config.js';
  */
 export function needsProxy(url: string, source?: string): boolean {
   if (!url) return false;
-  if (!API_CONFIG.USE_PROXY) return false;
+  if (!API_CONFIG.USE_PROXY) {
+    console.log('[代理] 代理功能已禁用');
+    return false;
+  }
 
   try {
     const urlObj = new URL(url);
@@ -22,6 +25,12 @@ export function needsProxy(url: string, source?: string): boolean {
     ) || PROXY_CONFIG.ALLOWED_DOMAINS.some((domain) =>
       hostname.includes(domain)
     );
+
+    console.log('[代理] 检查URL:', {
+      hostname,
+      needsProxy: needsProxyDomain,
+      proxyEnabled: API_CONFIG.USE_PROXY,
+    });
 
     return needsProxyDomain;
   } catch (error) {
@@ -77,28 +86,40 @@ function isAudioUrl(url: string): boolean {
  * 将URL转换为代理URL
  */
 export function getProxiedUrl(url: string, source?: string): string {
-  if (!url) return url;
+  if (!url) {
+    console.warn('[代理] 空URL，跳过代理');
+    return url;
+  }
 
   // 不需要代理，直接返回（可能升级HTTPS）
   if (!needsProxy(url, source)) {
+    console.log('[代理] URL不需要代理:', url);
     if (PROXY_CONFIG.AUTO_HTTPS && url.startsWith('http://')) {
-      return url.replace(/^http:/, 'https:');
+      const httpsUrl = url.replace(/^http:/, 'https:');
+      console.log('[代理] HTTP升级为HTTPS:', httpsUrl);
+      return httpsUrl;
     }
     return url;
   }
 
   // 根据URL类型选择正确的代理
   if (source === 'bilibili') {
-    return `${PROXY_CONFIG.BILIBILI_PROXY}?url=${encodeURIComponent(url)}`;
+    const proxiedUrl = `${PROXY_CONFIG.BILIBILI_PROXY}?url=${encodeURIComponent(url)}`;
+    console.log('[代理] Bilibili代理:', url, '->', proxiedUrl);
+    return proxiedUrl;
   }
 
   // 音频URL使用专用音频代理
   if (isAudioUrl(url)) {
-    return `${PROXY_CONFIG.AUDIO_PROXY}?url=${encodeURIComponent(url)}`;
+    const proxiedUrl = `${PROXY_CONFIG.AUDIO_PROXY}?url=${encodeURIComponent(url)}`;
+    console.log('[代理] 音频代理:', url, '->', proxiedUrl);
+    return proxiedUrl;
   }
 
   // API请求使用音乐API代理
-  return `${PROXY_CONFIG.MUSIC_API_PROXY}?url=${encodeURIComponent(url)}`;
+  const proxiedUrl = `${PROXY_CONFIG.MUSIC_API_PROXY}?url=${encodeURIComponent(url)}`;
+  console.log('[代理] API代理:', url, '->', proxiedUrl);
+  return proxiedUrl;
 }
 
 /**
