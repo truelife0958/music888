@@ -1278,38 +1278,21 @@ export async function getSongUrl(
     console.warn(`⚠️ [播放优化] Provider失败:`, providerError);
   }
 
-  // 老王新增：跨平台智能搜索fallback
-  // 当原平台（如网易云）版权限制时，自动搜索其他平台的同名歌曲
-  console.log(`🔄 [跨平台Fallback] 开始搜索其他平台: ${song.name}`);
-  const alternativeSources = ['kuwo', 'migu', 'kugou', 'qq'].filter(s => s !== song.source);
-
-  for (const source of alternativeSources) {
-    try {
-      console.log(`🔄 [跨平台Fallback] 尝试平台: ${source}`);
-
-      // 在其他平台搜索同名歌曲
-      const searchKeyword = `${song.name} ${Array.isArray(song.artist) ? song.artist[0] : song.artist}`;
-      const searchResults = await searchMusicAPI(searchKeyword, source);
-
-      if (searchResults.length > 0) {
-        const matchedSong = searchResults[0]; // 取第一个匹配结果
-        console.log(`✅ [跨平台Fallback] 在${source}找到匹配歌曲: ${matchedSong.name}`);
-
-        // 尝试获取这首歌的播放URL
-        const fallbackResult = await getSongUrl(matchedSong, quality);
-        if (fallbackResult.url && !fallbackResult.error) {
-          console.log(`🎉 [跨平台Fallback] 成功从${source}获取播放链接！`);
-          return fallbackResult;
-        }
-      }
-    } catch (fallbackError) {
-      console.warn(`⚠️ [跨平台Fallback] ${source}搜索失败:`, fallbackError);
-      continue; // 继续尝试下一个平台
+  // 老王增强：使用ProviderManager的智能跨平台搜索fallback
+  // 避免递归调用，直接使用增强版的getSongUrlWithFallback
+  console.log(`🔄 [跨平台Fallback] 使用智能匹配搜索其他平台: ${song.name}`);
+  try {
+    const fallbackResult = await providerManager.getSongUrlWithFallback(song, quality);
+    if (fallbackResult.url) {
+      console.log(`🎉 [跨平台Fallback] 成功从 ${fallbackResult.fromSource || '其他平台'} 获取播放链接！`);
+      return { url: fallbackResult.url, br: fallbackResult.br };
     }
+  } catch (fallbackError) {
+    console.warn(`⚠️ [跨平台Fallback] 智能搜索失败:`, fallbackError);
   }
 
   // 所有方式都失败，返回错误
-  console.error(`❌ [播放优化] 所有方式均失败（含跨平台搜索），歌曲: ${song.name}`);
+  console.error(`❌ [播放优化] 所有方式均失败（含跨平台智能搜索），歌曲: ${song.name}`);
   const combinedError =
     errors.length > 0 ? `尝试${errors.length}个API均失败 - ${errors[0]}` : '无法获取音乐链接';
 

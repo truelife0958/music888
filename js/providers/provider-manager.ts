@@ -3,6 +3,7 @@
  *
  * 老王实现：统一管理所有音乐平台Provider
  * 提供聚合搜索、智能fallback、多平台切换等功能
+ * 老王增强：集成智能匹配算法，根据成功率动态排序Provider
  */
 
 import type { MusicProvider } from './base-provider';
@@ -14,6 +15,8 @@ import { MiguProvider } from './migu-provider';
 import { KuwoProvider } from './kuwo-provider';
 import { BilibiliProvider } from './bilibili-provider';
 import { QianqianProvider } from './qianqian-provider';
+import { findBestMatch, providerSuccessTracker } from '../song-matcher';
+import { getProxiedUrl } from '../proxy-handler';
 
 /**
  * Provider管理器配置
@@ -168,8 +171,9 @@ export class ProviderManager {
 
   /**
    * 智能获取播放链接 - 自动fallback到其他平台
+   * 老王增强：使用智能匹配算法，根据成功率动态排序Provider
    */
-  async getSongUrlWithFallback(song: Song, quality: string = '320k'): Promise<{ url: string; br: string }> {
+  async getSongUrlWithFallback(song: Song, quality: string = '320k'): Promise<{ url: string; br: string; fromSource?: string }> {
     console.log(`[ProviderManager] 获取播放链接: ${song.name} (原平台: ${song.source})`);
 
     // 1. 优先从原平台获取
@@ -178,37 +182,91 @@ export class ProviderManager {
       try {
         const result = await primaryProvider.getSongUrl(song, quality);
         if (result.url) {
-          console.log(`[ProviderManager] 从原平台成功获取: ${primaryProvider.name}`);
-          return result;
+          // 老王增强：验证URL是否可用
+          const isValid = await this.validateAudioUrl(result.url);
+          if (isValid) {
+            console.log(`[ProviderManager] ✅ 从原平台成功获取: ${primaryProvider.name}`);
+            providerSuccessTracker.recordSuccess(song.source);
+            return { ...result, fromSource: song.source };
+          } else {
+            console.warn(`[ProviderManager] ⚠️ 原平台URL无效，尝试其他平台`);
+            providerSuccessTracker.recordFail(song.source);
+          }
         }
       } catch (error) {
         console.warn(`[ProviderManager] 原平台获取失败: ${primaryProvider?.name}`, error);
+        providerSuccessTracker.recordFail(song.source);
       }
     }
 
     // 2. 如果启用了自动fallback，尝试其他平台
     if (this.config.autoFallback) {
-      console.log(`[ProviderManager] 尝试从其他平台获取`);
+      console.log(`[ProviderManager] 🔄 开始跨平台搜索: ${song.name}`);
 
-      const enabledProviders = this.getEnabledProviders().filter((p) => p.id !== song.source);
+      // 老王增强：根据成功率排序Provider
+      const otherProviderIds = this.getEnabledProviders()
+        .filter((p) => p.id !== song.source)
+        .map((p) => p.id);
+      const sortedProviderIds = providerSuccessTracker.sortBySuccessRate(otherProviderIds);
 
-      for (const provider of enabledProviders) {
+      for (const providerId of sortedProviderIds) {
+        const provider = this.providers.get(providerId);
+        if (!provider) continue;
+
         try {
-          // 先在该平台搜索相同歌曲
           console.log(`[ProviderManager] 尝试平台: ${provider.name}`);
-          const searchResults = await provider.search(`${song.name} ${song.artist[0]}`, 1);
 
-          if (searchResults.length > 0) {
-            const matchedSong = searchResults[0];
-            const result = await provider.getSongUrl(matchedSong, quality);
+          // 老王增强：构建更精确的搜索关键词
+          const artistName = Array.isArray(song.artist) ? song.artist[0] : song.artist;
+          const searchKeyword = `${song.name} ${artistName}`.trim();
 
-            if (result.url) {
-              console.log(`[ProviderManager] ✅ 从 ${provider.name} 成功获取替代链接`);
-              return result;
+          // 搜索歌曲
+          const searchResults = await Promise.race([
+            provider.search(searchKeyword, 10), // 搜索更多结果以便智能匹配
+            new Promise<Song[]>((_, reject) =>
+              setTimeout(() => reject(new Error('搜索超时')), 8000)
+            ),
+          ]);
+
+          if (searchResults.length === 0) {
+            console.log(`[ProviderManager] ${provider.name} 无搜索结果`);
+            continue;
+          }
+
+          // 老王增强：使用智能匹配算法找到最佳匹配
+          const matchResult = findBestMatch(song, searchResults, {
+            minScore: 0.4, // 降低阈值，增加匹配成功率
+            titleWeight: 0.5,
+            artistWeight: 0.4,
+            durationWeight: 0.1,
+          });
+
+          if (!matchResult) {
+            console.log(`[ProviderManager] ${provider.name} 无满足条件的匹配`);
+            continue;
+          }
+
+          const matchedSong = matchResult.song;
+          console.log(`[ProviderManager] 找到匹配: ${matchedSong.name} (分数: ${matchResult.score.toFixed(2)})`);
+
+          // 获取播放链接
+          const result = await provider.getSongUrl(matchedSong, quality);
+
+          if (result.url) {
+            // 验证URL
+            const isValid = await this.validateAudioUrl(result.url);
+            if (isValid) {
+              console.log(`[ProviderManager] 🎉 从 ${provider.name} 成功获取替代链接`);
+              providerSuccessTracker.recordSuccess(providerId);
+              return { ...result, fromSource: providerId };
+            } else {
+              console.warn(`[ProviderManager] ${provider.name} URL无效`);
+              providerSuccessTracker.recordFail(providerId);
             }
           }
         } catch (error) {
           console.warn(`[ProviderManager] ${provider.name} fallback失败:`, error);
+          providerSuccessTracker.recordFail(providerId);
         }
       }
     }
@@ -216,6 +274,38 @@ export class ProviderManager {
     // 3. 所有平台都失败
     console.error(`[ProviderManager] ❌ 所有平台均无法获取播放链接`);
     return { url: '', br: '' };
+  }
+
+  /**
+   * 老王新增：验证音频URL是否可用
+   */
+  private async validateAudioUrl(url: string): Promise<boolean> {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      // 使用代理URL
+      const proxiedUrl = getProxiedUrl(url);
+
+      const response = await fetch(proxiedUrl, {
+        method: 'HEAD',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      // 检查响应状态和Content-Type
+      if (response.ok || response.status === 206) {
+        const contentType = response.headers.get('content-type') || '';
+        // 音频类型或者没有Content-Type（某些CDN）都认为有效
+        return contentType.includes('audio') || contentType.includes('octet-stream') || !contentType;
+      }
+
+      return false;
+    } catch (error) {
+      // 超时或网络错误，假设URL可用（让播放器去验证）
+      return true;
+    }
   }
 
   /**
