@@ -12,6 +12,8 @@ export type { ProviderConfig, SearchResult, PlayUrlResult, LyricResult } from '.
 export { NeteaseProvider } from './netease-provider.js';
 export { QQProvider } from './qq-provider.js';
 export { BilibiliProvider } from './bilibili-provider.js';
+export { KugouProvider } from './kugou-provider.js';
+export { KuwoProvider } from './kuwo-provider.js';
 
 // 导出Provider Manager（单例）
 export { providerManager } from './provider-manager.js';

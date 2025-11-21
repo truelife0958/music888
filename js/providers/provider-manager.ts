@@ -7,6 +7,8 @@ import { BaseProvider } from './base-provider.js';
 import { NeteaseProvider } from './netease-provider.js';
 import { QQProvider } from './qq-provider.js';
 import { BilibiliProvider } from './bilibili-provider.js';
+import { KugouProvider } from './kugou-provider.js';
+import { KuwoProvider } from './kuwo-provider.js';
 import type { Song } from '../api.js';
 
 /**
@@ -39,6 +41,8 @@ class ProviderManager {
       new NeteaseProvider(),
       new QQProvider(),
       new BilibiliProvider(),
+      new KugouProvider(),  // 老王添加：酷狗音乐
+      new KuwoProvider(),   // 老王添加：酷我音乐
     ];
 
     providerInstances.forEach((provider) => {
