@@ -107,12 +107,20 @@ async function handleProxy(request: Request): Promise<Response> {
     const targetUrlObj = new URL(targetUrl);
     proxyHeaders.set('Referer', targetUrlObj.origin);
 
-    // 发送代理请求
+    // 添加超时控制（8秒超时）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    // 发送代理请求，包含body（如果有）
     const response = await fetch(targetUrl, {
       method: request.method,
       headers: proxyHeaders,
+      body: request.method !== 'GET' && request.method !== 'HEAD' ? await request.arrayBuffer() : undefined,
       redirect: 'follow',
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     // 构建响应头
     const responseHeaders = new Headers(corsHeaders(origin));
@@ -136,11 +144,36 @@ async function handleProxy(request: Request): Promise<Response> {
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error('Proxy error:', error);
+    // 超时错误
+    if (error instanceof Error && error.name === 'AbortError') {
+      return new Response(
+        JSON.stringify({
+          error: 'Request timeout',
+          message: 'The upstream API did not respond within 8 seconds',
+          targetUrl,
+        }),
+        {
+          status: 504,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders(origin),
+          },
+        }
+      );
+    }
+
+    // 其他错误
+    console.error('[music-proxy] Error:', {
+      targetUrl,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return new Response(
       JSON.stringify({
         error: 'Proxy request failed',
         message: error instanceof Error ? error.message : 'Unknown error',
+        targetUrl,
       }),
       {
         status: 500,
