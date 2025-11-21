@@ -7,6 +7,8 @@
 
 import { BaseProvider, ProviderError, type ProviderConfig } from './base-provider';
 import type { Song } from '../api';
+// 老王修复CORS：导入代理模块
+import { getProxiedUrl } from '../proxy-handler';
 
 /**
  * 网易云音乐Provider
@@ -67,8 +69,10 @@ export class NeteaseProvider extends BaseProvider {
       const url = `${this.endpoints.songUrl}?id=${songId}.mp3`;
 
       // 验证URL是否有效（尝试HEAD请求）
+      // 老王修复CORS：使用代理
       try {
-        const headResponse = await fetch(url, { method: 'HEAD' });
+        const proxiedUrl = getProxiedUrl(url, this.id);
+        const headResponse = await fetch(proxiedUrl, { method: 'HEAD' });
         if (headResponse.ok) {
           this.log(`获取播放链接成功`);
           return { url, br: quality };

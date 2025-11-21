@@ -1,6 +1,6 @@
 /**
- * BUG-006修复: 统一的跨域代理处理模块
- * 集中管理所有需要代理的请求，确保跨域处理一致性
+ * 老王修复CORS问题: 统一的跨域代理处理模块
+ * 所有第三方API请求都通过Cloudflare Pages Functions代理
  */
 
 import { PROXY_CONFIG, API_CONFIG } from './config.js';
@@ -10,25 +10,65 @@ import { PROXY_CONFIG, API_CONFIG } from './config.js';
  */
 export function needsProxy(url: string, source?: string): boolean {
   if (!url) return false;
+  if (!API_CONFIG.USE_PROXY) return false;
 
   try {
     const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
 
-    // 检查是否是允许的域名但使用HTTP（需要升级到HTTPS或代理）
-    if (urlObj.protocol === 'http:') {
-      const hostname = urlObj.hostname;
-      const needsProxyDomain = PROXY_CONFIG.ALLOWED_DOMAINS.some((domain) =>
-        hostname.includes(domain)
-      );
+    // 检查是否是需要代理的域名
+    const needsProxyDomain = (API_CONFIG.PROXY_SOURCES as readonly string[]).some((domain) =>
+      hostname.includes(domain)
+    ) || PROXY_CONFIG.ALLOWED_DOMAINS.some((domain) =>
+      hostname.includes(domain)
+    );
 
-      if (needsProxyDomain) {
-        return true;
-      }
+    return needsProxyDomain;
+  } catch (error) {
+    console.error('解析URL失败:', url, error);
+    return false;
+  }
+}
+
+/**
+ * 判断URL是否是音频URL（用于选择正确的代理）
+ */
+function isAudioUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname.toLowerCase();
+
+    // 常见音频文件扩展名
+    const audioExtensions = ['.mp3', '.m4a', '.flac', '.wav', '.ogg', '.aac', '.wma'];
+    if (audioExtensions.some(ext => pathname.includes(ext))) {
+      return true;
+    }
+
+    // 网易云音乐外链URL
+    if (urlObj.hostname.includes('music.163.com') && pathname.includes('/song/media/outer/url')) {
+      return true;
+    }
+
+    // 音频CDN域名
+    const audioCdnDomains = [
+      'm7.music.126.net',
+      'm8.music.126.net',
+      'm701.music.126.net',
+      'm801.music.126.net',
+      'dl.stream.qqmusic.qq.com',
+      'isure.stream.qqmusic.qq.com',
+      'ws.stream.qqmusic.qq.com',
+      'sycdn.kuwo.cn',
+      'webfs.tx.kugou.com',
+      'freetyst.nf.migu.cn',
+    ];
+
+    if (audioCdnDomains.some(domain => urlObj.hostname.includes(domain))) {
+      return true;
     }
 
     return false;
-  } catch (error) {
-    console.error('解析URL失败:', url, error);
+  } catch {
     return false;
   }
 }
@@ -39,22 +79,26 @@ export function needsProxy(url: string, source?: string): boolean {
 export function getProxiedUrl(url: string, source?: string): string {
   if (!url) return url;
 
-  // 不需要代理，直接返回
+  // 不需要代理，直接返回（可能升级HTTPS）
   if (!needsProxy(url, source)) {
-    // BUG-006修复: 自动将HTTP升级为HTTPS（如果配置允许）
     if (PROXY_CONFIG.AUTO_HTTPS && url.startsWith('http://')) {
       return url.replace(/^http:/, 'https:');
     }
     return url;
   }
 
-  // 根据源选择合适的代理
+  // 根据URL类型选择正确的代理
   if (source === 'bilibili') {
     return `${PROXY_CONFIG.BILIBILI_PROXY}?url=${encodeURIComponent(url)}`;
   }
 
-  // 通用音频代理
-  return `${PROXY_CONFIG.AUDIO_PROXY}?url=${encodeURIComponent(url)}`;
+  // 音频URL使用专用音频代理
+  if (isAudioUrl(url)) {
+    return `${PROXY_CONFIG.AUDIO_PROXY}?url=${encodeURIComponent(url)}`;
+  }
+
+  // API请求使用音乐API代理
+  return `${PROXY_CONFIG.MUSIC_API_PROXY}?url=${encodeURIComponent(url)}`;
 }
 
 /**
@@ -66,13 +110,15 @@ export async function proxyFetch(
   source?: string
 ): Promise<Response> {
   const proxiedUrl = getProxiedUrl(url, source);
+  const isProxied = url !== proxiedUrl;
 
-  console.log('🌐 代理请求:', {
-    original: url,
-    proxied: proxiedUrl,
-    source,
-    needsProxy: url !== proxiedUrl,
-  });
+  if (isProxied) {
+    console.log('🌐 [代理请求]', {
+      original: url,
+      proxied: proxiedUrl,
+      source,
+    });
+  }
 
   return fetch(proxiedUrl, options);
 }
@@ -131,11 +177,21 @@ export function getProxyStatus(): {
   proxySources: readonly string[];
   allowedDomains: readonly string[];
   autoHttps: boolean;
+  proxyPaths: {
+    music: string;
+    audio: string;
+    bilibili: string;
+  };
 } {
   return {
     enabled: API_CONFIG.USE_PROXY,
     proxySources: API_CONFIG.PROXY_SOURCES,
     allowedDomains: PROXY_CONFIG.ALLOWED_DOMAINS,
     autoHttps: PROXY_CONFIG.AUTO_HTTPS,
+    proxyPaths: {
+      music: PROXY_CONFIG.MUSIC_API_PROXY,
+      audio: PROXY_CONFIG.AUDIO_PROXY,
+      bilibili: PROXY_CONFIG.BILIBILI_PROXY,
+    },
   };
 }

@@ -6,6 +6,8 @@
  */
 
 import type { Song } from '../api';
+// 老王修复CORS：导入代理模块
+import { getProxiedUrl } from '../proxy-handler';
 
 /**
  * 平台Provider接口
@@ -108,13 +110,20 @@ export abstract class BaseProvider implements MusicProvider {
 
   /**
    * 通用fetch方法，带超时和重试
+   * 老王修复CORS：添加代理支持
    */
   protected async fetch(url: string, options: RequestInit = {}): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
+    // 老王修复CORS：自动使用代理URL
+    const proxiedUrl = getProxiedUrl(url, this.id);
+    if (url !== proxiedUrl) {
+      console.log(`🌐 [代理] Provider(${this.id}) fetch:`, url);
+    }
+
     try {
-      const response = await fetch(url, {
+      const response = await fetch(proxiedUrl, {
         ...options,
         signal: controller.signal,
       });

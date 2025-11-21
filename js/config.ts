@@ -26,24 +26,41 @@ export const API_CONFIG = {
   RETRY_BASE_DELAY: 1000,
   /** API 失败阈值 */
   API_FAILURE_THRESHOLD: 3,
-  /** BUG-006修复: 统一的代理配置 */
-  USE_PROXY: false, // 修复：纯前端项目，禁用代理，直接请求支持CORS的API
-  /** 需要代理的源列表 */
-  PROXY_SOURCES: [] as const, // 修复：清空代理源列表
+  /** 启用代理 - 老王修复CORS问题：所有第三方API请求都走Cloudflare Functions代理 */
+  USE_PROXY: true,
+  /** 需要代理的源列表 - 第三方音乐API */
+  PROXY_SOURCES: [
+    'music.163.com',
+    'music-api.gdstudio.xyz',
+    'api-enhanced-three-indol.vercel.app',
+    'api.injahow.cn',
+  ] as const,
 } as const;
 
 /**
- * BUG-006修复: 跨域代理配置
+ * 跨域代理配置 - 老王修复：使用Cloudflare Pages Functions代理
  */
 export const PROXY_CONFIG = {
   /** Bilibili代理路径 */
   BILIBILI_PROXY: '/api/bilibili-proxy',
-  /** 通用音频代理路径 */
+  /** 通用音频代理路径 - 用于音频流 */
   AUDIO_PROXY: '/api/audio-proxy',
+  /** 音乐API代理路径 - 用于API请求 */
+  MUSIC_API_PROXY: '/api/music-proxy',
   /** 是否自动将HTTP升级为HTTPS */
   AUTO_HTTPS: true,
   /** 允许的源域名（用于验证） */
-  ALLOWED_DOMAINS: ['music.163.com', 'y.qq.com', 'bilibili.com', 'kuwo.cn', 'kugou.com'] as const,
+  ALLOWED_DOMAINS: [
+    'music.163.com',
+    'music-api.gdstudio.xyz',
+    'api-enhanced-three-indol.vercel.app',
+    'api.injahow.cn',
+    'y.qq.com',
+    'bilibili.com',
+    'kuwo.cn',
+    'kugou.com',
+    'migu.cn',
+  ] as const,
 } as const;
 
 /**

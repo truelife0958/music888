@@ -2,6 +2,8 @@
 
 // 老王集成：导入Provider模块
 import { providerManager } from './providers/provider-manager';
+// 老王修复CORS：导入代理模块
+import { getProxiedUrl, proxyFetch, needsProxy } from './proxy-handler';
 
 export interface Song {
   id: string;
@@ -573,12 +575,19 @@ function _isRetryableError(error: any, statusCode?: number): boolean {
 }
 
 // BUG-005修复: 改进的重试机制 - 区分错误类型，使用指数退避
+// 老王修复CORS：添加代理支持
 async function fetchWithRetry(
   url: string,
   options: RequestInit = {},
   maxRetries: number = 2
 ): Promise<Response> {
   const timeoutDuration = 15000; // 15秒超时（从8秒增加）
+
+  // 老王修复CORS：自动使用代理URL
+  const proxiedUrl = getProxiedUrl(url);
+  if (url !== proxiedUrl) {
+    console.log('🌐 [代理] fetchWithRetry:', url, '->', proxiedUrl);
+  }
 
   // BUG-005修复: 指数退避计算，更合理的延迟
   const getRetryDelay = (attempt: number): number => {
@@ -588,7 +597,7 @@ async function fetchWithRetry(
 
   // BUG-005修复: 提取请求执行逻辑，增加错误类型判断
   const executeRequest = async (signal: AbortSignal): Promise<Response> => {
-    const response = await fetch(url, { ...options, signal });
+    const response = await fetch(proxiedUrl, { ...options, signal });
 
     // 2xx 成功响应
     if (response.ok) {
@@ -763,13 +772,16 @@ function normalizeError(error: unknown): ApiError {
 }
 
 // 测试API可用性
+// 老王修复CORS：添加代理支持
 async function testAPI(apiUrl: string): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
     const testUrl = `${apiUrl}?types=search&source=netease&name=test&count=1`;
-    const response = await fetch(testUrl, { signal: controller.signal });
+    // 老王修复CORS：自动使用代理URL
+    const proxiedUrl = getProxiedUrl(testUrl);
+    const response = await fetch(proxiedUrl, { signal: controller.signal });
     clearTimeout(timeoutId);
 
     return response.ok;
@@ -1070,13 +1082,20 @@ export async function getAlbumCoverUrl(song: Song, size?: number): Promise<strin
 }
 
 // 修复BUG-003: 使用GET+Range替代HEAD请求，避免CORS问题
+// 老王修复CORS：添加代理支持
 async function validateUrl(url: string): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
+    // 老王修复CORS：自动使用代理URL
+    const proxiedUrl = getProxiedUrl(url);
+    if (url !== proxiedUrl) {
+      console.log('🌐 [代理] validateUrl:', url, '->', proxiedUrl);
+    }
+
     // 使用GET请求+Range头，只请求第一个字节，避免CORS阻止HEAD请求
-    const response = await fetch(url, {
+    const response = await fetch(proxiedUrl, {
       method: 'GET',
       headers: {
         Range: 'bytes=0-0',
