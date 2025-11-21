@@ -28,12 +28,24 @@ export const API_CONFIG = {
   API_FAILURE_THRESHOLD: 3,
   /** 启用代理 - 老王修复CORS问题：所有第三方API请求都走Cloudflare Functions代理 */
   USE_PROXY: true,
-  /** 需要代理的源列表 - 第三方音乐API */
+  /** 需要代理的源列表 - 第三方音乐API和CDN */
   PROXY_SOURCES: [
+    // 网易云音乐
     'music.163.com',
+    'music.126.net',  // 网易云CDN（m701.music.126.net等）
+    // 第三方API
     'music-api.gdstudio.xyz',
     'api-enhanced-three-indol.vercel.app',
     'api.injahow.cn',
+    // QQ音乐CDN
+    'stream.qqmusic.qq.com',
+    'dl.stream.qqmusic.qq.com',
+    // 酷狗CDN
+    'kugou.com',
+    // 酷我CDN
+    'kuwo.cn',
+    // 咪咕CDN
+    'migu.cn',
   ] as const,
 } as const;
 
@@ -49,16 +61,27 @@ export const PROXY_CONFIG = {
   MUSIC_API_PROXY: '/api/music-proxy',
   /** 是否自动将HTTP升级为HTTPS */
   AUTO_HTTPS: true,
-  /** 允许的源域名（用于验证） */
+  /** 允许的源域名（用于验证） - 老王修复：添加所有CDN域名 */
   ALLOWED_DOMAINS: [
+    // 网易云音乐
     'music.163.com',
+    'music.126.net',      // 网易云CDN
+    // 第三方API
     'music-api.gdstudio.xyz',
     'api-enhanced-three-indol.vercel.app',
     'api.injahow.cn',
+    // QQ音乐
     'y.qq.com',
+    'qq.com',
+    'stream.qqmusic.qq.com',
+    // Bilibili
     'bilibili.com',
-    'kuwo.cn',
+    'bilivideo.com',
+    // 酷狗
     'kugou.com',
+    // 酷我
+    'kuwo.cn',
+    // 咪咕
     'migu.cn',
   ] as const,
 } as const;

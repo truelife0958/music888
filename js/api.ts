@@ -1083,10 +1083,11 @@ export async function getAlbumCoverUrl(song: Song, size?: number): Promise<strin
 
 // 修复BUG-003: 使用GET+Range替代HEAD请求，避免CORS问题
 // 老王修复CORS：添加代理支持
+// 老王修复超时：超时时返回true让播放器验证，避免误判有效链接
 async function validateUrl(url: string): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 增加到5秒
 
     // 老王修复CORS：自动使用代理URL
     const proxiedUrl = getProxiedUrl(url);
@@ -1108,9 +1109,10 @@ async function validateUrl(url: string): Promise<boolean> {
     // 206 Partial Content, 200 OK, 或 416 Range Not Satisfiable 都表示URL有效
     return response.ok || response.status === 206 || response.status === 416;
   } catch (error) {
-    // 网络错误或超时，认为URL无效
-    console.warn('URL验证失败:', url, error);
-    return false;
+    // 老王修复：超时或网络错误时，假设URL可用（让播放器去验证）
+    // 避免因网络慢导致误判有效链接为无效
+    console.warn('URL验证超时/失败，假设可用:', url);
+    return true;
   }
 }
 
