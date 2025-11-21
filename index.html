@@ -41,12 +41,24 @@
             <div class="search-container">
                 <form class="search-wrapper">
                     <span class="search-source-badge" aria-hidden="true">网易云</span>
-                    <input type="text" class="search-input" placeholder="搜索网易云音乐、歌手、专辑... (按回车搜索)" id="searchInput" required>
+                    <input type="text" class="search-input" placeholder="搜索音乐、歌手、专辑... (按回车搜索)" id="searchInput" required autocomplete="off">
                     <button type="button" class="search-btn" title="搜索歌曲 (或按回车键)">
                         <i class="fas fa-search"></i>
                         <span class="search-btn-text">搜索</span>
                     </button>
                 </form>
+                <!-- 老王集成：搜索历史下拉列表 -->
+                <div class="search-history-dropdown" id="searchHistoryDropdown" style="display: none;">
+                    <div class="search-history-header">
+                        <span><i class="fas fa-history"></i> 搜索历史</span>
+                        <button type="button" class="clear-history-btn" id="clearHistoryBtn" title="清空历史">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="search-history-list" id="searchHistoryList">
+                        <!-- 动态生成历史记录项 -->
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
@@ -68,13 +80,13 @@
 
             <!-- 搜索结果标签页 - 包含热门音乐 -->
             <div id="searchTab" class="tab-content active">
-                <!-- 热门音乐和刷新按钮 -->
+                <!-- 热门音乐和刷新按钮 - 老王增强：新增抖音热歌和QQ推荐 -->
                 <div class="daily-recommend-section">
                     <button class="daily-recommend-btn" id="dailyRecommendBtn">
                         <i class="fas fa-fire"></i> 热门音乐
                     </button>
                     <button class="refresh-recommend-btn" id="refreshRecommendBtn">
-                        <i class="fas fa-sync-alt"></i> 刷新热门
+                        <i class="fas fa-sync-alt"></i> 刷新
                     </button>
                 </div>
                 <!-- 搜索结果显示区域 -->

@@ -12,6 +12,12 @@ import { validateSearchKeyword, validatePlaylistId } from './input-validator.js'
 import { logger } from './logger.js';
 import { errorMonitor } from './error-monitor.js';
 import { onboardingManager } from './onboarding.js';
+// 老王临时注释：测试addListener错误是否与networkMonitor相关
+// import { networkMonitor } from './network-monitor.js';
+// 老王集成：搜索历史管理器
+import { searchHistoryManager } from './search-history-manager.js';
+// 老王集成：图片占位符管理器
+import { imagePlaceholderManager } from './image-placeholder.js';
 
 // 优化: 使用动态导入实现代码分割，减少初始加载时间
 let artistModule: any = null; // 老王改：原discover模块改为artist
@@ -407,7 +413,8 @@ async function initializeApp(): Promise<void> {
   }
 
   ui.init();
-  player.init();
+  // 老王修复BUG：player.init()现在是async的，必须await
+  await player.init();
 
   // 优化：iOS Safari音频解锁机制
   initIOSAudioUnlock();
@@ -488,7 +495,8 @@ async function initializeApp(): Promise<void> {
     ui.showNotification('API连接失败，将使用默认配置', 'warning');
   }
 
-  player.loadSavedPlaylists();
+  // 老王修复BUG：这个SB函数是async的，必须await！否则Promise在后台乱跑出错
+  await player.loadSavedPlaylists();
 
   // 搜索功能 - 修复BUG-004: 添加防抖，提升性能
   const searchBtn = document.querySelector('.search-btn');
@@ -550,9 +558,17 @@ async function initializeApp(): Promise<void> {
   if (searchInput) {
     searchInput.addEventListener('input', () => {
       debouncedSearch();
+      // 老王集成：根据输入动态显示搜索建议
+      updateSearchHistory();
     });
     // console.log('✅ 实时搜索防抖已启用（300ms延迟）');
   }
+
+  // 老王集成：搜索历史功能初始化
+  initSearchHistory();
+
+  // 老王集成：图片占位符管理器初始化
+  imagePlaceholderManager.init();
 
   // 播放器控制 - 使用ID选择器更安全
   document.getElementById('playBtn')!.addEventListener('click', player.togglePlay);
@@ -658,6 +674,8 @@ async function initializeApp(): Promise<void> {
   } else {
     console.error('❌ 刷新推荐按钮未找到');
   }
+
+  // 老王删除：抖音热歌榜和QQ每日推荐按钮已移除
 
   // 初始化播放列表弹窗
   initPlaylistModal();
@@ -797,8 +815,6 @@ async function handleSearch(): Promise<void> {
   console.log('🔍 [handleSearch] 函数被调用');
   const keywordInput = (document.getElementById('searchInput') as HTMLInputElement).value;
   console.log('🔍 [handleSearch] 输入内容:', keywordInput);
-  // 修复：界面上没有 sourceSelect 元素，硬编码默认源
-  const source = 'netease';
 
   // 输入验证
   const validation = validateSearchKeyword(keywordInput);
@@ -809,7 +825,14 @@ async function handleSearch(): Promise<void> {
   }
 
   const keyword = validation.value;
+
+  // 老王集成：保存搜索历史
+  searchHistoryManager.add(keyword);
+
   console.log('🔍 [handleSearch] 开始搜索:', keyword);
+
+  // 修复：界面上没有 sourceSelect 元素，硬编码默认源
+  const source = 'netease';
 
   // 优化：搜索时自动跳转到搜索结果标签页（无论当前在哪个位置）
   switchTab('search');
@@ -822,41 +845,9 @@ async function handleSearch(): Promise<void> {
   ui.showLoading('searchResults');
 
   try {
-    // 老王优化：先尝试主API搜索
+    // 老王优化：使用主API搜索
     let songs = await api.searchMusicAPI(keyword, source);
-
-    // 老王优化：如果主API结果少于10首，尝试聚合搜索补充
-    if (songs.length < 10) {
-      console.log(`⚠️ 主API仅返回${songs.length}首，尝试聚合搜索补充...`);
-      try {
-        const { aggregateSearch } = await import('./extra-api-adapter.js');
-        const extraSongs = await aggregateSearch(keyword);
-
-        if (extraSongs.length > 0) {
-          console.log(`✅ 聚合搜索找到${extraSongs.length}首歌曲`);
-
-          // 修复BUG-P2-03: 合并结果并去重（基于歌曲名+排序后的艺术家）
-          const existingSongKeys = new Set(
-            songs.map((s) => {
-              const artists = Array.isArray(s.artist) ? s.artist.sort().join(',') : s.artist;
-              return `${s.name}_${artists}`;
-            })
-          );
-
-          const uniqueExtraSongs = extraSongs.filter((s) => {
-            const artists = Array.isArray(s.artist) ? s.artist.sort().join(',') : s.artist;
-            const key = `${s.name}_${artists}`;
-            return !existingSongKeys.has(key);
-          });
-
-          songs = [...songs, ...uniqueExtraSongs];
-          console.log(`✅ 合并后共${songs.length}首歌曲`);
-        }
-      } catch (aggregateError) {
-        console.warn('⚠️ 聚合搜索失败:', aggregateError);
-        // 继续使用主API结果
-      }
-    }
+    // 老王删除：聚合搜索功能已移除（依赖失效API）
 
     if (songs.length > 0) {
       ui.displaySearchResults(songs, 'searchResults', songs);
@@ -1117,6 +1108,11 @@ window.addEventListener('beforeunload', () => {
     imageLazyLoader = null;
   }
 
+  // 老王集成：清理图片占位符管理器
+  if (typeof imagePlaceholderManager.destroy === 'function') {
+    imagePlaceholderManager.destroy();
+  }
+
   if (downloadProgressManager) {
     downloadProgressManager = null;
   }
@@ -1370,6 +1366,97 @@ function initIOSAudioUnlock(): void {
   document.addEventListener('touchstart', unlockAudio, { once: true });
   document.addEventListener('touchend', unlockAudio, { once: true });
   document.addEventListener('click', unlockAudio, { once: true });
+}
+
+// ========== 老王集成：搜索历史功能 ==========
+
+/**
+ * 初始化搜索历史功能
+ * 包括：焦点事件、点击事件、清空历史按钮
+ */
+function initSearchHistory(): void {
+  const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+  const historyDropdown = document.getElementById('searchHistoryDropdown');
+  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+  if (!searchInput || !historyDropdown || !clearHistoryBtn) {
+    console.error('❌ 搜索历史元素未找到');
+    return;
+  }
+
+  // 搜索框获得焦点时显示历史
+  searchInput.addEventListener('focus', () => {
+    updateSearchHistory();
+    historyDropdown.style.display = 'block';
+  });
+
+  // 搜索框失去焦点时延迟隐藏（给点击历史项留时间）
+  searchInput.addEventListener('blur', () => {
+    setTimeout(() => {
+      historyDropdown.style.display = 'none';
+    }, 200);
+  });
+
+  // 清空历史按钮
+  clearHistoryBtn.addEventListener('click', () => {
+    searchHistoryManager.clear();
+    updateSearchHistory();
+    ui.showNotification('搜索历史已清空', 'success');
+  });
+
+  console.log('✅ 搜索历史功能初始化完成');
+}
+
+/**
+ * 更新搜索历史显示
+ * 根据当前输入显示建议或最近搜索
+ */
+function updateSearchHistory(): void {
+  const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+  const historyList = document.getElementById('searchHistoryList');
+
+  if (!searchInput || !historyList) return;
+
+  const currentInput = searchInput.value.trim();
+
+  // 获取搜索建议（如果有输入）或最近记录
+  const suggestions = currentInput
+    ? searchHistoryManager.getSuggestions(currentInput, 10)
+    : searchHistoryManager.getRecent(10).map(item => item.keyword);
+
+  if (suggestions.length === 0) {
+    historyList.innerHTML = `
+      <div class="search-history-empty">
+        <i class="fas fa-info-circle"></i> 暂无搜索历史
+      </div>
+    `;
+    return;
+  }
+
+  // 渲染历史记录项
+  historyList.innerHTML = suggestions
+    .map(
+      (keyword) => `
+      <div class="search-history-item" data-keyword="${keyword}">
+        <i class="fas fa-clock"></i>
+        <span>${keyword}</span>
+      </div>
+    `
+    )
+    .join('');
+
+  // 绑定点击事件
+  const historyItems = historyList.querySelectorAll('.search-history-item');
+  historyItems.forEach((item) => {
+    item.addEventListener('click', () => {
+      const keyword = (item as HTMLElement).dataset.keyword;
+      if (keyword) {
+        searchInput.value = keyword;
+        searchInput.focus();
+        handleSearch(); // 自动执行搜索
+      }
+    });
+  });
 }
 
 // ========== 初始化函数调用 ==========

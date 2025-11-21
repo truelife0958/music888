@@ -21,6 +21,8 @@ import { safeSetItem, safeGetItem } from './storage-utils.js';
 import { getProxiedUrl } from './proxy-handler.js';
 // 引入IndexedDB存储
 import indexedDB from './indexed-db.js';
+// 老王集成：播放自动重试管理器
+import { playRetryManager } from './play-retry-manager.js';
 
 // --- Player State ---
 let currentPlaylist: Song[] = [];
@@ -469,22 +471,26 @@ export async function playSong(
       }
 
       try {
-        const playPromise = audioPlayer.play();
+        // 老王集成：使用播放重试管理器，自动重试3次
+        await playRetryManager.retry(async () => {
+          const playPromise = audioPlayer.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+          }
+          return true; // 返回成功标志
+        }, {
+          maxRetries: 3,
+          showNotification: true
+        });
 
-        // 修复: 确保 play() Promise 被正确处理
-        if (playPromise !== undefined) {
-          await playPromise;
-          // 记录播放开始时间
-          playStartTime = Date.now();
-          lastRecordedSong = song;
-          // 修复: 显式更新状态
-          isPlaying = true;
-          ui.updatePlayButton(true);
-        }
+        // 播放成功后的状态更新
+        playStartTime = Date.now();
+        lastRecordedSong = song;
+        isPlaying = true;
+        ui.updatePlayButton(true);
       } catch (error) {
-        console.error('播放失败:', error);
+        console.error('播放失败（已重试3次）:', error);
         ui.showNotification('播放失败，请点击页面以允许自动播放', 'warning');
-        // 修复: 确保状态正确更新
         isPlaying = false;
         ui.updatePlayButton(false);
         document.getElementById('currentCover')?.classList.remove('playing');
@@ -1401,14 +1407,17 @@ function recordPlayStats(): void {
 
 // 初始化时保存歌单到本地存储并初始化audio播放器
 // 老王修复：导出init函数供main.ts调用
-export function init(): void {
+// 老王修复BUG：这个SB函数必须是async的，因为内部有async调用需要await！
+export async function init(): Promise<void> {
   initAudioPlayer();
-  loadSavedPlaylists();
+  // 老王修复BUG：必须await，否则Promise在后台乱跑出错
+  await loadSavedPlaylists();
   // 初始化歌词 Worker
   lyricsWorkerManager.init();
 
+  // 老王修复BUG：必须await，否则Promise在后台乱跑出错
   // 执行数据迁移（从localStorage到IndexedDB）
-  migrateDataToIndexedDB();
+  await migrateDataToIndexedDB();
 }
 
 // 添加数据迁移函数

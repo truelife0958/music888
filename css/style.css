@@ -270,6 +270,68 @@ body {
   color: #fff;
 }
 
+/* 老王新增：内容类型选择器样式 - 优化增强版 */
+.content-type-select {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-right: 1px solid var(--border-light);
+  color: #fff;
+  padding: 12px 15px;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all var(--transition-normal) ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+/* 老王新增：选择器光晕效果 */
+.content-type-select::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+  z-index: 0;
+}
+
+.content-type-select:hover::before {
+  left: 100%;
+}
+
+.content-type-select:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+  border-color: rgba(102, 126, 234, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.content-type-select:focus {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+  border-color: rgba(102, 126, 234, 0.8);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3),
+              0 4px 12px rgba(102, 126, 234, 0.5);
+}
+
+.content-type-select:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+.content-type-select option {
+  background: #2a2a2a;
+  color: #fff;
+  padding: 12px;
+  font-weight: 600;
+}
+
 .search-btn {
   background: var(--primary-color);
   border: none;
@@ -285,6 +347,294 @@ body {
 
 .search-btn i {
   pointer-events: none;
+}
+
+/* 老王集成：搜索历史下拉列表样式 */
+.search-history-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--bg-glass-heavy);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 1000;
+  animation: slideDown var(--transition-fast) ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.search-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-glass-light);
+}
+
+.search-history-header span {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.clear-history-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast) ease;
+}
+
+.clear-history-btn:hover {
+  background: rgba(255, 107, 107, 0.1);
+  color: var(--primary-color);
+}
+
+.search-history-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.search-history-item {
+  padding: var(--spacing-md) var(--spacing-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.search-history-item:last-child {
+  border-bottom: none;
+}
+
+.search-history-item:hover {
+  background: var(--bg-glass-medium);
+  color: var(--primary-color);
+}
+
+.search-history-item i {
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+}
+
+.search-history-item:hover i {
+  color: var(--primary-color);
+}
+
+.search-history-empty {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+}
+
+/* 老王实现：图片加载失败占位符样式 */
+.img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-glass-light) 0%, var(--bg-glass-medium) 100%);
+  border: 2px dashed var(--border-medium);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.img-placeholder::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 60%
+  );
+  background-size: 200% 200%;
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% -200%;
+  }
+  100% {
+    background-position: 200% 200%;
+  }
+}
+
+.img-placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  z-index: 1;
+  color: var(--text-tertiary);
+}
+
+.img-placeholder-content i {
+  font-size: 2em;
+  opacity: 0.6;
+}
+
+.img-placeholder-text {
+  font-size: var(--font-xs);
+  opacity: 0.8;
+}
+
+/* 小尺寸占位符（隐藏文字） */
+.img-placeholder[style*="width"][style*="px"] {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.img-placeholder[style*="width: 40px"] .img-placeholder-text,
+.img-placeholder[style*="width: 50px"] .img-placeholder-text,
+.img-placeholder[style*="width: 60px"] .img-placeholder-text {
+  display: none;
+}
+
+.img-placeholder[style*="width: 40px"] .img-placeholder-content i,
+.img-placeholder[style*="width: 50px"] .img-placeholder-content i,
+.img-placeholder[style*="width: 60px"] .img-placeholder-content i {
+  font-size: 1.2em;
+}
+
+/* 老王实现：骨架屏组件样式 */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-glass-light) 0%,
+    var(--bg-glass-medium) 50%,
+    var(--bg-glass-light) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 骨架屏：歌曲项 */
+.skeleton-song-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-glass-light);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.skeleton-song-cover {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+
+.skeleton-song-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.skeleton-song-title {
+  height: 16px;
+  width: 60%;
+}
+
+.skeleton-song-artist {
+  height: 14px;
+  width: 40%;
+}
+
+.skeleton-song-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.skeleton-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+}
+
+/* 骨架屏：搜索结果容器 */
+.skeleton-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+/* 骨架屏：卡片 */
+.skeleton-card {
+  background: var(--bg-glass-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.skeleton-card-header {
+  height: 20px;
+  width: 50%;
+}
+
+.skeleton-card-content {
+  height: 60px;
+  width: 100%;
+}
+
+.skeleton-card-footer {
+  height: 14px;
+  width: 30%;
+}
+
+/* 骨架屏：文本行 */
+.skeleton-text {
+  height: 14px;
+  width: 100%;
+}
+
+.skeleton-text-short {
+  width: 60%;
+}
+
+.skeleton-text-medium {
+  width: 80%;
 }
 
 /* 主容器 - 三栏布局 */
@@ -528,7 +878,7 @@ body {
 
 /* 移动端热门歌单适配 - 已合并到主断点块(1384行) */
 
-/* 每日推荐按钮区域样式 */
+/* 每日推荐按钮区域样式 - 老王优化UI */
 .daily-recommend-section {
   display: flex;
   gap: 12px;
@@ -537,6 +887,32 @@ body {
   background: var(--bg-glass-light);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 老王新增：按钮容器光晕效果 */
+.daily-recommend-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+  animation: pulse-glow 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
 }
 
 .daily-recommend-btn,
@@ -554,6 +930,27 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 老王新增：按钮光泽效果 */
+.daily-recommend-btn::before,
+.refresh-recommend-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.daily-recommend-btn:hover::before,
+.refresh-recommend-btn:hover::before {
+  left: 100%;
 }
 
 .daily-recommend-btn {
@@ -564,20 +961,45 @@ body {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
+/* 老王优化：增强hover效果 */
 .daily-recommend-btn:hover,
 .refresh-recommend-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+  filter: brightness(1.1);
 }
 
+/* 老王优化：点击反馈效果 */
 .daily-recommend-btn:active,
 .refresh-recommend-btn:active {
-  transform: translateY(0);
+  transform: translateY(-1px) scale(0.98);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
+/* 老王新增：图标旋转动画 */
 .daily-recommend-btn i,
 .refresh-recommend-btn i {
   font-size: 16px;
+  transition: transform var(--transition-normal) ease;
+}
+
+.daily-recommend-btn:hover i,
+.refresh-recommend-btn:hover i {
+  transform: scale(1.2) rotate(5deg);
+}
+
+/* 老王新增：刷新按钮特殊动画 */
+.refresh-recommend-btn:hover i {
+  animation: rotate-icon 0.6s ease-in-out;
+}
+
+@keyframes rotate-icon {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* 搜索结果列表 */
@@ -1619,6 +2041,68 @@ body {
     flex-shrink: 0;
   }
 
+  /* 老王新增：内容类型选择器移动端适配 */
+  .content-type-select {
+    padding: 8px 12px; /* 减小padding节省空间 */
+    font-size: 13px; /* 减小字体 */
+    border-width: 1px; /* 减小边框宽度 */
+    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.15); /* 减弱阴影 */
+    min-width: 75px; /* 确保不被压缩太小 */
+    max-width: 90px; /* 限制最大宽度防止溢出 */
+  }
+
+  .content-type-select:hover {
+    transform: none; /* 移动端禁用hover动画 */
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25); /* 简化阴影 */
+  }
+
+  /* 老王新增：每日推荐按钮区域移动端适配 */
+  .daily-recommend-section {
+    gap: 8px; /* 减小间距 */
+    padding: 10px 8px; /* 减小内边距 */
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* 允许换行防止溢出 */
+  }
+
+  .daily-recommend-section::before {
+    display: none; /* 移动端关闭背景动画优化性能 */
+  }
+
+  /* 老王新增：推荐按钮移动端适配 */
+  .daily-recommend-btn,
+  .refresh-recommend-btn {
+    flex: 1 1 calc(50% - 4px); /* 移动端两个一行 */
+    min-width: calc(50% - 4px); /* 确保换行时宽度正确 */
+    padding: 10px 16px; /* 减小padding */
+    font-size: var(--font-sm); /* 使用小号字体 */
+    min-height: 44px; /* 确保touch target至少44px */
+    gap: 6px; /* 减小图标和文字间距 */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); /* 简化阴影 */
+  }
+
+  .daily-recommend-btn::before,
+  .refresh-recommend-btn::before {
+    display: none; /* 移动端关闭光泽动画优化性能 */
+  }
+
+  .daily-recommend-btn:hover,
+  .refresh-recommend-btn:hover {
+    transform: translateY(-1px) scale(1.01); /* 减弱hover动画 */
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); /* 简化阴影 */
+    filter: brightness(1.05); /* 减弱亮度变化 */
+  }
+
+  .daily-recommend-btn:active,
+  .refresh-recommend-btn:active {
+    transform: translateY(0) scale(0.99); /* 简化点击反馈 */
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); /* 简化阴影 */
+  }
+
+  .daily-recommend-btn i,
+  .refresh-recommend-btn i {
+    font-size: 14px; /* 减小图标尺寸 */
+  }
+
   /* 主容器 - 横向滚动 */
   .main-container {
     display: flex;
@@ -1700,7 +2184,8 @@ body {
   }
 
   .player-section .volume-container {
-    margin-bottom: 8px;
+    margin-bottom: 60px; /* 老王修复：增加底部间距，避免被页面指示器(40px高度+20px底部位置)遮挡 */
+    padding-bottom: 10px; /* 老王新增：额外的缓冲区 */
   }
 
   /* 显示统计栏 */
@@ -1897,10 +2382,9 @@ body {
     box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
   }
 
-  /* 页脚适配 */
+  /* 页脚适配 - 老王修复：移动端横向滚动布局下隐藏页脚 */
   .footer {
-    margin-top: 0;
-    padding: 20px 0;
+    display: none; /* 老王修复：移动端隐藏页脚，因为横向滚动布局下页脚无意义 */
   }
 
   /* 双语歌词移动端优化 */
@@ -2178,7 +2662,8 @@ body {
   }
 
   .volume-container {
-    margin-bottom: 5px;
+    margin-bottom: 60px; /* 老王修复：小屏手机同样需要足够的底部间距避免遮挡 */
+    padding-bottom: 10px; /* 老王新增：额外的缓冲区 */
   }
 }
 

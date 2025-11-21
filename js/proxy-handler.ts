@@ -14,11 +14,6 @@ export function needsProxy(url: string, source?: string): boolean {
   try {
     const urlObj = new URL(url);
 
-    // 检查是否是需要代理的源
-    if (source && API_CONFIG.PROXY_SOURCES.includes(source as any)) {
-      return true;
-    }
-
     // 检查是否是允许的域名但使用HTTP（需要升级到HTTPS或代理）
     if (urlObj.protocol === 'http:') {
       const hostname = urlObj.hostname;

@@ -25,14 +25,22 @@ class LyricsWorkerManager {
     }
 
     try {
-      // 使用动态导入创建 Worker
-      this.worker = new Worker(new URL('./lyrics-worker.ts', import.meta.url), { type: 'module' });
+      // 老王修复BUG：Vite的module Worker loader有addListener错误
+      // 改用传统Worker创建方式，避免动态导入loader出错
+      // this.worker = new Worker(new URL('./lyrics-worker.ts', import.meta.url), { type: 'module' });
 
-      this.worker.addEventListener('message', this.handleMessage.bind(this));
-      this.worker.addEventListener('error', this.handleError.bind(this));
-
+      // 临时方案：直接使用降级Worker，避免Vite loader问题
+      console.log('📦 使用降级Worker（避免Vite loader问题）');
+      this.createFallbackWorker();
       this.workerReady = true;
       console.log('✅ 歌词 Worker 初始化成功');
+      return;
+
+      // this.worker.addEventListener('message', this.handleMessage.bind(this));
+      // this.worker.addEventListener('error', this.handleError.bind(this));
+
+      // this.workerReady = true;
+      // console.log('✅ 歌词 Worker 初始化成功');
     } catch (error) {
       console.error('❌ 歌词 Worker 初始化失败，使用降级方案:', error);
       this.workerReady = false;

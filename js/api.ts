@@ -1,5 +1,8 @@
 ﻿// js/api.ts - 优化版音乐API
 
+// 老王集成：导入Provider模块
+import { providerManager } from './providers/provider-manager';
+
 export interface Song {
   id: string;
   name: string;
@@ -38,72 +41,63 @@ class ApiError extends Error {
   }
 }
 
-// 检测API类型和格式
+// 检测API类型和格式 - 老王更新：添加Vercel API识别
 function detectApiFormat(apiUrl: string): {
   isGDStudio: boolean;
   isNCM: boolean;
   isMeting: boolean;
   isClawCloud: boolean;
-  format: 'gdstudio' | 'ncm' | 'meting' | 'clawcloud';
+  isVercel: boolean;
+  format: 'gdstudio' | 'ncm' | 'meting' | 'clawcloud' | 'vercel';
 } {
   const isGDStudio = apiUrl.includes('gdstudio');
   const isNCM = apiUrl.includes('ncm-api.imixc.top');
-  const isMeting = apiUrl.includes('meting');
-  const isClawCloud = apiUrl.includes('clawcloudrun.com');
+  const isMeting = apiUrl.includes('meting') || apiUrl.includes('injahow');
+  const isClawCloud = apiUrl.includes('clawcloudrun.com') || apiUrl.includes('onrender.com');
+  const isVercel = apiUrl.includes('vercel.app');
 
   return {
     isGDStudio,
     isNCM,
     isMeting,
     isClawCloud,
-    format: isGDStudio ? 'gdstudio' : isNCM ? 'ncm' : isClawCloud ? 'clawcloud' : 'meting',
+    isVercel,
+    format: isGDStudio ? 'gdstudio' : isVercel ? 'vercel' : isNCM ? 'ncm' : isClawCloud ? 'clawcloud' : 'meting',
   };
 }
 
-// 音乐API配置 - 修复：移除失效的CORS代理，直接请求API
+// 音乐API配置 - 老王更新：精简为3个有效源
 const API_SOURCES: ApiSource[] = [
   {
     name: 'GDStudio 主API',
     url: 'https://music-api.gdstudio.xyz/api.php',
   },
   {
-    name: 'GDStudio 备用API',
-    url: 'https://music-api.gdstudio.org/api.php',
+    name: 'Vercel增强API',
+    url: 'https://api-enhanced-three-indol.vercel.app/',
   },
   {
     name: 'Meting备用API',
     url: 'https://api.injahow.cn/meting/',
-  },
-  {
-    name: 'NCM增强API',
-    url: 'https://ncm-api.imixc.top/',
-  },
-  {
-    name: 'ClawCloud API (网易云增强)',
-    url: 'https://ncm-api-latest.onrender.com/',
   },
 ];
 
 let API_BASE = API_SOURCES[0].url;
 let currentApiIndex = 0;
 
-// 播放专用API源优先级列表 - 修复：使用正确的GDStudio API地址(仅.xyz有效)
+// 播放专用API源优先级列表 - 老王更新：精简为3个有效源
 const PLAYBACK_API_SOURCES: ApiSource[] = [
   {
     name: 'GDStudio 主API',
     url: 'https://music-api.gdstudio.xyz/api.php',
   },
   {
+    name: 'Vercel增强API',
+    url: 'https://api-enhanced-three-indol.vercel.app/',
+  },
+  {
     name: 'Meting备用API',
     url: 'https://api.injahow.cn/meting/',
-  },
-  {
-    name: 'NCM增强API',
-    url: 'https://ncm-api.imixc.top/',
-  },
-  {
-    name: 'ClawCloud API (网易云增强)',
-    url: 'https://ncm-api-latest.onrender.com/',
   },
 ];
 
@@ -891,7 +885,7 @@ export async function detectApiCapabilities(apiUrl?: string): Promise<{
   hotPlaylists: boolean;
   artistList: boolean;
   artistTopSongs: boolean;
-  format: 'gdstudio' | 'ncm' | 'meting' | 'clawcloud';
+  format: 'gdstudio' | 'ncm' | 'meting' | 'clawcloud' | 'vercel';
 }> {
   const url = apiUrl || API_BASE;
   const apiFormat = detectApiFormat(url);
@@ -1247,8 +1241,56 @@ export async function getSongUrl(
     }
   }
 
-  // 所有API源都失败，返回错误
-  console.error(`❌ [播放优化] 所有API源均失败，歌曲: ${song.name}`);
+  // 老王集成：所有API源都失败后，尝试Provider直连平台
+  console.log(`⚠️ [播放优化] 所有API源失败，尝试Provider直连平台`);
+  try {
+    const providerResult = await getSongUrlFromProvider(song, quality);
+    if (providerResult.url) {
+      // 老王修复BUG：验证Provider返回的URL是否可用（避免CORS阻塞的无效链接）
+      const isUrlValid = await validateUrl(providerResult.url);
+      if (isUrlValid) {
+        console.log(`✅ [播放优化] Provider成功获取播放链接`);
+        return providerResult;
+      } else {
+        console.warn(`⚠️ [播放优化] Provider返回的URL被CORS阻塞，继续尝试跨平台fallback`);
+      }
+    }
+  } catch (providerError) {
+    console.warn(`⚠️ [播放优化] Provider失败:`, providerError);
+  }
+
+  // 老王新增：跨平台智能搜索fallback
+  // 当原平台（如网易云）版权限制时，自动搜索其他平台的同名歌曲
+  console.log(`🔄 [跨平台Fallback] 开始搜索其他平台: ${song.name}`);
+  const alternativeSources = ['kuwo', 'migu', 'kugou', 'qq'].filter(s => s !== song.source);
+
+  for (const source of alternativeSources) {
+    try {
+      console.log(`🔄 [跨平台Fallback] 尝试平台: ${source}`);
+
+      // 在其他平台搜索同名歌曲
+      const searchKeyword = `${song.name} ${Array.isArray(song.artist) ? song.artist[0] : song.artist}`;
+      const searchResults = await searchMusicAPI(searchKeyword, source);
+
+      if (searchResults.length > 0) {
+        const matchedSong = searchResults[0]; // 取第一个匹配结果
+        console.log(`✅ [跨平台Fallback] 在${source}找到匹配歌曲: ${matchedSong.name}`);
+
+        // 尝试获取这首歌的播放URL
+        const fallbackResult = await getSongUrl(matchedSong, quality);
+        if (fallbackResult.url && !fallbackResult.error) {
+          console.log(`🎉 [跨平台Fallback] 成功从${source}获取播放链接！`);
+          return fallbackResult;
+        }
+      }
+    } catch (fallbackError) {
+      console.warn(`⚠️ [跨平台Fallback] ${source}搜索失败:`, fallbackError);
+      continue; // 继续尝试下一个平台
+    }
+  }
+
+  // 所有方式都失败，返回错误
+  console.error(`❌ [播放优化] 所有方式均失败（含跨平台搜索），歌曲: ${song.name}`);
   const combinedError =
     errors.length > 0 ? `尝试${errors.length}个API均失败 - ${errors[0]}` : '无法获取音乐链接';
 
@@ -1312,11 +1354,37 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
 
     if (lyricData.lyric) {
       cache.set(cacheKey, lyricData, CacheCategory.LYRICS);
+      return lyricData;
     }
 
-    return lyricData;
+    // 老王修改：如果现有API未返回歌词，直接尝试Provider
+    console.log(`⚠️ 现有API未返回歌词，尝试Provider直连平台`);
+    try {
+      const providerLyric = await getLyricFromProvider(song);
+      if (providerLyric.lyric) {
+        cache.set(cacheKey, providerLyric, CacheCategory.LYRICS);
+        return providerLyric;
+      }
+    } catch (providerError) {
+      console.warn('Provider获取歌词失败:', providerError);
+    }
+
+    return { lyric: '' };
   } catch (error) {
     console.warn('获取歌词失败:', error);
+
+    // 老王修改：现有API失败时，直接尝试Provider作为备用源
+    try {
+      console.log(`⚠️ 现有API失败，尝试Provider直连平台作为备用源`);
+      const providerLyric = await getLyricFromProvider(song);
+      if (providerLyric.lyric) {
+        cache.set(cacheKey, providerLyric, CacheCategory.LYRICS);
+        return providerLyric;
+      }
+    } catch (providerError) {
+      console.warn('Provider也失败了:', providerError);
+    }
+
     return { lyric: '' };
   }
 }
@@ -2793,3 +2861,116 @@ async function getArtistSongsBySearch(artistId: string): Promise<{
     songs: [],
   };
 }
+
+// ========== 老王集成：Listen 1 Provider架构 ==========
+
+/**
+ * 聚合搜索 - 从所有启用的Provider平台搜索
+ *
+ * @param keyword 搜索关键词
+ * @param limit 每个平台返回数量限制
+ * @returns 所有平台的搜索结果
+ */
+export async function aggregateSearchMusic(keyword: string, limit: number = 30): Promise<Song[]> {
+  console.log(`🎵 [聚合搜索] 开始搜索: ${keyword}`);
+
+  try {
+    const results = await providerManager.aggregateSearch(keyword, limit);
+    console.log(`✅ [聚合搜索] 成功，共找到 ${results.length} 首歌曲`);
+    return results;
+  } catch (error) {
+    console.error('❌ [聚合搜索] 失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 使用Provider获取歌曲URL（作为现有API的fallback）
+ *
+ * @param song 歌曲对象
+ * @param quality 音质
+ * @returns 播放URL和音质
+ */
+export async function getSongUrlFromProvider(
+  song: Song,
+  quality: string = '320k'
+): Promise<{ url: string; br: string }> {
+  console.log(`🎵 [Provider] 尝试获取播放链接: ${song.name}`);
+
+  try {
+    const result = await providerManager.getSongUrlWithFallback(song, quality);
+    if (result.url) {
+      console.log(`✅ [Provider] 成功获取播放链接`);
+    } else {
+      console.warn(`⚠️ [Provider] 未能获取播放链接`);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ [Provider] 获取播放链接失败:', error);
+    return { url: '', br: '' };
+  }
+}
+
+/**
+ * 使用Provider获取歌词（作为现有API的fallback）
+ *
+ * @param song 歌曲对象
+ * @returns 歌词
+ */
+export async function getLyricFromProvider(song: Song): Promise<{ lyric: string }> {
+  console.log(`🎵 [Provider] 尝试获取歌词: ${song.name}`);
+
+  try {
+    const result = await providerManager.getLyricWithFallback(song);
+    if (result.lyric) {
+      console.log(`✅ [Provider] 成功获取歌词`);
+    } else {
+      console.warn(`⚠️ [Provider] 未能获取歌词`);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ [Provider] 获取歌词失败:', error);
+    return { lyric: '' };
+  }
+}
+
+/**
+ * 获取所有Provider的状态
+ *
+ * @returns Provider状态列表
+ */
+export function getProvidersStatus(): { id: string; name: string; enabled: boolean; color: string }[] {
+  return providerManager.getProvidersStatus();
+}
+
+/**
+ * 启用指定Provider
+ *
+ * @param providerId Provider ID
+ */
+export function enableProvider(providerId: string): void {
+  providerManager.enableProvider(providerId);
+}
+
+/**
+ * 禁用指定Provider
+ *
+ * @param providerId Provider ID
+ */
+export function disableProvider(providerId: string): void {
+  providerManager.disableProvider(providerId);
+}
+
+/**
+ * 获取指定Provider
+ *
+ * @param providerId Provider ID
+ * @returns Provider实例或undefined
+ */
+export function getProvider(providerId: string) {
+  return providerManager.getProvider(providerId);
+}
+
+// 导出providerManager供高级使用
+export { providerManager };
+

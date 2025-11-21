@@ -4,6 +4,8 @@ import { isSongInFavoritesSync } from './player.js';
 import { formatTime, formatArtist } from './utils.js';
 import { LyricLine } from './types.js';
 import { VirtualScroll, createSongListVirtualScroll } from './virtual-scroll.js';
+// 老王集成：骨架屏生成器
+import { generateSongListSkeleton } from './skeleton.js';
 
 // --- DOM Element Cache ---
 interface DOMElements {
@@ -643,7 +645,9 @@ export function showLoading(containerId: string = 'searchResults'): void {
     console.error(`❌ 找不到容器元素: ${containerId}`);
     return;
   }
-  container.innerHTML = `<div class="loading"><i class="fas fa-spinner"></i><div>正在加载...</div></div>`;
+
+  // 老王优化：使用骨架屏替代简单的加载提示
+  container.innerHTML = generateSongListSkeleton(8);
 }
 
 export function showError(message: string, containerId: string = 'searchResults'): void {
