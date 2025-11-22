@@ -2338,6 +2338,9 @@ body {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     padding: 0 5px;
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .hot-playlist-item {
@@ -2518,6 +2521,9 @@ body {
 
   .artist-grid {
     grid-template-columns: 1fr;
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .artist-detail-header,
