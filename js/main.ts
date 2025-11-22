@@ -19,6 +19,12 @@ import { searchHistoryManager } from './search-history-manager.js';
 // 老王集成：图片占位符管理器
 import { imagePlaceholderManager } from './image-placeholder.js';
 
+// 老王集成：Listen1 多平台支持
+import { unifiedProviderManager } from './providers/unified-provider-manager.js';
+import { loWeb } from './providers/listen1-media-service.js';
+import { enhancedSearch, searchMusic, getMusicPlayUrl, getMusicLyric } from './enhanced-search.js';
+import { sourceManagerUI } from './ui/source-manager.js';
+
 // 优化: 使用动态导入实现代码分割，减少初始加载时间
 let artistModule: any = null; // 老王改：原discover模块改为artist
 let playlistModule: any = null; // 老王改：新的playlist模块（整合了rank）
@@ -832,7 +838,8 @@ async function handleSearch(): Promise<void> {
   console.log('🔍 [handleSearch] 开始搜索:', keyword);
 
   // 修复：界面上没有 sourceSelect 元素，硬编码默认源
-  const source = 'netease';
+  // 使用增强搜索，支持自动选择最佳源
+  const source = 'auto'; // 自动选择 Listen1 全平台搜索
 
   // 优化：搜索时自动跳转到搜索结果标签页（无论当前在哪个位置）
   switchTab('search');
@@ -845,14 +852,31 @@ async function handleSearch(): Promise<void> {
   ui.showLoading('searchResults');
 
   try {
-    // 老王优化：使用主API搜索
-    let songs = await api.searchMusicAPI(keyword, source);
-    // 老王删除：聚合搜索功能已移除（依赖失效API）
+    // 🔥 老王增强：使用新的增强搜索系统，整合 Listen1 多平台支持
+    const searchResult = await enhancedSearch.search({
+      keyword,
+      source, // 'auto' 会自动选择最佳搜索方式
+      type: 0,  // 搜索歌曲
+      limit: 30
+    });
 
-    if (songs.length > 0) {
-      ui.displaySearchResults(songs, 'searchResults', songs);
-      ui.showNotification(`找到 ${songs.length} 首歌曲`, 'success');
-      
+    console.log('[handleSearch] 搜索结果来源:', searchResult.fromSource, '找到', searchResult.songs.length, '首歌曲');
+
+    if (searchResult.songs.length > 0) {
+      // 显示搜索结果，并标记来源
+      ui.displaySearchResults(searchResult.songs, 'searchResults', searchResult.songs);
+
+      // 显示来源信息
+      const sourceNames = {
+        'listen1': 'Listen1 全平台',
+        'enhanced': '增强版多平台',
+        'traditional': '传统API',
+        'auto': '智能选择'
+      };
+      const sourceName = sourceNames[searchResult.fromSource as keyof typeof sourceNames] || searchResult.fromSource;
+
+      ui.showNotification(`找到 ${searchResult.songs.length} 首歌曲 (${sourceName})`, 'success');
+
       // 移动端搜索后自动聚焦到搜索结果
       if (window.innerWidth <= 768) {
         // 延迟执行，确保结果已渲染
@@ -863,7 +887,7 @@ async function handleSearch(): Promise<void> {
             (window as any).switchMobilePage(0);
             // 滚动搜索结果容器到顶部
             searchResults.scrollTop = 0;
-            // console.log('✅ 移动端已自动聚焦到搜索结果');
+            console.log('✅ 移动端已自动聚焦到搜索结果');
           }
         }, 300);
       }
@@ -873,8 +897,24 @@ async function handleSearch(): Promise<void> {
     }
   } catch (error) {
     console.error('搜索失败:', error);
-    ui.showError('搜索失败，请稍后重试', 'searchResults');
-    ui.showNotification('搜索失败，请检查网络连接', 'error');
+
+    // 降级到传统搜索
+    console.log('🔄 [handleSearch] 增强搜索失败，降级到传统搜索');
+    try {
+      let songs = await api.searchMusicAPI(keyword, 'netease');
+
+      if (songs.length > 0) {
+        ui.displaySearchResults(songs, 'searchResults', songs);
+        ui.showNotification(`找到 ${songs.length} 首歌曲 (传统API)`, 'success');
+      } else {
+        ui.showError('未找到相关歌曲，请尝试其他关键词', 'searchResults');
+        ui.showNotification('未找到相关歌曲', 'warning');
+      }
+    } catch (fallbackError) {
+      console.error('传统搜索也失败:', fallbackError);
+      ui.showError('搜索失败，请稍后重试', 'searchResults');
+      ui.showNotification('搜索失败，请检查网络连接', 'error');
+    }
   }
 }
 

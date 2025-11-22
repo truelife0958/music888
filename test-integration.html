@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音源集成测试 - Music888</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 32px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .test-input {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .test-btn {
+            padding: 10px 20px;
+            margin-left: 10px;
+            background: #1db954;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-btn:hover {
+            background: #1aa34a;
+        }
+        .test-results {
+            margin-top: 16px;
+            padding: 16px;
+            background: #f8f8f8;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .result-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .status-success { color: #1db954; }
+        .status-error { color: #ff4444; }
+        .status-info { color: #ff8800; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Music888 音源集成测试</h1>
+        <p>测试 Listen1 Chrome Extension 多平台架构的集成情况</p>
+
+        <div class="test-section">
+            <h3>🔍 搜索测试</h3>
+            <div>
+                <input type="text" id="searchInput" class="test-input" placeholder="输入搜索关键词（如：周杰伦）" value="周杰伦">
+                <button id="searchBtn" class="test-btn">测试搜索</button>
+                <select id="searchSource" class="test-input" style="width: 150px; margin-left: 10px;">
+                    <option value="auto">智能选择</option>
+                    <option value="listen1">Listen1 全平台</option>
+                    <option value="enhanced">增强版多平台</option>
+                    <option value="netease">网易云音乐</option>
+                    <option value="qq">QQ音乐</option>
+                </select>
+            </div>
+            <div id="searchResults" class="test-results">等待测试...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎧 播放URL测试</h3>
+            <p>点击搜索结果中的歌曲，测试播放链接获取</p>
+            <div id="playUrlResults" class="test-results">等待选择歌曲...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 歌词测试</h3>
+            <p>自动测试搜索歌曲的歌词获取</p>
+            <div id="lyricResults" class="test-results">等待选择歌曲...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>⚙️ 系统状态</h3>
+            <button id="statusBtn" class="test-btn">检查系统状态</button>
+            <div id="statusResults" class="test-results">点击按钮检查状态...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 综合测试</h3>
+            <button id="fullTestBtn" class="test-btn">运行完整测试套件</button>
+            <div id="fullTestResults" class="test-results">点击按钮开始测试...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 导入测试模块
+        import { sourceTester } from '/js/source-tester.js';
+        import { enhancedSearch } from '/js/enhanced-search.js';
+        import { unifiedProviderManager } from '/js/providers/unified-provider-manager.js';
+
+        let currentSongs = [];
+
+        // 搜索测试
+        document.getElementById('searchBtn').addEventListener('click', async () => {
+            const keyword = document.getElementById('searchInput').value;
+            const source = document.getElementById('searchSource').value;
+            const resultsDiv = document.getElementById('searchResults');
+
+            resultsDiv.innerHTML = '<div class="loading">🔍 搜索中...</div>';
+
+            try {
+                const startTime = Date.now();
+                const result = await enhancedSearch.search({
+                    keyword,
+                    source,
+                    type: 0,
+                    limit: 10
+                });
+                const duration = Date.now() - startTime;
+
+                currentSongs = result.songs;
+
+                let html = `<div class="status-success">✅ 搜索成功 (${result.fromSource}, ${duration}ms) - 找到 ${result.songs.length} 首歌曲</div>`;
+
+                result.songs.slice(0, 5).forEach((song, index) => {
+                    html += `
+                        <div class="result-item">
+                            <strong>${index + 1}. ${song.name}</strong><br>
+                            歌手: ${song.artist?.[0] || '未知'}<br>
+                            专辑: ${song.album || '未知'}<br>
+                            来源: ${song.source}<br>
+                            <button onclick="testSong(${index})" style="margin-top: 8px; padding: 4px 8px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">测试这首歌</button>
+                        </div>
+                    `;
+                });
+
+                resultsDiv.innerHTML = html;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="status-error">❌ 搜索失败: ${error.message}</div>`;
+            }
+        });
+
+        // 测试单首歌曲
+        window.testSong = async (index) => {
+            const song = currentSongs[index];
+            if (!song) return;
+
+            // 测试播放URL
+            const playUrlDiv = document.getElementById('playUrlResults');
+            playUrlDiv.innerHTML = '<div class="loading">🎧 获取播放链接...</div>';
+
+            try {
+                const playResult = await enhancedSearch.getPlayUrl(song);
+                if (playResult.url) {
+                    playUrlDiv.innerHTML = `
+                        <div class="status-success">✅ 播放链接获取成功 (${playResult.fromSource})</div>
+                        <div class="result-item">
+                            <strong>${song.name}</strong><br>
+                            URL: ${playResult.url.substring(0, 100)}...<br>
+                            来源: ${playResult.fromSource}
+                        </div>
+                    `;
+                } else {
+                    playUrlDiv.innerHTML = `<div class="status-error">❌ 无法获取播放链接</div>`;
+                }
+            } catch (error) {
+                playUrlDiv.innerHTML = `<div class="status-error">❌ 播放链接获取失败: ${error.message}</div>`;
+            }
+
+            // 测试歌词
+            const lyricDiv = document.getElementById('lyricResults');
+            lyricDiv.innerHTML = '<div class="loading">📝 获取歌词...</div>';
+
+            try {
+                const lyricResult = await enhancedSearch.getLyric(song);
+                if (lyricResult.lyric) {
+                    lyricDiv.innerHTML = `
+                        <div class="status-success">✅ 歌词获取成功 (${lyricResult.fromSource})</div>
+                        <div class="result-item">
+                            <strong>${song.name}</strong><br>
+                            <pre style="max-height: 150px; overflow-y: auto; background: white; padding: 8px; border-radius: 4px;">${lyricResult.lyric.substring(0, 500)}${lyricResult.lyric.length > 500 ? '...' : ''}</pre>
+                            来源: ${lyricResult.fromSource}
+                        </div>
+                    `;
+                } else {
+                    lyricDiv.innerHTML = `<div class="status-error">❌ 无法获取歌词</div>`;
+                }
+            } catch (error) {
+                lyricDiv.innerHTML = `<div class="status-error">❌ 歌词获取失败: ${error.message}</div>`;
+            }
+        };
+
+        // 系统状态检查
+        document.getElementById('statusBtn').addEventListener('click', () => {
+            const statusDiv = document.getElementById('statusResults');
+
+            try {
+                const systemStatus = unifiedProviderManager.getSystemStatus();
+                const platforms = unifiedProviderManager.getAllPlatforms();
+                const searchStats = enhancedSearch.getSearchStats();
+
+                let html = `
+                    <div class="status-success">✅ 系统状态正常</div>
+                    <div class="result-item">
+                        <strong>系统状态:</strong><br>
+                        ${JSON.stringify(systemStatus, null, 2)}
+                    </div>
+                    <div class="result-item">
+                        <strong>支持平台 (${platforms.length}个):</strong><br>
+                        ${platforms.map(p => `${p.name} (${p.source})`).join(', ')}
+                    </div>
+                    <div class="result-item">
+                        <strong>搜索统计:</strong><br>
+                        ${JSON.stringify(searchStats, null, 2)}
+                    </div>
+                `;
+
+                statusDiv.innerHTML = html;
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status-error">❌ 状态检查失败: ${error.message}</div>`;
+            }
+        });
+
+        // 完整测试套件
+        document.getElementById('fullTestBtn').addEventListener('click', async () => {
+            const resultsDiv = document.getElementById('fullTestResults');
+            resultsDiv.innerHTML = '<div class="loading">🧪 运行完整测试套件...</div>';
+
+            try {
+                await sourceTester.runFullTest();
+                await sourceTester.testSystemStatus();
+
+                resultsDiv.innerHTML = `
+                    <div class="status-success">✅ 完整测试套件执行完成</div>
+                    <div class="result-item">
+                        <strong>测试结果:</strong><br>
+                        请查看浏览器控制台的详细输出
+                    </div>
+                    <div class="status-info">💡 打开开发者工具控制台查看详细测试结果</div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="status-error">❌ 测试套件执行失败: ${error.message}</div>`;
+            }
+        });
+
+        // 页面加载完成提示
+        console.log('🎵 Music888 音源集成测试页面已加载');
+        console.log('💡 可以直接调用 enhancedSearch, unifiedProviderManager 等对象进行测试');
+    </script>
+</body>
+</html>

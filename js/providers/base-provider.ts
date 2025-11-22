@@ -134,7 +134,7 @@ export abstract class BaseProvider {
    * @param rawSong 原始歌曲数据
    * @returns 规范化后的 Song 对象
    */
-  protected normalizeSong(rawSong: any): Song {
+  protected normalizeSong(rawSong: any): Song | null {
     // 默认实现，子类可以覆盖
     return rawSong as Song;
   }

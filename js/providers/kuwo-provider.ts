@@ -5,7 +5,7 @@ import {
   type PlayUrlResult,
   type LyricResult,
 } from './base-provider.js';
-import type { Song } from '../types/music.js';
+import type { Song } from '../api.js';
 
 /**
  * 酷我音乐Provider - 老王实现
@@ -66,7 +66,7 @@ export class KuwoProvider extends BaseProvider {
     let encrypted = '';
 
     for (let i = 0; i < token.length; i++) {
-      const charCode = parseInt(token.charCodeAt(i) ^ Math.floor((n / c) * 255));
+      const charCode = Math.floor(token.charCodeAt(i) ^ Math.floor((n / c) * 255));
       encrypted += (charCode < 16 ? '0' : '') + charCode.toString(16);
       n = (o * n + l) % c;
     }
@@ -125,7 +125,7 @@ export class KuwoProvider extends BaseProvider {
       const songs = json.abslist
         .slice(0, limit)
         .map((rawSong: any) => this.normalizeSong(rawSong))
-        .filter((song): song is Song => song !== null);
+        .filter((song: Song | null): song is Song => song !== null);
 
       return {
         songs,
@@ -251,15 +251,18 @@ export class KuwoProvider extends BaseProvider {
       }
 
       const trackId = this.generateTrackId(rawSong.DC_TARGETID);
+      const picUrl = rawSong.web_albumpic_short
+        ? `https://img2.kuwo.cn/star/albumcover/${rawSong.web_albumpic_short}`
+        : '';
 
       return {
         id: trackId,
         name: rawSong.NAME || '未知歌曲',
         artist: rawSong.ARTIST || '未知艺术家',
         album: rawSong.ALBUM || '',
-        pic: rawSong.web_albumpic_short
-          ? `https://img2.kuwo.cn/star/albumcover/${rawSong.web_albumpic_short}`
-          : '',
+        pic_id: rawSong.DC_TARGETID || '',
+        lyric_id: rawSong.DC_TARGETID || '',
+        pic_url: picUrl,
         source: 'kuwo',
       };
     } catch (error) {

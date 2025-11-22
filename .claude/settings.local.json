@@ -7,7 +7,14 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "mcp__Playwright__browser_navigate",
+      "mcp__Playwright__browser_console_messages",
+      "mcp__Playwright__browser_type",
+      "mcp__Playwright__browser_snapshot",
+      "mcp__Playwright__browser_click",
+      "mcp__Playwright__browser_wait_for",
+      "mcp__Playwright__browser_evaluate"
     ],
     "deny": [],
     "ask": []
