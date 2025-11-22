@@ -66,15 +66,12 @@ export class EnhancedSearch {
 
     let result: SearchResult;
 
-    // 智能选择搜索方式
-    if (source === 'auto') {
-      result = await this.autoSearch(keyword, type, limit, curpage);
-    } else if (source === 'allmusic' || source === 'listen1') {
-      result = await this.listen1Search(keyword, type, limit, curpage);
-    } else if (source === 'enhanced') {
-      result = await this.enhancedSearch(keyword, 'netease', limit);
+    // 老王修复CORS：强制使用原有API，避免Listen1/Enhanced的CORS阻塞
+    if (source === 'auto' || source === 'allmusic' || source === 'listen1' || source === 'enhanced') {
+      // 所有这些源都走原有API（网易云）
+      result = await this.traditionalSearch(keyword, 'netease', limit);
     } else {
-      // 传统搜索或指定平台搜索
+      // 指定平台搜索
       result = await this.traditionalSearch(keyword, source, limit);
     }
 
@@ -94,10 +91,8 @@ export class EnhancedSearch {
    * 自动搜索 - 智能选择最佳源
    */
   private async autoSearch(keyword: string, type: number, limit: number, curpage: number): Promise<SearchResult> {
-    // 搜索策略：1. Listen1全平台 -> 2. 统一管理器 -> 3. 原有API
+    // 老王修复CORS：跳过 Listen1 和 Enhanced（浏览器环境CORS阻止），直接使用原有API
     const searchStrategies = [
-      () => this.listen1Search(keyword, type, limit, curpage),
-      () => this.enhancedSearch(keyword, 'netease', limit),
       () => this.traditionalSearch(keyword, 'netease', limit),
     ];
 
