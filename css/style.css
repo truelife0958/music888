@@ -1,8 +1,8 @@
-/* 简化版音乐播放器样式 - 优化版 */
+﻿/* 绠€鍖栫増闊充箰鎾斁鍣ㄦ牱寮?- 浼樺寲鐗?*/
 
-/* ========== CSS 变量系统 ========== */
+/* ========== CSS 鍙橀噺绯荤粺 ========== */
 :root {
-  /* 颜色系统 - 默认暗色主题 */
+  /* 棰滆壊绯荤粺 - 榛樿鏆楄壊涓婚 */
   --primary-color: #ff6b6b;
   --primary-dark: #ff5252;
   --primary-light: #ff8a80;
@@ -11,43 +11,43 @@
   --text-secondary: rgba(255, 255, 255, 0.7);
   --text-tertiary: rgba(255, 255, 255, 0.5);
 
-  /* 背景透明度 */
+  /* 鑳屾櫙閫忔槑搴?*/
   --bg-overlay: rgba(0, 0, 0, 0.85);
   --bg-glass-light: rgba(255, 255, 255, 0.05);
   --bg-glass-medium: rgba(255, 255, 255, 0.1);
   --bg-glass-heavy: rgba(255, 255, 255, 0.15);
 
-  /* 边框颜色 */
+  /* 杈规棰滆壊 */
   --border-light: rgba(255, 255, 255, 0.1);
   --border-medium: rgba(255, 255, 255, 0.2);
   --border-primary: rgba(255, 107, 107, 0.5);
 
-  /* 间距系统 */
+  /* 闂磋窛绯荤粺 */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
   --spacing-lg: 20px;
   --spacing-xl: 30px;
 
-  /* 圆角系统 */
+  /* 鍦嗚绯荤粺 */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
   --radius-xl: 25px;
   --radius-full: 50%;
 
-  /* 阴影系统 */
+  /* 闃村奖绯荤粺 */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
   --shadow-primary: 0 8px 25px rgba(255, 107, 107, 0.4);
 
-  /* 过渡时间 */
+  /* 杩囨浮鏃堕棿 */
   --transition-fast: 0.2s;
   --transition-normal: 0.3s;
   --transition-slow: 0.4s;
 
-  /* 字体大小 */
+  /* 瀛椾綋澶у皬 */
   --font-xs: 12px;
   --font-sm: 13px;
   --font-md: 14px;
@@ -57,9 +57,9 @@
   --font-2xl: 24px;
 }
 
-/* ========== 亮色主题 ========== */
+/* ========== 浜壊涓婚 ========== */
 [data-theme='light'] {
-  /* 颜色系统 */
+  /* 棰滆壊绯荤粺 */
   --primary-color: #ff6b6b;
   --primary-dark: #ff5252;
   --primary-light: #ff8a80;
@@ -68,25 +68,25 @@
   --text-secondary: rgba(0, 0, 0, 0.7);
   --text-tertiary: rgba(0, 0, 0, 0.5);
 
-  /* 背景透明度 */
+  /* 鑳屾櫙閫忔槑搴?*/
   --bg-overlay: rgba(255, 255, 255, 0.95);
   --bg-glass-light: rgba(255, 255, 255, 0.6);
   --bg-glass-medium: rgba(255, 255, 255, 0.8);
   --bg-glass-heavy: rgba(255, 255, 255, 0.9);
 
-  /* 边框颜色 */
+  /* 杈规棰滆壊 */
   --border-light: rgba(0, 0, 0, 0.1);
   --border-medium: rgba(0, 0, 0, 0.15);
   --border-primary: rgba(255, 107, 107, 0.5);
 
-  /* 阴影系统 */
+  /* 闃村奖绯荤粺 */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.15);
   --shadow-primary: 0 8px 25px rgba(255, 107, 107, 0.3);
 }
 
-/* ========== 主题过渡动画 ========== */
+/* ========== 涓婚杩囨浮鍔ㄧ敾 ========== */
 body,
 .navbar,
 .bg-overlay,
@@ -110,9 +110,9 @@ body,
 
 html {
   max-width: 100vw;
-  overflow-x: hidden; /* 防止横向滚动 */
-  position: relative; /* 确保定位上下文 */
-  width: 100%; /* 修复：确保宽度为100% */
+  overflow-x: hidden; /* 闃叉妯悜婊氬姩 */
+  position: relative; /* 纭繚瀹氫綅涓婁笅鏂?*/
+  width: 100%; /* 淇锛氱‘淇濆搴︿负100% */
 }
 
 body {
@@ -122,13 +122,13 @@ body {
   background: var(--bg-color);
   color: var(--text-color);
   font-size: var(--font-base);
-  overflow-x: hidden; /* 防止横向滚动 */
-  max-width: 100vw; /* 限制最大宽度 */
-  width: 100%; /* 确保宽度为100% */
-  position: relative; /* 修复：确保定位上下文 */
+  overflow-x: hidden; /* 闃叉妯悜婊氬姩 */
+  max-width: 100vw; /* 闄愬埗鏈€澶у搴?*/
+  width: 100%; /* 纭繚瀹藉害涓?00% */
+  position: relative; /* 淇锛氱‘淇濆畾浣嶄笂涓嬫枃 */
 }
 
-/* 背景动画 */
+/* 鑳屾櫙鍔ㄧ敾 */
 .bg-animation {
   position: fixed;
   top: 0;
@@ -164,7 +164,7 @@ body {
   }
 }
 
-/* 导航栏 */
+/* 瀵艰埅鏍?*/
 .navbar {
   background: var(--bg-glass-medium);
   backdrop-filter: blur(20px);
@@ -198,9 +198,9 @@ body {
   font-size: 28px;
 }
 
-/* API状态指示器 - 已移除 */
+/* API鐘舵€佹寚绀哄櫒 - 宸茬Щ闄?*/
 
-/* 搜索栏 */
+/* 鎼滅储鏍?*/
 .search-container {
   flex: 1;
   max-width: 600px;
@@ -215,8 +215,8 @@ body {
   overflow: hidden;
   border: 1px solid var(--border-medium);
   transition: all var(--transition-normal) ease;
-  max-width: 100%; /* 防止超出容器 */
-  box-sizing: border-box; /* 修复：确保padding不影响宽度 */
+  max-width: 100%; /* 闃叉瓒呭嚭瀹瑰櫒 */
+  box-sizing: border-box; /* 淇锛氱‘淇漰adding涓嶅奖鍝嶅搴?*/
 }
 
 .search-wrapper:focus-within {
@@ -246,8 +246,8 @@ body {
   color: #fff;
   font-size: 16px;
   outline: none;
-  min-width: 0; /* 修复：允许收缩，防止横向溢出 */
-  box-sizing: border-box; /* 修复：确保padding不影响宽度 */
+  min-width: 0; /* 淇锛氬厑璁告敹缂╋紝闃叉妯悜婧㈠嚭 */
+  box-sizing: border-box; /* 淇锛氱‘淇漰adding涓嶅奖鍝嶅搴?*/
 }
 
 .search-input::placeholder {
@@ -261,8 +261,8 @@ body {
   padding: 12px 15px;
   outline: none;
   cursor: pointer;
-  flex-shrink: 0; /* 修复：防止收缩导致文字截断 */
-  box-sizing: border-box; /* 修复：确保padding不影响宽度 */
+  flex-shrink: 0; /* 淇锛氶槻姝㈡敹缂╁鑷存枃瀛楁埅鏂?*/
+  box-sizing: border-box; /* 淇锛氱‘淇漰adding涓嶅奖鍝嶅搴?*/
 }
 
 .source-select option {
@@ -270,7 +270,7 @@ body {
   color: #fff;
 }
 
-/* 老王新增：内容类型选择器样式 - 优化增强版 */
+/* 鑰佺帇鏂板锛氬唴瀹圭被鍨嬮€夋嫨鍣ㄦ牱寮?- 浼樺寲澧炲己鐗?*/
 .content-type-select {
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
   border: 2px solid rgba(102, 126, 234, 0.3);
@@ -289,7 +289,7 @@ body {
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
-/* 老王新增：选择器光晕效果 */
+/* 鑰佺帇鏂板锛氶€夋嫨鍣ㄥ厜鏅曟晥鏋?*/
 .content-type-select::before {
   content: '';
   position: absolute;
@@ -349,7 +349,7 @@ body {
   pointer-events: none;
 }
 
-/* 老王集成：搜索历史下拉列表样式 */
+/* 鑰佺帇闆嗘垚锛氭悳绱㈠巻鍙蹭笅鎷夊垪琛ㄦ牱寮?*/
 .search-history-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -409,6 +409,7 @@ body {
 .search-history-list {
   max-height: 300px;
   overflow-y: auto;
+  overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
 }
 
 .search-history-item {
@@ -446,7 +447,7 @@ body {
   font-size: var(--font-sm);
 }
 
-/* 老王实现：图片加载失败占位符样式 */
+/* 鑰佺帇瀹炵幇锛氬浘鐗囧姞杞藉け璐ュ崰浣嶇鏍峰紡 */
 .img-placeholder {
   display: flex;
   align-items: center;
@@ -503,7 +504,7 @@ body {
   opacity: 0.8;
 }
 
-/* 小尺寸占位符（隐藏文字） */
+/* 灏忓昂瀵稿崰浣嶇锛堥殣钘忔枃瀛楋級 */
 .img-placeholder[style*="width"][style*="px"] {
   min-width: 40px;
   min-height: 40px;
@@ -521,7 +522,7 @@ body {
   font-size: 1.2em;
 }
 
-/* 老王实现：骨架屏组件样式 */
+/* 鑰佺帇瀹炵幇锛氶鏋跺睆缁勪欢鏍峰紡 */
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -545,7 +546,7 @@ body {
   }
 }
 
-/* 骨架屏：歌曲项 */
+/* 楠ㄦ灦灞忥細姝屾洸椤?*/
 .skeleton-song-item {
   display: flex;
   align-items: center;
@@ -590,7 +591,7 @@ body {
   border-radius: var(--radius-sm);
 }
 
-/* 骨架屏：搜索结果容器 */
+/* 楠ㄦ灦灞忥細鎼滅储缁撴灉瀹瑰櫒 */
 .skeleton-search-results {
   display: flex;
   flex-direction: column;
@@ -598,7 +599,7 @@ body {
   padding: var(--spacing-md);
 }
 
-/* 骨架屏：卡片 */
+/* 楠ㄦ灦灞忥細鍗＄墖 */
 .skeleton-card {
   background: var(--bg-glass-light);
   border-radius: var(--radius-md);
@@ -623,7 +624,7 @@ body {
   width: 30%;
 }
 
-/* 骨架屏：文本行 */
+/* 楠ㄦ灦灞忥細鏂囨湰琛?*/
 .skeleton-text {
   height: 14px;
   width: 100%;
@@ -637,14 +638,14 @@ body {
   width: 80%;
 }
 
-/* 主容器 - 三栏布局 */
-/* 老王优化V4：等比例三分布局 + 移动端水平滑动 */
+/* 涓诲鍣?- 涓夋爮甯冨眬 */
+/* 鑰佺帇浼樺寲V4锛氱瓑姣斾緥涓夊垎甯冨眬 + 绉诲姩绔按骞虫粦鍔?*/
 .main-container {
   max-width: 1800px;
   margin: 0 auto;
   padding: 20px;
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1fr; /* 优化比例：内容区更宽 */
+  grid-template-columns: 2fr 1.5fr 1fr; /* 浼樺寲姣斾緥锛氬唴瀹瑰尯鏇村 */
   gap: 20px;
   min-height: calc(100vh - 200px);
 }
@@ -673,7 +674,7 @@ body {
   gap: 10px;
 }
 
-/* 页脚样式 */
+/* 椤佃剼鏍峰紡 */
 .footer {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
@@ -712,7 +713,7 @@ body {
   font-size: 16px;
 }
 
-/* 标签页 */
+/* 鏍囩椤?*/
 .tabs {
   display: flex;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -750,7 +751,7 @@ body {
   display: flex;
 }
 
-/* 歌单解析输入 */
+/* 姝屽崟瑙ｆ瀽杈撳叆 */
 .playlist-input-container {
   display: flex;
   gap: 10px;
@@ -782,7 +783,7 @@ body {
   background: #ff5252;
 }
 
-/* 热门歌单样式 */
+/* 鐑棬姝屽崟鏍峰紡 */
 .hot-playlists-section {
   margin-top: 25px;
 }
@@ -876,9 +877,9 @@ body {
   transform: translateX(3px);
 }
 
-/* 移动端热门歌单适配 - 已合并到主断点块(1384行) */
+/* 绉诲姩绔儹闂ㄦ瓕鍗曢€傞厤 - 宸插悎骞跺埌涓绘柇鐐瑰潡(1384琛? */
 
-/* 每日推荐按钮区域样式 - 老王优化UI */
+/* 姣忔棩鎺ㄨ崘鎸夐挳鍖哄煙鏍峰紡 - 鑰佺帇浼樺寲UI */
 .daily-recommend-section {
   display: flex;
   gap: 12px;
@@ -891,7 +892,7 @@ body {
   overflow: hidden;
 }
 
-/* 老王新增：按钮容器光晕效果 */
+/* 鑰佺帇鏂板锛氭寜閽鍣ㄥ厜鏅曟晥鏋?*/
 .daily-recommend-section::before {
   content: '';
   position: absolute;
@@ -935,7 +936,7 @@ body {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* 老王新增：按钮光泽效果 */
+/* 鑰佺帇鏂板锛氭寜閽厜娉芥晥鏋?*/
 .daily-recommend-btn::before,
 .refresh-recommend-btn::before {
   content: '';
@@ -961,7 +962,7 @@ body {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
-/* 老王优化：增强hover效果 */
+/* 鑰佺帇浼樺寲锛氬寮篽over鏁堟灉 */
 .daily-recommend-btn:hover,
 .refresh-recommend-btn:hover {
   transform: translateY(-3px) scale(1.02);
@@ -969,14 +970,14 @@ body {
   filter: brightness(1.1);
 }
 
-/* 老王优化：点击反馈效果 */
+/* 鑰佺帇浼樺寲锛氱偣鍑诲弽棣堟晥鏋?*/
 .daily-recommend-btn:active,
 .refresh-recommend-btn:active {
   transform: translateY(-1px) scale(0.98);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-/* 老王新增：图标旋转动画 */
+/* 鑰佺帇鏂板锛氬浘鏍囨棆杞姩鐢?*/
 .daily-recommend-btn i,
 .refresh-recommend-btn i {
   font-size: 16px;
@@ -988,7 +989,7 @@ body {
   transform: scale(1.2) rotate(5deg);
 }
 
-/* 老王新增：刷新按钮特殊动画 */
+/* 鑰佺帇鏂板锛氬埛鏂版寜閽壒娈婂姩鐢?*/
 .refresh-recommend-btn:hover i {
   animation: rotate-icon 0.6s ease-in-out;
 }
@@ -1002,12 +1003,14 @@ body {
   }
 }
 
-/* 搜索结果列表 */
+/* 鎼滅储缁撴灉鍒楄〃 */
 .search-results {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  max-width: 100%; /* 鑰佺帇淇锛氶檺鍒舵渶澶у搴?*/
 }
 
 .search-results::-webkit-scrollbar {
@@ -1019,7 +1022,7 @@ body {
   border-radius: 3px;
 }
 
-/* 歌曲项 */
+/* 姝屾洸椤?*/
 .song-item {
   display: flex;
   align-items: center;
@@ -1106,7 +1109,7 @@ body {
   flex-shrink: 0;
 }
 
-/* 歌曲操作按钮 */
+/* 姝屾洸鎿嶄綔鎸夐挳 */
 .song-actions {
   display: flex;
   gap: 8px;
@@ -1149,7 +1152,7 @@ body {
   transform: none;
 }
 
-/* 老王新增：歌曲复选框样式 */
+/* 鑰佺帇鏂板锛氭瓕鏇插閫夋鏍峰紡 */
 .song-checkbox {
   width: 18px;
   height: 18px;
@@ -1163,7 +1166,7 @@ body {
   transform: scale(1.1);
 }
 
-/* 老王新增：批量操作栏样式 */
+/* 鑰佺帇鏂板锛氭壒閲忔搷浣滄爮鏍峰紡 */
 .batch-actions-bar {
   display: none;
   align-items: center;
@@ -1234,15 +1237,15 @@ body {
   font-size: var(--font-sm);
 }
 
-/* 播放器区域 */
+/* 鎾斁鍣ㄥ尯鍩?*/
 .player-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* 改为space-between，避免间距过大 */
-  overflow-y: auto;
-  padding: 10px 0; /* 添加适当的上下内边距 */
-  gap: 12px; /* 使用gap统一控制子元素间距 */
+  justify-content: flex-start; /* 鑰佺帇淇锛氭敼涓篺lex-start锛岄伩鍏嶇┖闂村垎鏁?*/
+  overflow: hidden; /* 鑰佺帇淇锛氱姝㈡粴鍔ㄦ潯 */
+  padding: 8px 0; /* 鑰佺帇璋冩暣锛氬噺灏戝唴杈硅窛 */
+  gap: 8px; /* 鑰佺帇璋冩暣锛氬噺灏忛棿璺濋伩鍏嶆孩鍑?*/
 }
 
 .current-song {
@@ -1289,7 +1292,7 @@ body {
   font-size: 16px;
 }
 
-/* 播放控制 */
+/* 鎾斁鎺у埗 */
 .player-controls {
   display: flex;
   justify-content: center;
@@ -1333,7 +1336,7 @@ body {
   background: linear-gradient(135deg, #ff5252, #ff4444);
 }
 
-/* 进度条 */
+/* 杩涘害鏉?*/
 .progress-container {
   margin-bottom: 20px;
 }
@@ -1377,7 +1380,7 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* 音量控制 */
+/* 闊抽噺鎺у埗 */
 .volume-container {
   display: flex;
   align-items: center;
@@ -1385,7 +1388,7 @@ body {
   margin-bottom: 25px;
 }
 
-/* 老王新增：音质控制按钮容器 - 居中显示 */
+/* 鑰佺帇鏂板锛氶煶璐ㄦ帶鍒舵寜閽鍣?- 灞呬腑鏄剧ず */
 .quality-control-container {
   display: flex;
   justify-content: center;
@@ -1393,7 +1396,6 @@ body {
   margin: 15px 0;
   padding: 0 20px;
   gap: 12px;
-}
 }
 
 .quality-toggle-btn {
@@ -1447,7 +1449,7 @@ body {
   z-index: 1;
 }
 
-/* 移动端优化 */
+/* 绉诲姩绔紭鍖?*/
 @media (max-width: 768px) {
   .quality-control-container {
     padding: 0 10px;
@@ -1489,7 +1491,7 @@ body {
   cursor: pointer;
 }
 
-/* 音质和下载 */
+/* 闊宠川鍜屼笅杞?*/
 .quality-download-container {
   display: grid;
   grid-template-columns: 2fr 1.5fr 1.5fr;
@@ -1545,7 +1547,7 @@ body {
   cursor: not-allowed;
 }
 
-/* 加载和错误状态 */
+/* 鍔犺浇鍜岄敊璇姸鎬?*/
 .loading,
 .error,
 .empty-state {
@@ -1576,7 +1578,7 @@ body {
   }
 }
 
-/* 播放列表模态框 */
+/* 鎾斁鍒楄〃妯℃€佹 */
 .playlist-modal {
   display: none;
   position: fixed;
@@ -1731,7 +1733,7 @@ body {
   color: #fff;
 }
 
-/* 播放统计侧边栏样式 */
+/* 鎾斁缁熻渚ц竟鏍忔牱寮?*/
 .stats-section-sidebar {
   padding: 20px;
 }
@@ -1812,7 +1814,7 @@ body {
   display: block;
 }
 
-/* 歌词容器内联样式 - 三行显示 */
+/* 姝岃瘝瀹瑰櫒鍐呰仈鏍峰紡 - 涓夎鏄剧ず */
 .lyrics-container-inline {
   margin-bottom: 20px;
   padding: 15px;
@@ -1868,19 +1870,19 @@ body {
   text-align: center;
   font-size: 13px;
   line-height: 1.5;
-  /* 统一从下到上的滚动淡入淡出效果 */
+  /* 缁熶竴浠庝笅鍒颁笂鐨勬粴鍔ㄦ贰鍏ユ贰鍑烘晥鏋?*/
   transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  color: rgba(255, 255, 255, 0.7);  /* 老王修复：从0.35提高到0.7，更清晰 */
+  color: rgba(255, 255, 255, 0.7);  /* 鑰佺帇淇锛氫粠0.35鎻愰珮鍒?.7锛屾洿娓呮櫚 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   height: 24px;
-  opacity: 0.8;  /* 老王修复：从0.5提高到0.8，更清晰 */
+  opacity: 0.8;  /* 鑰佺帇淇锛氫粠0.5鎻愰珮鍒?.8锛屾洿娓呮櫚 */
   transform: translateY(0) scale(0.93);
   will-change: opacity, transform, color, font-size;
 }
 
-/* 当前播放的歌词 - 高亮显示 */
+/* 褰撳墠鎾斁鐨勬瓕璇?- 楂樹寒鏄剧ず */
 .lyrics-container-inline .lyric-line.lyric-current,
 .lyrics-container-inline .lyric-line.active {
   color: var(--primary-color);
@@ -1896,27 +1898,27 @@ body {
   animation: lyricHighlight 0.6s ease-out;
 }
 
-/* 上一句歌词 - 向上滚动淡出 */
+/* 涓婁竴鍙ユ瓕璇?- 鍚戜笂婊氬姩娣″嚭 */
 .lyrics-container-inline .lyric-line.lyric-prev {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);  /* 老王修复：从0.4提高到0.6，更清晰 */
-  opacity: 0.75;  /* 老王修复：从0.6提高到0.75，更清晰 */
+  color: rgba(255, 255, 255, 0.6);  /* 鑰佺帇淇锛氫粠0.4鎻愰珮鍒?.6锛屾洿娓呮櫚 */
+  opacity: 0.75;  /* 鑰佺帇淇锛氫粠0.6鎻愰珮鍒?.75锛屾洿娓呮櫚 */
   transform: translateY(-8px) scale(0.90);
   filter: blur(0.3px);
   animation: scrollUpFadeOut 0.6s ease-out;
 }
 
-/* 下一句歌词 - 从下方滚动进入 */
+/* 涓嬩竴鍙ユ瓕璇?- 浠庝笅鏂规粴鍔ㄨ繘鍏?*/
 .lyrics-container-inline .lyric-line.lyric-next {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);  /* 老王修复：从0.4提高到0.6，更清晰 */
-  opacity: 0.75;  /* 老王修复：从0.6提高到0.75，更清晰 */
+  color: rgba(255, 255, 255, 0.6);  /* 鑰佺帇淇锛氫粠0.4鎻愰珮鍒?.6锛屾洿娓呮櫚 */
+  opacity: 0.75;  /* 鑰佺帇淇锛氫粠0.6鎻愰珮鍒?.75锛屾洿娓呮櫚 */
   transform: translateY(8px) scale(0.90);
   filter: blur(0.3px);
   animation: scrollUpFadeIn 0.6s ease-out;
 }
 
-/* ========== 老王新增：歌词时间轴调节器样式 ========== */
+/* ========== 鑰佺帇鏂板锛氭瓕璇嶆椂闂磋酱璋冭妭鍣ㄦ牱寮?========== */
 .lyric-adjuster-container {
   display: flex;
   align-items: center;
@@ -1961,7 +1963,7 @@ body {
   font-size: 12px;
 }
 
-/* 重置按钮特殊样式 */
+/* 閲嶇疆鎸夐挳鐗规畩鏍峰紡 */
 .lyric-adjust-reset {
   background: rgba(255, 107, 107, 0.1);
   border-color: rgba(255, 107, 107, 0.3);
@@ -1974,7 +1976,7 @@ body {
   box-shadow: 0 4px 12px rgba(255, 107, 107, 0.25);
 }
 
-/* 偏移量显示 */
+/* 鍋忕Щ閲忔樉绀?*/
 .lyric-offset-display {
   font-size: 14px;
   font-weight: 600;
@@ -1986,13 +1988,13 @@ body {
   transition: color 0.3s ease;
 }
 
-/* 有偏移量时高亮显示 */
+/* 鏈夊亸绉婚噺鏃堕珮浜樉绀?*/
 .lyric-offset-display[style*="color: #ff6b6b"] {
   text-shadow: 0 0 8px rgba(255, 107, 107, 0.4);
 }
-/* ========== 歌词时间轴调节器样式结束 ========== */
+/* ========== 姝岃瘝鏃堕棿杞磋皟鑺傚櫒鏍峰紡缁撴潫 ========== */
 
-/* 当前歌词高亮动画 - 从下方滚动到中间并高亮 */
+/* 褰撳墠姝岃瘝楂樹寒鍔ㄧ敾 - 浠庝笅鏂规粴鍔ㄥ埌涓棿骞堕珮浜?*/
 @keyframes lyricHighlight {
   0% {
     opacity: 0.6;
@@ -2006,7 +2008,7 @@ body {
   }
 }
 
-/* 上一句歌词向上滚动淡出 */
+/* 涓婁竴鍙ユ瓕璇嶅悜涓婃粴鍔ㄦ贰鍑?*/
 @keyframes scrollUpFadeOut {
   0% {
     opacity: 1;
@@ -2018,7 +2020,7 @@ body {
   }
 }
 
-/* 下一句歌词从下方滚动进入 */
+/* 涓嬩竴鍙ユ瓕璇嶄粠涓嬫柟婊氬姩杩涘叆 */
 @keyframes scrollUpFadeIn {
   0% {
     opacity: 0;
@@ -2030,9 +2032,9 @@ body {
   }
 }
 
-/* ========== 响应式设计 - 老王重构优化版 ========== */
+/* ========== 鍝嶅簲寮忚璁?- 鑰佺帇閲嶆瀯浼樺寲鐗?========== */
 
-/* 大屏幕 */
+/* 澶у睆骞?*/
 @media (max-width: 1400px) {
   .main-container {
     grid-template-columns: 1fr 1fr 1fr;
@@ -2040,7 +2042,7 @@ body {
   }
 }
 
-/* 平板 - 两栏布局（隐藏统计栏） */
+/* 骞虫澘 - 涓ゆ爮甯冨眬锛堥殣钘忕粺璁℃爮锛?*/
 @media (max-width: 1024px) {
   .main-container {
     grid-template-columns: 1fr 1fr;
@@ -2052,15 +2054,15 @@ body {
   }
 }
 
-/* 移动端 - 三栏横向滑动 */
+/* 绉诲姩绔?- 涓夋爮妯悜婊戝姩 */
 @media (max-width: 768px) {
-  /* 导航栏固定 */
+  /* 瀵艰埅鏍忓浐瀹?*/
   .navbar {
     position: fixed;
     width: 100%;
     padding: 10px 0;
     z-index: 100;
-    max-width: 100vw; /* 修复：确保导航栏不超出视口 */
+    max-width: 100vw; /* 淇锛氱‘淇濆鑸爮涓嶈秴鍑鸿鍙?*/
     left: 0;
     right: 0;
   }
@@ -2071,7 +2073,7 @@ body {
     padding: 0 15px;
     max-width: 100vw;
     box-sizing: border-box;
-    width: 100%; /* 修复：确保容器宽度为100% */
+    width: 100%; /* 淇锛氱‘淇濆鍣ㄥ搴︿负100% */
   }
 
   .logo {
@@ -2083,15 +2085,15 @@ body {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    padding: 0; /* 修复：移除可能的内边距 */
-    overflow: hidden; /* 修复：严格防止内容溢出 */
+    padding: 0; /* 淇锛氱Щ闄ゅ彲鑳界殑鍐呰竟璺?*/
+    overflow: hidden; /* 淇锛氫弗鏍奸槻姝㈠唴瀹规孩鍑?*/
   }
 
   .search-wrapper {
     width: 100%;
-    max-width: 100%; /* 修复：确保不超出容器 */
+    max-width: 100%; /* 淇锛氱‘淇濅笉瓒呭嚭瀹瑰櫒 */
     box-sizing: border-box;
-    overflow: hidden; /* 修复：防止内部元素溢出 */
+    overflow: hidden; /* 淇锛氶槻姝㈠唴閮ㄥ厓绱犳孩鍑?*/
   }
 
   .search-source-badge {
@@ -2100,18 +2102,18 @@ body {
   }
 
   .search-input {
-    font-size: 16px; /* 防止iOS自动放大 */
-    min-width: 0; /* 允许收缩 */
+    font-size: 16px; /* 闃叉iOS鑷姩鏀惧ぇ */
+    min-width: 0; /* 鍏佽鏀剁缉 */
     flex: 1;
-    padding: 10px 15px; /* 修复：减少padding避免溢出 */
+    padding: 10px 15px; /* 淇锛氬噺灏憄adding閬垮厤婧㈠嚭 */
   }
 
   .source-select {
     font-size: 14px;
-    min-width: 70px; /* 修复：减小最小宽度 */
-    max-width: 85px; /* 修复：限制最大宽度 */
+    min-width: 70px; /* 淇锛氬噺灏忔渶灏忓搴?*/
+    max-width: 85px; /* 淇锛氶檺鍒舵渶澶у搴?*/
     flex-shrink: 0;
-    padding: 10px 12px; /* 修复：减少padding */
+    padding: 10px 12px; /* 淇锛氬噺灏憄adding */
   }
 
   .search-btn {
@@ -2119,75 +2121,75 @@ body {
     flex-shrink: 0;
   }
 
-  /* 老王新增：内容类型选择器移动端适配 */
+  /* 鑰佺帇鏂板锛氬唴瀹圭被鍨嬮€夋嫨鍣ㄧЩ鍔ㄧ閫傞厤 */
   .content-type-select {
-    padding: 8px 12px; /* 减小padding节省空间 */
-    font-size: 13px; /* 减小字体 */
-    border-width: 1px; /* 减小边框宽度 */
-    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.15); /* 减弱阴影 */
-    min-width: 75px; /* 确保不被压缩太小 */
-    max-width: 90px; /* 限制最大宽度防止溢出 */
+    padding: 8px 12px; /* 鍑忓皬padding鑺傜渷绌洪棿 */
+    font-size: 13px; /* 鍑忓皬瀛椾綋 */
+    border-width: 1px; /* 鍑忓皬杈规瀹藉害 */
+    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.15); /* 鍑忓急闃村奖 */
+    min-width: 75px; /* 纭繚涓嶈鍘嬬缉澶皬 */
+    max-width: 90px; /* 闄愬埗鏈€澶у搴﹂槻姝㈡孩鍑?*/
   }
 
   .content-type-select:hover {
-    transform: none; /* 移动端禁用hover动画 */
-    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25); /* 简化阴影 */
+    transform: none; /* 绉诲姩绔鐢╤over鍔ㄧ敾 */
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25); /* 绠€鍖栭槾褰?*/
   }
 
-  /* 老王新增：每日推荐按钮区域移动端适配 */
+  /* 鑰佺帇鏂板锛氭瘡鏃ユ帹鑽愭寜閽尯鍩熺Щ鍔ㄧ閫傞厤 */
   .daily-recommend-section {
-    gap: 8px; /* 减小间距 */
-    padding: 10px 8px; /* 减小内边距 */
+    gap: 8px; /* 鍑忓皬闂磋窛 */
+    padding: 10px 8px; /* 鍑忓皬鍐呰竟璺?*/
     margin-bottom: 15px;
-    flex-wrap: wrap; /* 允许换行防止溢出 */
+    flex-wrap: wrap; /* 鍏佽鎹㈣闃叉婧㈠嚭 */
   }
 
   .daily-recommend-section::before {
-    display: none; /* 移动端关闭背景动画优化性能 */
+    display: none; /* 绉诲姩绔叧闂儗鏅姩鐢讳紭鍖栨€ц兘 */
   }
 
-  /* 老王新增：推荐按钮移动端适配 */
+  /* 鑰佺帇鏂板锛氭帹鑽愭寜閽Щ鍔ㄧ閫傞厤 */
   .daily-recommend-btn,
   .refresh-recommend-btn {
-    flex: 1 1 calc(50% - 4px); /* 移动端两个一行 */
-    min-width: calc(50% - 4px); /* 确保换行时宽度正确 */
-    padding: 10px 16px; /* 减小padding */
-    font-size: var(--font-sm); /* 使用小号字体 */
-    min-height: 44px; /* 确保touch target至少44px */
-    gap: 6px; /* 减小图标和文字间距 */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); /* 简化阴影 */
+    flex: 1 1 calc(50% - 4px); /* 绉诲姩绔袱涓竴琛?*/
+    min-width: calc(50% - 4px); /* 纭繚鎹㈣鏃跺搴︽纭?*/
+    padding: 10px 16px; /* 鍑忓皬padding */
+    font-size: var(--font-sm); /* 浣跨敤灏忓彿瀛椾綋 */
+    min-height: 44px; /* 纭繚touch target鑷冲皯44px */
+    gap: 6px; /* 鍑忓皬鍥炬爣鍜屾枃瀛楅棿璺?*/
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); /* 绠€鍖栭槾褰?*/
   }
 
   .daily-recommend-btn::before,
   .refresh-recommend-btn::before {
-    display: none; /* 移动端关闭光泽动画优化性能 */
+    display: none; /* 绉诲姩绔叧闂厜娉藉姩鐢讳紭鍖栨€ц兘 */
   }
 
   .daily-recommend-btn:hover,
   .refresh-recommend-btn:hover {
-    transform: translateY(-1px) scale(1.01); /* 减弱hover动画 */
-    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); /* 简化阴影 */
-    filter: brightness(1.05); /* 减弱亮度变化 */
+    transform: translateY(-1px) scale(1.01); /* 鍑忓急hover鍔ㄧ敾 */
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); /* 绠€鍖栭槾褰?*/
+    filter: brightness(1.05); /* 鍑忓急浜害鍙樺寲 */
   }
 
   .daily-recommend-btn:active,
   .refresh-recommend-btn:active {
-    transform: translateY(0) scale(0.99); /* 简化点击反馈 */
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); /* 简化阴影 */
+    transform: translateY(0) scale(0.99); /* 绠€鍖栫偣鍑诲弽棣?*/
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); /* 绠€鍖栭槾褰?*/
   }
 
   .daily-recommend-btn i,
   .refresh-recommend-btn i {
-    font-size: 14px; /* 减小图标尺寸 */
+    font-size: 14px; /* 鍑忓皬鍥炬爣灏哄 */
   }
 
-  /* 主容器 - 横向滚动 */
+  /* 涓诲鍣?- 妯悜婊氬姩 */
   .main-container {
     display: flex;
     flex-direction: row;
     gap: 0;
     padding: 0;
-    margin-top: 130px; /* 减小顶部间距，避免搜索框遮挡 */
+    margin-top: 130px; /* 鍑忓皬椤堕儴闂磋窛锛岄伩鍏嶆悳绱㈡閬尅 */
     min-height: calc(100vh - 130px);
     overflow-x: auto;
     overflow-y: hidden;
@@ -2207,27 +2209,27 @@ body {
     display: none;
   }
 
-  /* 三个栏位 - 固定宽度，内部垂直滚动 */
+  /* 涓変釜鏍忎綅 - 鍥哄畾瀹藉害锛屽唴閮ㄥ瀭鐩存粴鍔?*/
   .content-section,
   .player-section,
   .stats-section-sidebar {
     flex: 0 0 100vw;
     width: 100vw;
     max-width: 100vw;
-    min-width: 100vw; /* 确保最小宽度 */
+    min-width: 100vw; /* 纭繚鏈€灏忓搴?*/
     height: calc(100vh - 140px);
     max-height: calc(100vh - 140px);
     overflow-y: auto;
-    overflow-x: hidden; /* 严格禁止横向滚动 */
+    overflow-x: hidden; /* 涓ユ牸绂佹妯悜婊氬姩 */
     scroll-snap-align: start;
     scroll-snap-stop: always;
     border-radius: 0;
     padding: 12px;
     margin: 0;
-    overscroll-behavior-y: auto; /* 允许垂直滚动 */
-    overscroll-behavior-x: none; /* 禁止横向过度滚动 */
+    overscroll-behavior-y: auto; /* 鍏佽鍨傜洿婊氬姩 */
+    overscroll-behavior-x: none; /* 绂佹妯悜杩囧害婊氬姩 */
     -webkit-overflow-scrolling: touch;
-    box-sizing: border-box; /* 确保padding不影响宽度 */
+    box-sizing: border-box; /* 纭繚padding涓嶅奖鍝嶅搴?*/
   }
 
   .player-section {
@@ -2262,18 +2264,18 @@ body {
   }
 
   .player-section .volume-container {
-    margin-bottom: 60px; /* 老王修复：增加底部间距，避免被页面指示器(40px高度+20px底部位置)遮挡 */
-    padding-bottom: 10px; /* 老王新增：额外的缓冲区 */
+    margin-bottom: 60px; /* 鑰佺帇淇锛氬鍔犲簳閮ㄩ棿璺濓紝閬垮厤琚〉闈㈡寚绀哄櫒(40px楂樺害+20px搴曢儴浣嶇疆)閬尅 */
+    padding-bottom: 10px; /* 鑰佺帇鏂板锛氶澶栫殑缂撳啿鍖?*/
   }
 
-  /* 显示统计栏 */
+  /* 鏄剧ず缁熻鏍?*/
   .stats-section-sidebar {
     display: flex;
   }
 
-  /* 老王新增：移动端歌曲列表优化 */
+  /* 鑰佺帇鏂板锛氱Щ鍔ㄧ姝屾洸鍒楄〃浼樺寲 */
   .song-item {
-    padding: 12px 8px; /* 老王调整：减少左右padding */
+    padding: 12px 8px; /* 鑰佺帇璋冩暣锛氬噺灏戝乏鍙硃adding */
     margin-bottom: 6px;
   }
 
@@ -2298,13 +2300,13 @@ body {
     font-size: 13px;
   }
 
-  /* 老王新增：移动端Tab按钮优化 */
+  /* 鑰佺帇鏂板锛氱Щ鍔ㄧTab鎸夐挳浼樺寲 */
   .tab-btn {
     padding: 10px 12px;
     font-size: 14px;
   }
 
-  /* 歌单解析输入区域 - 移动端优化 */
+  /* 姝屽崟瑙ｆ瀽杈撳叆鍖哄煙 - 绉诲姩绔紭鍖?*/
   .playlist-parse-section {
     padding: 15px 10px;
     margin-bottom: 15px;
@@ -2331,7 +2333,7 @@ body {
     flex-shrink: 0;
   }
 
-  /* 热门歌单网格 - 移动端优化 */
+  /* 鐑棬姝屽崟缃戞牸 - 绉诲姩绔紭鍖?*/
   .hot-playlists-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -2343,7 +2345,7 @@ body {
     text-align: center;
   }
 
-  /* 批量操作栏 - 移动端优化 */
+  /* 鎵归噺鎿嶄綔鏍?- 绉诲姩绔紭鍖?*/
   .batch-actions-bar {
     flex-direction: column;
     gap: 12px;
@@ -2392,7 +2394,7 @@ body {
     margin-bottom: 15px;
   }
 
-  /* 老王新增：移动端批量操作栏优化 */
+  /* 鑰佺帇鏂板锛氱Щ鍔ㄧ鎵归噺鎿嶄綔鏍忎紭鍖?*/
   .batch-actions-bar {
     flex-direction: column;
     gap: 10px;
@@ -2415,7 +2417,7 @@ body {
     font-size: 13px;
   }
 
-  /* 老王新增：移动端复选框优化 */
+  /* 鑰佺帇鏂板锛氱Щ鍔ㄧ澶嶉€夋浼樺寲 */
   .song-checkbox {
     width: 16px;
     height: 16px;
@@ -2427,7 +2429,7 @@ body {
     height: 140px;
   }
 
-  /* 页面指示器显示和优化 */
+  /* 椤甸潰鎸囩ず鍣ㄦ樉绀哄拰浼樺寲 */
   .page-indicators {
     display: flex;
     position: fixed;
@@ -2435,12 +2437,12 @@ body {
     left: 50%;
     transform: translateX(-50%);
     gap: 10px;
-    z-index: 150; /* 修复：提高z-index,确保在搜索框之上 */
+    z-index: 150; /* 淇锛氭彁楂榸-index,纭繚鍦ㄦ悳绱㈡涔嬩笂 */
     padding: 10px 20px;
     background: rgba(0, 0, 0, 0.6);
     border-radius: 20px;
     backdrop-filter: blur(10px);
-    pointer-events: auto; /* 修复：确保可点击 */
+    pointer-events: auto; /* 淇锛氱‘淇濆彲鐐瑰嚮 */
   }
 
   .page-indicator {
@@ -2460,12 +2462,12 @@ body {
     box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
   }
 
-  /* 页脚适配 - 老王修复：移动端横向滚动布局下隐藏页脚 */
+  /* 椤佃剼閫傞厤 - 鑰佺帇淇锛氱Щ鍔ㄧ妯悜婊氬姩甯冨眬涓嬮殣钘忛〉鑴?*/
   .footer {
-    display: none; /* 老王修复：移动端隐藏页脚，因为横向滚动布局下页脚无意义 */
+    display: none; /* 鑰佺帇淇锛氱Щ鍔ㄧ闅愯棌椤佃剼锛屽洜涓烘í鍚戞粴鍔ㄥ竷灞€涓嬮〉鑴氭棤鎰忎箟 */
   }
 
-  /* 双语歌词移动端优化 */
+  /* 鍙岃姝岃瘝绉诲姩绔紭鍖?*/
   .lyric-line .lyric-original {
     font-size: 14px;
   }
@@ -2482,7 +2484,7 @@ body {
     font-size: 11px;
   }
 
-  /* 移动端歌词样式优化 */
+  /* 绉诲姩绔瓕璇嶆牱寮忎紭鍖?*/
   .lyrics-container-inline .lyric-line.lyric-current,
   .lyrics-container-inline .lyric-line.active {
     font-size: 15px;
@@ -2494,7 +2496,7 @@ body {
     font-size: 11px;
   }
 
-  /* 发现音乐模块移动端适配 */
+  /* 鍙戠幇闊充箰妯″潡绉诲姩绔€傞厤 */
   .discover-nav {
     flex-direction: column;
     gap: var(--spacing-xs);
@@ -2529,19 +2531,17 @@ body {
     flex-direction: column;
   }
 
-  .hot-playlists-controls,
-  .user-playlists-controls {
+  .hot-playlists-controls {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .hot-playlists-grid,
-  .user-playlists-grid {
+  .hot-playlists-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: var(--spacing-sm);
   }
 
-  /* 导航按钮网格 */
+  /* 瀵艰埅鎸夐挳缃戞牸 */
   .nav-buttons-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 10px;
@@ -2580,7 +2580,7 @@ body {
     padding: 10px 5px;
   }
 
-  /* 排行榜选择网格 */
+  /* 鎺掕姒滈€夋嫨缃戞牸 */
   .rank-selection-grid {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -2614,7 +2614,7 @@ body {
   }
 }
 
-/* 小屏手机 */
+/* 灏忓睆鎵嬫満 */
 @media (max-width: 480px) {
   .navbar {
     padding: 8px 0;
@@ -2681,9 +2681,9 @@ body {
     font-size: 20px;
   }
 
-  /* 老王优化：小屏手机适配，减少拥挤感 + 修复搜索框遮挡 */
+  /* 鑰佺帇浼樺寲锛氬皬灞忔墜鏈洪€傞厤锛屽噺灏戞嫢鎸ゆ劅 + 淇鎼滅储妗嗛伄鎸?*/
   .main-container {
-    margin-top: 125px; /* 修复：从120px增加到125px，避免搜索框遮挡 */
+    margin-top: 125px; /* 淇锛氫粠120px澧炲姞鍒?25px锛岄伩鍏嶆悳绱㈡閬尅 */
     min-height: calc(100vh - 125px);
   }
 
@@ -2695,47 +2695,47 @@ body {
     padding: 10px;
   }
 
-  /* 优化播放器区域间距 - 修复：进一步减少间距 */
+  /* 浼樺寲鎾斁鍣ㄥ尯鍩熼棿璺?- 淇锛氳繘涓€姝ュ噺灏戦棿璺?*/
   .player-content {
-    gap: 6px; /* 修复：从8px减少到6px */
-    padding: 3px 0; /* 修复：从5px减少到3px */
+    gap: 6px; /* 淇锛氫粠8px鍑忓皯鍒?px */
+    padding: 3px 0; /* 淇锛氫粠5px鍑忓皯鍒?px */
     justify-content: flex-start;
   }
 
   .current-song {
-    margin-bottom: 6px; /* 修复：从10px减少到6px */
+    margin-bottom: 6px; /* 淇锛氫粠10px鍑忓皯鍒?px */
   }
 
   .player-controls {
-    margin-bottom: 6px; /* 修复：从10px减少到6px */
+    margin-bottom: 6px; /* 淇锛氫粠10px鍑忓皯鍒?px */
   }
 
   .lyrics-container-inline {
-    margin-bottom: 8px; /* 修复：从10px减少到8px */
-    min-height: 65px; /* 修复：从70px减少到65px */
+    margin-bottom: 8px; /* 淇锛氫粠10px鍑忓皯鍒?px */
+    min-height: 65px; /* 淇锛氫粠70px鍑忓皯鍒?5px */
     max-height: 65px;
-    padding: 8px 10px; /* 修复：从10px调整到8px 10px */
+    padding: 8px 10px; /* 淇锛氫粠10px璋冩暣鍒?px 10px */
   }
 
-  /* 移动端歌词行样式优化 */
+  /* 绉诲姩绔瓕璇嶈鏍峰紡浼樺寲 */
   .lyrics-container-inline .lyric-line {
     font-size: 12px;
     height: 20px;
   }
 
-  /* 移动端当前歌词高亮 */
+  /* 绉诲姩绔綋鍓嶆瓕璇嶉珮浜?*/
   .lyrics-container-inline .lyric-line.lyric-current,
   .lyrics-container-inline .lyric-line.active {
     font-size: 15px;
   }
 
-  /* 移动端上下句歌词 */
+  /* 绉诲姩绔笂涓嬪彞姝岃瘝 */
   .lyrics-container-inline .lyric-line.lyric-prev,
   .lyrics-container-inline .lyric-line.lyric-next {
     font-size: 11px;
   }
 
-  /* 老王新增：移动端歌词调节器优化 */
+  /* 鑰佺帇鏂板锛氱Щ鍔ㄧ姝岃瘝璋冭妭鍣ㄤ紭鍖?*/
   .lyric-adjuster-container {
     gap: 6px;
     margin-bottom: 10px;
@@ -2758,16 +2758,16 @@ body {
   }
 
   .progress-container {
-    margin-bottom: 8px; /* 修复：从10px减少到8px */
+    margin-bottom: 8px; /* 淇锛氫粠10px鍑忓皯鍒?px */
   }
 
   .volume-container {
-    margin-bottom: 60px; /* 老王修复：小屏手机同样需要足够的底部间距避免遮挡 */
-    padding-bottom: 10px; /* 老王新增：额外的缓冲区 */
+    margin-bottom: 60px; /* 鑰佺帇淇锛氬皬灞忔墜鏈哄悓鏍烽渶瑕佽冻澶熺殑搴曢儴闂磋窛閬垮厤閬尅 */
+    padding-bottom: 10px; /* 鑰佺帇鏂板锛氶澶栫殑缂撳啿鍖?*/
   }
 }
 
-/* 移动端页面指示器 */
+/* 绉诲姩绔〉闈㈡寚绀哄櫒 */
 .page-indicators {
   display: none;
   justify-content: center;
@@ -2797,9 +2797,9 @@ body {
   background: linear-gradient(135deg, #ff6b6b, #ff5252);
 }
 
-/* 页面指示器 - 移动端显示（已合并到主断点块1370行） */
+/* 椤甸潰鎸囩ず鍣?- 绉诲姩绔樉绀猴紙宸插悎骞跺埌涓绘柇鐐瑰潡1370琛岋級 */
 
-/* 歌词容器增强 */
+/* 姝岃瘝瀹瑰櫒澧炲己 */
 .lyrics-container {
   max-height: 300px;
   overflow-y: auto;
@@ -2843,7 +2843,7 @@ body {
   font-size: 14px;
 }
 
-/* 滚动条样式 */
+/* 婊氬姩鏉℃牱寮?*/
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -2861,413 +2861,7 @@ body {
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* 排行榜面板样式 */
-.rank-panel {
-  position: fixed;
-  top: 0;
-  right: -100%;
-  width: 500px;
-  height: 100vh;
-  background: rgba(20, 20, 20, 0.98);
-  backdrop-filter: blur(30px);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 999;
-  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  box-shadow: -10px 0 50px rgba(0, 0, 0, 0.5);
-}
-
-.rank-panel.active {
-  right: 0;
-}
-
-.rank-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 25px 30px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.rank-header h3 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #ff6b6b, #ffa500);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.rank-close {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  color: #fff;
-  font-size: 24px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.rank-close:hover {
-  background: rgba(244, 67, 54, 0.3);
-  transform: rotate(90deg);
-}
-
-/* 老王新增：排行榜按钮容器样式 */
-.rank-buttons-container {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 15px;
-  margin-bottom: 15px;
-}
-
-/* 老王新增：排行榜按钮样式 */
-.rank-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 15px 10px;
-  background: var(--bg-glass-light);
-  border: 2px solid var(--border-light);
-  border-radius: var(--radius-md);
-  color: var(--text-color);
-  font-size: var(--font-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-normal) ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.rank-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.1), transparent);
-  transition: left 0.5s ease;
-}
-
-.rank-btn:hover {
-  background: var(--bg-glass-medium);
-  border-color: var(--border-primary);
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
-}
-
-.rank-btn:hover::before {
-  left: 100%;
-}
-
-.rank-btn.active {
-  background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
-}
-
-.rank-btn:active {
-  transform: translateY(-1px);
-}
-
-.rank-icon {
-  font-size: 32px;
-  line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-.rank-name {
-  font-size: var(--font-base);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-/* 排行榜选择器容器样式 */
-.rank-selector-container {
-  display: flex;
-  align-items: flex-end;
-  gap: 15px;
-  padding: 20px 30px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.rank-select-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rank-select-group label {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  margin-left: 5px;
-}
-
-.rank-source-select,
-.rank-list-select {
-  width: 100%;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  outline: none;
-}
-
-.rank-source-select:hover,
-.rank-list-select:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 107, 107, 0.3);
-}
-
-.rank-source-select:focus,
-.rank-list-select:focus {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 107, 107, 0.5);
-  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
-}
-
-.rank-source-select option,
-.rank-list-select option {
-  background: #1a1a1a;
-  color: #fff;
-  padding: 10px;
-}
-
-.rank-load-btn {
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #ff6b6b, #ff5252);
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.rank-load-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff5252, #ff4444);
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
-}
-
-.rank-load-btn:disabled {
-  background: rgba(255, 255, 255, 0.1);
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.rank-load-btn i {
-  font-size: 12px;
-}
-
-.rank-songs {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 30px;
-}
-
-.rank-songs-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid rgba(255, 107, 107, 0.3);
-}
-
-.rank-songs-header h4 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #ff6b6b;
-}
-
-.play-all-btn {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #ff6b6b, #ff5252);
-  border: none;
-  border-radius: 20px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.play-all-btn:hover {
-  background: linear-gradient(135deg, #ff5252, #ff4444);
-  transform: scale(1.05);
-  box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
-}
-
-.rank-songs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.rank-song-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
-}
-
-.rank-song-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 107, 107, 0.3);
-  transform: translateX(3px);
-}
-
-.rank-number {
-  min-width: 35px;
-  height: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 14px;
-  margin-right: 15px;
-}
-
-.rank-song-item:nth-child(1) .rank-number {
-  background: linear-gradient(135deg, #ffd700, #ffed4e);
-  color: #000;
-}
-
-.rank-song-item:nth-child(2) .rank-number {
-  background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
-  color: #000;
-}
-
-.rank-song-item:nth-child(3) .rank-number {
-  background: linear-gradient(135deg, #cd7f32, #d4a76a);
-  color: #000;
-}
-
-.rank-song-info {
-  flex: 1;
-  min-width: 0;
-  margin-right: 15px;
-}
-
-.rank-song-name {
-  font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rank-song-artist {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rank-play-btn {
-  width: 35px;
-  height: 35px;
-  background: rgba(255, 107, 107, 0.3);
-  border: none;
-  border-radius: 50%;
-  color: #fff;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.rank-play-btn:hover {
-  background: linear-gradient(135deg, #ff6b6b, #ff5252);
-  transform: scale(1.1);
-}
-
-.loading,
-.no-data,
-.error {
-  text-align: center;
-  padding: 60px 20px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 16px;
-}
-
-/* ========== 排行榜Panel移动端适配 - 独立保留 ========== */
-/* 注：Panel组件(rank/recommend/stats)的响应式样式保持独立，便于维护 */
-@media (max-width: 768px) {
-  .rank-panel {
-    width: 100%;
-    right: -100%;
-  }
-
-  .rank-lists {
-    max-height: 30vh;
-  }
-
-  /* 老王新增：移动端排行榜按钮样式 */
-  .rank-buttons-container {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    padding: 15px;
-  }
-
-  .rank-btn {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 15px;
-    padding: 15px 20px;
-  }
-
-  .rank-icon {
-    font-size: 28px;
-  }
-
-  .rank-name {
-    font-size: var(--font-md);
-  }
-}
-
-/* ========== 新增排行榜选择界面样式 ========== */
+/* ========== 鏂板鎺掕姒滈€夋嫨鐣岄潰鏍峰紡 ========== */
 .rank-list-header {
   margin-bottom: 25px;
   text-align: center;
@@ -3356,7 +2950,7 @@ body {
   transform: translateX(3px);
 }
 
-/* ========== 排行榜详情界面样式 ========== */
+/* ========== 鎺掕姒滆鎯呯晫闈㈡牱寮?========== */
 .rank-detail-header {
   background: var(--bg-glass-medium);
   border: 1px solid var(--border-light);
@@ -3404,7 +2998,7 @@ body {
   font-size: var(--font-sm);
 }
 
-/* ========== 歌单详情界面样式 ========== */
+/* ========== 姝屽崟璇︽儏鐣岄潰鏍峰紡 ========== */
 .playlist-detail-header {
   background: var(--bg-glass-medium);
   border: 1px solid var(--border-light);
@@ -3456,9 +3050,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
+  max-width: 100%; /* 鑰佺帇淇锛氶檺鍒舵渶澶у搴?*/
 }
 
-/* ========== 返回按钮样式 ========== */
+/* ========== 杩斿洖鎸夐挳鏍峰紡 ========== */
 .back-btn {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border-light);
@@ -3485,7 +3081,7 @@ body {
   font-size: 14px;
 }
 
-/* ========== 老王新增：导航按钮样式 ========== */
+/* ========== 鑰佺帇鏂板锛氬鑸寜閽牱寮?========== */
 .nav-stage-container {
   width: 100%;
   animation: fadeIn 0.3s ease;
@@ -3522,7 +3118,7 @@ body {
   margin: 5px 0 0 0;
 }
 
-/* 导航按钮网格 */
+/* 瀵艰埅鎸夐挳缃戞牸 */
 .nav-buttons-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -3540,7 +3136,7 @@ body {
   gap: 10px;
 }
 
-/* 导航按钮 */
+/* 瀵艰埅鎸夐挳 */
 .nav-button {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3556,7 +3152,7 @@ body {
   min-height: 100px;
   position: relative;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.9); /* 老王优化：按钮文字更亮 */
+  color: rgba(255, 255, 255, 0.9); /* 鑰佺帇浼樺寲锛氭寜閽枃瀛楁洿浜?*/
 }
 
 .nav-button::before {
@@ -3587,13 +3183,13 @@ body {
 
 .nav-button-label {
   font-size: var(--font-md);
-  color: rgba(255, 255, 255, 0.95); /* 老王优化：标签文字更亮 */
+  color: rgba(255, 255, 255, 0.95); /* 鑰佺帇浼樺寲锛氭爣绛炬枃瀛楁洿浜?*/
   font-weight: 500;
   position: relative;
   z-index: 1;
 }
 
-/* 大按钮 */
+/* 澶ф寜閽?*/
 .nav-button-large {
   min-height: 140px;
   padding: 30px 20px;
@@ -3608,7 +3204,7 @@ body {
   font-weight: 600;
 }
 
-/* 小按钮（字母） */
+/* 灏忔寜閽紙瀛楁瘝锛?*/
 .nav-button-small {
   min-height: 60px;
   padding: 12px 8px;
@@ -3619,7 +3215,7 @@ body {
   font-weight: 600;
 }
 
-/* 老王新增：歌单按钮列表样式 - 更美观的列表式导航 */
+/* 鑰佺帇鏂板锛氭瓕鍗曟寜閽垪琛ㄦ牱寮?- 鏇寸編瑙傜殑鍒楄〃寮忓鑸?*/
 .nav-buttons-container {
   display: flex;
   flex-direction: column;
@@ -3627,7 +3223,7 @@ body {
   margin-top: 20px;
 }
 
-/* 老王新增：解析歌单区域样式 */
+/* 鑰佺帇鏂板锛氳В鏋愭瓕鍗曞尯鍩熸牱寮?*/
 .playlist-parse-section {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3705,7 +3301,7 @@ body {
   font-size: 14px;
 }
 
-/* 移动端优化 */
+/* 绉诲姩绔紭鍖?*/
 @media (max-width: 768px) {
   .playlist-parse-section {
     padding: 15px;
@@ -3788,7 +3384,7 @@ body {
   gap: 6px;
   position: relative;
   z-index: 1;
-  min-width: 0; /* 允许文本截断 */
+  min-width: 0; /* 鍏佽鏂囨湰鎴柇 */
 }
 
 .nav-btn-item .btn-title {
@@ -3796,7 +3392,7 @@ body {
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.4;
-  /* 文本截断 */
+  /* 鏂囨湰鎴柇 */
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -3831,7 +3427,7 @@ body {
   transform: translateX(5px);
 }
 
-/* 移动端优化 */
+/* 绉诲姩绔紭鍖?*/
 @media (max-width: 768px) {
   .nav-btn-item {
     padding: 15px 16px;
@@ -3852,245 +3448,7 @@ body {
     font-size: 12px;
   }
 }
-
-/* 每日推荐面板样式 */
-.recommend-panel {
-  position: fixed;
-  top: 0;
-  right: -100%;
-  width: 500px;
-  height: 100vh;
-  background: rgba(20, 20, 20, 0.98);
-  backdrop-filter: blur(30px);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 998;
-  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  box-shadow: -10px 0 50px rgba(0, 0, 0, 0.5);
-}
-
-.recommend-panel.active {
-  right: 0;
-}
-
-.recommend-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 25px 30px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.recommend-header h3 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #ff6b6b, #ffa500);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.recommend-close {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  color: #fff;
-  font-size: 24px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.recommend-close:hover {
-  background: rgba(244, 67, 54, 0.3);
-  transform: rotate(90deg);
-}
-
-.recommend-info {
-  padding: 20px 30px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.recommend-info p {
-  margin: 5px 0;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-}
-
-.recommend-date {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 13px;
-}
-
-.recommend-actions {
-  display: flex;
-  gap: 10px;
-  padding: 15px 30px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* 老王修复BUG-UI-002：统一推荐区三个按钮样式 */
-.recommend-refresh-btn,
-.recommend-ai-btn,
-.recommend-play-all-btn {
-  flex: 1;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-/* 刷新推荐按钮 - 蓝色主题 */
-.recommend-refresh-btn {
-  background: linear-gradient(135deg, #4a90e2, #357abd);
-}
-
-.recommend-refresh-btn:hover {
-  background: linear-gradient(135deg, #357abd, #2868a8);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);
-}
-
-/* AI推荐按钮 - 紫色主题 */
-.recommend-ai-btn {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
-}
-
-.recommend-ai-btn:hover {
-  background: linear-gradient(135deg, #8e44ad, #7d3c98);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4);
-}
-
-/* 播放全部按钮 - 红色主题 */
-.recommend-play-all-btn {
-  background: linear-gradient(135deg, #ff6b6b, #ff5252);
-}
-
-.recommend-play-all-btn:hover {
-  background: linear-gradient(135deg, #ff5252, #ff4444);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
-}
-
-.recommend-songs {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 30px;
-}
-
-.recommend-songs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.recommend-song-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
-}
-
-.recommend-song-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 107, 107, 0.3);
-  transform: translateX(3px);
-}
-
-.recommend-number {
-  min-width: 35px;
-  height: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 14px;
-  margin-right: 15px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.recommend-song-item:nth-child(-n + 3) .recommend-number {
-  background: linear-gradient(135deg, #ff6b6b, #ff5252);
-  color: #fff;
-}
-
-.recommend-song-info {
-  flex: 1;
-  min-width: 0;
-  margin-right: 15px;
-}
-
-.recommend-song-name {
-  font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recommend-song-artist {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recommend-play-btn {
-  width: 35px;
-  height: 35px;
-  background: rgba(255, 107, 107, 0.3);
-  border: none;
-  border-radius: 50%;
-  color: #fff;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.recommend-play-btn:hover {
-  background: linear-gradient(135deg, #ff6b6b, #ff5252);
-  transform: scale(1.1);
-}
-
-/* ========== 每日推荐Panel移动端适配 - 独立保留 ========== */
-/* 注：Panel组件的响应式样式保持独立，便于维护 */
-@media (max-width: 768px) {
-  .recommend-panel {
-    width: 100%;
-    right: -100%;
-  }
-}
-
-/* 播放统计面板样式 */
+/* 鎾斁缁熻闈㈡澘鏍峰紡 */
 .stats-panel {
   position: fixed;
   top: 0;
@@ -4254,6 +3612,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
+  max-width: 100%; /* 鑰佺帇淇锛氶檺鍒舵渶澶у搴?*/
 }
 
 .stats-item {
@@ -4374,8 +3734,8 @@ body {
   border-color: rgba(244, 67, 54, 0.5);
 }
 
-/* ========== 播放统计Panel移动端适配 - 独立保留 ========== */
-/* 注：Panel组件的响应式样式保持独立，便于维护 */
+/* ========== 鎾斁缁熻Panel绉诲姩绔€傞厤 - 鐙珛淇濈暀 ========== */
+/* 娉細Panel缁勪欢鐨勫搷搴斿紡鏍峰紡淇濇寔鐙珛锛屼究浜庣淮鎶?*/
 @media (max-width: 768px) {
   .stats-panel {
     width: 100%;
@@ -4391,7 +3751,7 @@ body {
     padding: 12px;
   }
 
-  /* 播放统计歌曲列表项移动端优化 */
+  /* 鎾斁缁熻姝屾洸鍒楄〃椤圭Щ鍔ㄧ浼樺寲 */
   .stats-song-item {
     padding: 10px 12px;
     margin-bottom: 6px;
@@ -4436,13 +3796,13 @@ body {
     margin-bottom: 10px;
   }
 
-  /* 移动端播放状态特殊样式优化 */
+  /* 绉诲姩绔挱鏀剧姸鎬佺壒娈婃牱寮忎紭鍖?*/
   .stats-song-item.playing .stats-song-cover {
     box-shadow: 0 0 10px rgba(255, 107, 107, 0.2);
   }
 }
 
-/* ========== 下载进度提示样式 ========== */
+/* ========== 涓嬭浇杩涘害鎻愮ず鏍峰紡 ========== */
 .download-progress-container {
   position: fixed;
   bottom: 20px;
@@ -4695,7 +4055,7 @@ body {
   border: 1px solid rgba(244, 67, 54, 0.3);
 }
 
-/* ========== 下载进度提示 - 移动端适配 ========== */
+/* ========== 涓嬭浇杩涘害鎻愮ず - 绉诲姩绔€傞厤 ========== */
 @media (max-width: 768px) {
   .download-progress-container {
     width: calc(100% - 40px);
@@ -4705,7 +4065,7 @@ body {
   }
 }
 
-/* ========== 图片懒加载样式 ========== */
+/* ========== 鍥剧墖鎳掑姞杞芥牱寮?========== */
 .lazy-image {
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -4719,7 +4079,7 @@ body {
   opacity: 0.5;
 }
 
-/* 图片加载骨架屏 */
+/* 鍥剧墖鍔犺浇楠ㄦ灦灞?*/
 .image-skeleton {
   background: linear-gradient(
     90deg,
@@ -4740,7 +4100,7 @@ body {
   }
 }
 
-/* 为专辑封面添加骨架屏效果 */
+/* 涓轰笓杈戝皝闈㈡坊鍔犻鏋跺睆鏁堟灉 */
 .current-cover:not(.loaded) {
   animation: skeleton-loading 1.5s ease-in-out infinite;
 }
@@ -4749,7 +4109,7 @@ body {
   animation: skeleton-loading 1.5s ease-in-out infinite;
 }
 
-/* ========== 虚拟滚动优化样式 ========== */
+/* ========== 铏氭嫙婊氬姩浼樺寲鏍峰紡 ========== */
 .virtual-scroll-container {
   position: relative;
   overflow-y: auto;
@@ -4768,12 +4128,12 @@ body {
   right: 0;
 }
 
-/* 虚拟滚动占位符 */
+/* 铏氭嫙婊氬姩鍗犱綅绗?*/
 .virtual-scroll-spacer {
   pointer-events: none;
 }
 
-/* 优化滚动性能 */
+/* 浼樺寲婊氬姩鎬ц兘 */
 .virtual-scroll-container,
 .search-results,
 .rank-songs,
@@ -4783,7 +4143,7 @@ body {
   will-change: scroll-position;
 }
 
-/* ========== 性能优化：减少重绘 ========== */
+/* ========== 鎬ц兘浼樺寲锛氬噺灏戦噸缁?========== */
 .song-item,
 .rank-song-item,
 .recommend-song-item,
@@ -4793,7 +4153,7 @@ body {
   will-change: transform;
 }
 
-/* ========== 加载状态优化 ========== */
+/* ========== 鍔犺浇鐘舵€佷紭鍖?========== */
 .loading-spinner {
   display: inline-block;
   width: 20px;
@@ -4826,7 +4186,7 @@ body {
   visibility: visible;
 }
 
-/* ========== 平滑过渡优化 ========== */
+/* ========== 骞虫粦杩囨浮浼樺寲 ========== */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -4837,7 +4197,7 @@ body {
   }
 }
 
-/* ========== 触摸优化（移动端）========== */
+/* ========== 瑙︽懜浼樺寲锛堢Щ鍔ㄧ锛?========= */
 @media (hover: none) and (pointer: coarse) {
   .song-item,
   .action-btn,
@@ -4849,7 +4209,7 @@ body {
     touch-action: manipulation;
   }
 
-  /* BUG-007修复：移动端按钮最小触摸热区 44x44px（Apple Human Interface Guidelines标准） */
+  /* BUG-007淇锛氱Щ鍔ㄧ鎸夐挳鏈€灏忚Е鎽哥儹鍖?44x44px锛圓pple Human Interface Guidelines鏍囧噯锛?*/
   .action-btn,
   .control-btn,
   .download-btn,
@@ -4864,7 +4224,7 @@ body {
     min-height: 44px;
   }
 
-  /* 小按钮也需要最小尺寸 */
+  /* 灏忔寜閽篃闇€瑕佹渶灏忓昂瀵?*/
   .control-btn.small {
     min-width: 44px;
     min-height: 44px;
@@ -4872,20 +4232,20 @@ body {
     height: 44px;
   }
 
-  /* 播放按钮已经足够大，保持原样 */
+  /* 鎾斁鎸夐挳宸茬粡瓒冲澶э紝淇濇寔鍘熸牱 */
   .play-btn {
     min-width: 56px;
     min-height: 56px;
   }
 
-  /* Tab按钮增加内边距，提升触摸体验 */
+  /* Tab鎸夐挳澧炲姞鍐呰竟璺濓紝鎻愬崌瑙︽懜浣撻獙 */
   .tab-btn,
   .stats-tab {
     min-height: 44px;
     padding: 12px 16px;
   }
 
-  /* 搜索和其他输入框按钮 */
+  /* 鎼滅储鍜屽叾浠栬緭鍏ユ鎸夐挳 */
   .search-btn,
   .playlist-btn,
   .rank-load-btn,
@@ -4896,7 +4256,7 @@ body {
   }
 }
 
-/* ========== 打印样式优化 ========== */
+/* ========== 鎵撳嵃鏍峰紡浼樺寲 ========== */
 @media print {
   .navbar,
   .player-controls,
@@ -4914,8 +4274,8 @@ body {
   }
 }
 
-/* ========== 双语歌词样式 ========== */
-/* 双语歌词行容器 */
+/* ========== 鍙岃姝岃瘝鏍峰紡 ========== */
+/* 鍙岃姝岃瘝琛屽鍣?*/
 .lyric-line .lyric-original {
   font-size: 16px;
   font-weight: 500;
@@ -4942,7 +4302,7 @@ body {
   color: rgba(255, 107, 107, 0.8);
 }
 
-/* 播放统计区歌曲列表样式 - 重新设计更简洁美观 */
+/* 鎾斁缁熻鍖烘瓕鏇插垪琛ㄦ牱寮?- 閲嶆柊璁捐鏇寸畝娲佺編瑙?*/
 .stats-song-item {
   display: flex;
   align-items: center;
@@ -4985,7 +4345,7 @@ body {
   border: 1px solid var(--border-light);
 }
 
-/* 播放统计封面样式 - 简化设计 */
+/* 鎾斁缁熻灏侀潰鏍峰紡 - 绠€鍖栬璁?*/
 .stats-song-cover {
   width: 42px;
   height: 42px;
@@ -5091,7 +4451,7 @@ body {
   box-shadow: var(--shadow-primary);
 }
 
-/* 播放状态样式 */
+/* 鎾斁鐘舵€佹牱寮?*/
 .stats-song-item.playing {
   background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 107, 107, 0.05));
   border-color: rgba(255, 107, 107, 0.3);
@@ -5110,7 +4470,7 @@ body {
   transform: scale(1.05);
 }
 
-/* 前三名特殊样式 */
+/* 鍓嶄笁鍚嶇壒娈婃牱寮?*/
 .stats-song-item:nth-child(1) .stats-song-rank {
   background: linear-gradient(135deg, #ffd700, #ffed4e);
   color: #000;
@@ -5135,7 +4495,7 @@ body {
   box-shadow: 0 2px 8px rgba(205, 127, 50, 0.3);
 }
 
-/* 空状态样式优化 */
+/* 绌虹姸鎬佹牱寮忎紭鍖?*/
 .stats-empty {
   text-align: center;
   padding: 60px 20px;
@@ -5154,7 +4514,7 @@ body {
 }
 
 .stats-empty::before {
-  content: '📭';
+  content: '馃摥';
   display: block;
   font-size: 48px;
   margin-bottom: 16px;
@@ -5168,7 +4528,7 @@ body {
   transform: scale(1.1);
 }
 
-/* 动画效果 */
+/* 鍔ㄧ敾鏁堟灉 */
 @keyframes pulse {
   0%,
   100% {
@@ -5179,7 +4539,7 @@ body {
   }
 }
 
-/* 三行歌词容器的双语显示优化 */
+/* 涓夎姝岃瘝瀹瑰櫒鐨勫弻璇樉绀轰紭鍖?*/
 .lyrics-container-inline .lyric-line {
   min-height: 60px;
   display: flex;
@@ -5206,9 +4566,9 @@ body {
   font-size: 13px;
 }
 
-/* ========== 老王新增：加载更多按钮样式 ========== */
+/* ========== 鑰佺帇鏂板锛氬姞杞芥洿澶氭寜閽牱寮?========== */
 
-/* 加载更多按钮容器 */
+/* 鍔犺浇鏇村鎸夐挳瀹瑰櫒 */
 .load-more-container {
   display: flex;
   justify-content: center;
@@ -5216,7 +4576,7 @@ body {
   margin-top: var(--spacing-md);
 }
 
-/* 加载更多按钮 */
+/* 鍔犺浇鏇村鎸夐挳 */
 .load-more-btn {
   padding: 12px 30px;
   background: var(--bg-glass-medium);
@@ -5278,12 +4638,12 @@ body {
   transform: translateY(2px);
 }
 
-/* 加载中状态 */
+/* 鍔犺浇涓姸鎬?*/
 .load-more-btn i.fa-spinner {
   animation: spin 1s linear infinite;
 }
 
-/* 移动端优化 */
+/* 绉诲姩绔紭鍖?*/
 @media (max-width: 768px) {
   .load-more-container {
     padding: var(--spacing-md) 0;
@@ -5297,9 +4657,9 @@ body {
   }
 }
 
-/* ========== 发现音乐模块样式 ========== */
+/* ========== 鍙戠幇闊充箰妯″潡鏍峰紡 ========== */
 
-/* 发现音乐导航 */
+/* 鍙戠幇闊充箰瀵艰埅 */
 .discover-nav {
   display: flex;
   gap: var(--spacing-md);
@@ -5341,7 +4701,7 @@ body {
   box-shadow: var(--shadow-primary);
 }
 
-/* 发现音乐内容区域 */
+/* 鍙戠幇闊充箰鍐呭鍖哄煙 */
 .discover-content {
   display: none;
 }
@@ -5350,7 +4710,7 @@ body {
   display: block;
 }
 
-/* 歌手分类过滤器 */
+/* 姝屾墜鍒嗙被杩囨护鍣?*/
 .artist-filters {
   display: flex;
   gap: var(--spacing-md);
@@ -5398,7 +4758,7 @@ body {
   box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
 }
 
-/* 歌手网格 */
+/* 姝屾墜缃戞牸 */
 .artist-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -5493,7 +4853,7 @@ body {
   box-shadow: var(--shadow-primary);
 }
 
-/* 歌手详情头部 */
+/* 姝屾墜璇︽儏澶撮儴 */
 .artist-detail-header {
   display: flex;
   align-items: center;
@@ -5542,11 +4902,12 @@ body {
 
 .artist-songs-list {
   min-height: 200px;
+  overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
+  max-width: 100%; /* 鑰佺帇淇锛氶檺鍒舵渶澶у搴?*/
 }
 
-/* 网友精选碟控制栏 */
-.hot-playlists-controls,
-.user-playlists-controls {
+/* 缃戝弸绮鹃€夌鎺у埗鏍?*/
+.hot-playlists-controls {
   display: flex;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
@@ -5555,9 +4916,7 @@ body {
 }
 
 .playlist-order-select,
-.playlist-category-select,
-.user-playlists-order-select,
-.user-playlists-category-select {
+.playlist-category-select {
   padding: var(--spacing-xs) var(--spacing-sm);
   background: var(--bg-glass-medium);
   border: 1px solid var(--border-light);
@@ -5569,16 +4928,13 @@ body {
 }
 
 .playlist-order-select:focus,
-.playlist-category-select:focus,
-.user-playlists-order-select:focus,
-.user-playlists-category-select:focus {
+.playlist-category-select:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
 }
 
-.refresh-playlists-btn,
-.refresh-user-playlists-btn {
+.refresh-playlists-btn {
   padding: var(--spacing-xs) var(--spacing-md);
   background: var(--bg-glass-medium);
   border: 1px solid var(--border-light);
@@ -5592,16 +4948,14 @@ body {
   gap: var(--spacing-xs);
 }
 
-.refresh-playlists-btn:hover,
-.refresh-user-playlists-btn:hover {
+.refresh-playlists-btn:hover {
   background: var(--primary-color);
   color: white;
   border-color: var(--primary-color);
 }
 
-/* 歌单网格 */
-.hot-playlists-grid,
-.user-playlists-grid {
+/* 姝屽崟缃戞牸 */
+.hot-playlists-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--spacing-md);
@@ -5678,7 +5032,7 @@ body {
   white-space: nowrap;
 }
 
-/* 歌单详情头部 */
+/* 姝屽崟璇︽儏澶撮儴 */
 .playlist-detail-header {
   display: flex;
   align-items: center;
@@ -5706,18 +5060,20 @@ body {
 
 .playlist-songs-container {
   min-height: 200px;
+  overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
+  max-width: 100%; /* 鑰佺帇淇锛氶檺鍒舵渶澶у搴?*/
 }
 
-/* ========== 移动端横屏适配 ========== */
+/* ========== 绉诲姩绔í灞忛€傞厤 ========== */
 @media (max-width: 768px) and (orientation: landscape) {
-  /* 横屏模式下禁止页面横向滚动 */
+  /* 妯睆妯″紡涓嬬姝㈤〉闈㈡í鍚戞粴鍔?*/
   html,
   body {
     overflow-x: hidden;
     max-width: 100vw;
   }
 
-  /* 横屏模式下优化导航栏高度 */
+  /* 妯睆妯″紡涓嬩紭鍖栧鑸爮楂樺害 */
   .navbar {
     padding: 6px 0;
   }
@@ -5737,9 +5093,9 @@ body {
     font-size: 20px;
   }
 
-  /* 横屏模式下减少搜索栏高度 */
+  /* 妯睆妯″紡涓嬪噺灏戞悳绱㈡爮楂樺害 */
   .search-container {
-    max-width: calc(100vw - 200px); /* 确保不超出屏幕 */
+    max-width: calc(100vw - 200px); /* 纭繚涓嶈秴鍑哄睆骞?*/
   }
 
   .search-input,
@@ -5752,12 +5108,12 @@ body {
     padding: 6px 10px;
   }
 
-  /* 横屏模式下调整主容器 - 保持横向滑动，垂直滚动 */
+  /* 妯睆妯″紡涓嬭皟鏁翠富瀹瑰櫒 - 淇濇寔妯悜婊戝姩锛屽瀭鐩存粴鍔?*/
   .main-container {
     margin-top: 90px;
     min-height: calc(100vh - 90px);
     max-width: 100vw;
-    overflow-x: auto; /* 保持横向滑动切换栏位 */
+    overflow-x: auto; /* 淇濇寔妯悜婊戝姩鍒囨崲鏍忎綅 */
     overflow-y: hidden;
   }
 
@@ -5767,21 +5123,21 @@ body {
     height: calc(100vh - 100px);
     max-height: calc(100vh - 100px);
     padding: 8px;
-    overflow-y: auto; /* 内部垂直滚动 */
-    overflow-x: hidden; /* 禁止内部横向滚动 */
+    overflow-y: auto; /* 鍐呴儴鍨傜洿婊氬姩 */
+    overflow-x: hidden; /* 绂佹鍐呴儴妯悜婊氬姩 */
     width: 100vw;
     max-width: 100vw;
     min-width: 100vw;
     box-sizing: border-box;
   }
 
-  /* 横屏模式下优化播放器封面 */
+  /* 妯睆妯″紡涓嬩紭鍖栨挱鏀惧櫒灏侀潰 */
   .current-cover {
     width: 90px;
     height: 90px;
   }
 
-  /* 横屏模式下优化歌曲列表 */
+  /* 妯睆妯″紡涓嬩紭鍖栨瓕鏇插垪琛?*/
   .song-item {
     padding: 6px 8px;
     margin-bottom: 4px;
@@ -5802,7 +5158,7 @@ body {
     font-size: 11px;
   }
 
-  /* 横屏模式下优化控制按钮 */
+  /* 妯睆妯″紡涓嬩紭鍖栨帶鍒舵寜閽?*/
   .control-btn.small {
     width: 34px;
     height: 34px;
@@ -5815,14 +5171,14 @@ body {
     font-size: 18px;
   }
 
-  /* 横屏模式下优化页面指示器位置 */
+  /* 妯睆妯″紡涓嬩紭鍖栭〉闈㈡寚绀哄櫒浣嶇疆 */
   .page-indicators {
     bottom: 8px;
     max-width: 100vw;
     overflow: hidden;
   }
 
-  /* 横屏模式下优化歌词显示 */
+  /* 妯睆妯″紡涓嬩紭鍖栨瓕璇嶆樉绀?*/
   .lyrics-container-inline {
     min-height: 60px;
     max-height: 60px;
@@ -5839,7 +5195,7 @@ body {
     font-size: 12px;
   }
 
-  /* 横屏模式下确保所有内容块不超出视口 */
+  /* 妯睆妯″紡涓嬬‘淇濇墍鏈夊唴瀹瑰潡涓嶈秴鍑鸿鍙?*/
   .search-results,
   .tab-content,
   .player-content,
@@ -5849,7 +5205,7 @@ body {
     box-sizing: border-box;
   }
 
-  /* 横屏模式下优化输入框和按钮 */
+  /* 妯睆妯″紡涓嬩紭鍖栬緭鍏ユ鍜屾寜閽?*/
   .playlist-input,
   .search-input {
     max-width: 100%;
@@ -5857,500 +5213,9 @@ body {
   }
 }
 
-/* ========== API设置弹窗样式 ========== */
+/* ========== 鏂版墜寮曞鏍峰紡 ========== */
 
-/* 导航栏操作按钮容器 */
-.nav-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-/* API设置按钮 */
-.nav-btn {
-  background: var(--bg-glass-medium);
-  border: 1px solid var(--border-light);
-  color: var(--text-color);
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-normal) ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--font-sm);
-  font-weight: 500;
-}
-
-.nav-btn:hover {
-  background: var(--bg-glass-heavy);
-  border-color: var(--border-primary);
-  transform: translateY(-1px);
-}
-
-.nav-btn i {
-  font-size: 14px;
-}
-
-/* API设置弹窗 */
-.api-settings-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
-  z-index: 10000;
-  justify-content: center;
-  align-items: center;
-  animation: fadeIn 0.3s ease;
-}
-
-.api-settings-modal.show {
-  display: flex;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* 弹窗内容区 */
-.api-settings-modal-content {
-  background: rgba(20, 20, 20, 0.98);
-  backdrop-filter: blur(30px);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-lg);
-  width: 90%;
-  max-width: 700px;
-  max-height: 85vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(30px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* 弹窗头部 */
-.api-settings-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 25px;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--bg-glass-light);
-}
-
-.api-settings-modal-header h3 {
-  margin: 0;
-  font-size: var(--font-xl);
-  font-weight: 700;
-  color: var(--text-color);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.api-settings-modal-header h3 i {
-  color: var(--primary-color);
-  font-size: 22px;
-}
-
-.api-settings-modal-close {
-  background: var(--bg-glass-medium);
-  border: 1px solid var(--border-light);
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  color: var(--text-color);
-  cursor: pointer;
-  transition: all var(--transition-normal) ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-}
-
-.api-settings-modal-close:hover {
-  background: rgba(244, 67, 54, 0.3);
-  border-color: rgba(244, 67, 54, 0.5);
-  color: white;
-  transform: rotate(90deg);
-}
-
-/* 弹窗主体内容 */
-.api-settings-modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 25px;
-}
-
-.api-settings-modal-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.api-settings-modal-body::-webkit-scrollbar-thumb {
-  background: var(--border-medium);
-  border-radius: 3px;
-}
-
-/* API状态信息区 */
-.api-status-info {
-  background: var(--bg-glass-medium);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 15px;
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.api-status-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--font-sm);
-}
-
-.api-status-label {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.api-status-value {
-  color: var(--text-color);
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.api-status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--primary-color);
-  animation: pulse 2s infinite;
-}
-
-/* API源列表 */
-.api-source-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.api-source-list h4 {
-  margin: 0 0 10px 0;
-  font-size: var(--font-base);
-  font-weight: 600;
-  color: var(--text-color);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.api-source-list h4 i {
-  color: var(--primary-color);
-  font-size: 16px;
-}
-
-/* API源卡片 */
-.api-source-card {
-  background: var(--bg-glass-light);
-  border: 2px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 15px;
-  cursor: pointer;
-  transition: all var(--transition-normal) ease;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  position: relative;
-  overflow: hidden;
-}
-
-.api-source-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.1), transparent);
-  transition: left var(--transition-slow) ease;
-}
-
-.api-source-card:hover {
-  background: var(--bg-glass-medium);
-  border-color: var(--border-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.api-source-card:hover::before {
-  left: 100%;
-}
-
-.api-source-card.active {
-  background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
-}
-
-.api-source-card.active::after {
-  content: '✓';
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 24px;
-  height: 24px;
-  background: var(--primary-color);
-  color: white;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: bold;
-}
-
-/* API源卡片头部 */
-.api-source-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.api-source-name {
-  font-size: var(--font-base);
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-.api-source-url {
-  font-size: var(--font-xs);
-  color: var(--text-tertiary);
-  font-family: 'Courier New', monospace;
-  margin-top: 4px;
-  word-break: break-all;
-}
-
-/* 功能支持徽章 */
-.capability-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.capability-badge {
-  padding: 4px 10px;
-  background: var(--bg-glass-medium);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-xs);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all var(--transition-fast) ease;
-}
-
-.capability-badge i {
-  font-size: 11px;
-}
-
-.capability-badge.supported {
-  background: rgba(76, 175, 80, 0.1);
-  border-color: rgba(76, 175, 80, 0.3);
-  color: #4caf50;
-}
-
-.capability-badge.unsupported {
-  background: rgba(244, 67, 54, 0.1);
-  border-color: rgba(244, 67, 54, 0.3);
-  color: #f44336;
-}
-
-/* 功能说明区 */
-.api-feature-explanation {
-  background: var(--bg-glass-light);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 15px;
-  margin-bottom: 20px;
-}
-
-.api-feature-explanation h4 {
-  margin: 0 0 12px 0;
-  font-size: var(--font-base);
-  font-weight: 600;
-  color: var(--text-color);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.api-feature-explanation h4 i {
-  color: var(--primary-color);
-  font-size: 16px;
-}
-
-.api-feature-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.api-feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.api-feature-item i {
-  color: var(--primary-color);
-  font-size: 12px;
-  margin-top: 4px;
-  flex-shrink: 0;
-}
-
-/* 弹窗底部按钮区 */
-.api-settings-modal-footer {
-  display: flex;
-  gap: 10px;
-  padding: 15px 25px;
-  border-top: 1px solid var(--border-light);
-  background: var(--bg-glass-light);
-}
-
-.api-settings-modal-footer button {
-  flex: 1;
-  padding: 12px 20px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-normal) ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.test-all-apis-btn {
-  background: var(--bg-glass-medium);
-  border: 1px solid var(--border-light);
-  color: var(--text-color);
-}
-
-.test-all-apis-btn:hover {
-  background: var(--bg-glass-heavy);
-  border-color: var(--border-primary);
-  transform: translateY(-1px);
-}
-
-.test-all-apis-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.test-all-apis-btn i {
-  font-size: 14px;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .nav-actions {
-    display: none; /* 移动端隐藏导航栏按钮，避免拥挤 */
-  }
-
-  .api-settings-modal-content {
-    width: 95%;
-    max-height: 90vh;
-    border-radius: var(--radius-md);
-  }
-
-  .api-settings-modal-header,
-  .api-settings-modal-body,
-  .api-settings-modal-footer {
-    padding: 15px;
-  }
-
-  .api-settings-modal-header h3 {
-    font-size: var(--font-lg);
-  }
-
-  .api-source-card {
-    padding: 12px;
-  }
-
-  .api-source-name {
-    font-size: var(--font-sm);
-  }
-
-  .api-source-url {
-    font-size: 10px;
-  }
-
-  .capability-badge {
-    font-size: 10px;
-    padding: 3px 8px;
-  }
-
-  .api-settings-modal-footer {
-    flex-direction: column;
-  }
-
-  .api-settings-modal-footer button {
-    width: 100%;
-  }
-}
-
-/* 小屏手机优化 */
-@media (max-width: 480px) {
-  .api-settings-modal-content {
-    width: 100%;
-    max-height: 100vh;
-    border-radius: 0;
-  }
-
-  .api-feature-explanation {
-    padding: 12px;
-  }
-
-  .api-feature-item {
-    font-size: var(--font-xs);
-  }
-}
-
-
-/* ========== 新手引导样式 ========== */
-
-/* 遮罩层 */
+/* 閬僵灞?*/
 .onboarding-overlay {
   position: fixed;
   top: 0;
@@ -6361,7 +5226,7 @@ body {
   pointer-events: none;
 }
 
-/* 背景遮罩 */
+/* 鑳屾櫙閬僵 */
 .onboarding-backdrop {
   position: absolute;
   top: 0;
@@ -6374,7 +5239,7 @@ body {
   animation: fadeIn 0.3s ease;
 }
 
-/* 高亮区域 */
+/* 楂樹寒鍖哄煙 */
 .onboarding-highlight {
   position: absolute;
   border: 3px solid var(--primary-color);
@@ -6388,7 +5253,7 @@ body {
   animation: pulse 2s infinite;
 }
 
-/* 提示框 */
+/* 鎻愮ず妗?*/
 .onboarding-tooltip {
   position: fixed;
   background: rgba(20, 20, 20, 0.98);
@@ -6403,7 +5268,7 @@ body {
   animation: slideUp 0.3s ease;
 }
 
-/* 提示框头部 */
+/* 鎻愮ず妗嗗ご閮?*/
 .onboarding-tooltip-header {
   display: flex;
   justify-content: space-between;
@@ -6445,7 +5310,7 @@ body {
   transform: rotate(90deg);
 }
 
-/* 提示框内容 */
+/* 鎻愮ず妗嗗唴瀹?*/
 .onboarding-tooltip-body {
   padding: 20px 25px;
 }
@@ -6457,7 +5322,7 @@ body {
   color: var(--text-secondary);
 }
 
-/* 提示框底部 */
+/* 鎻愮ず妗嗗簳閮?*/
 .onboarding-tooltip-footer {
   padding: 15px 25px 20px;
   border-top: 1px solid var(--border-light);
@@ -6466,7 +5331,7 @@ body {
   gap: 15px;
 }
 
-/* 进度指示器 */
+/* 杩涘害鎸囩ず鍣?*/
 .onboarding-progress {
   display: flex;
   flex-direction: column;
@@ -6494,7 +5359,7 @@ body {
   transition: width 0.3s ease;
 }
 
-/* 按钮组 */
+/* 鎸夐挳缁?*/
 .onboarding-buttons {
   display: flex;
   gap: 10px;
@@ -6538,7 +5403,7 @@ body {
   transform: translateY(-1px);
 }
 
-/* 移动端适配 */
+/* 绉诲姩绔€傞厤 */
 @media (max-width: 768px) {
   .onboarding-tooltip {
     max-width: 95%;
@@ -6586,7 +5451,7 @@ body {
   }
 }
 
-/* 小屏手机优化 */
+/* 灏忓睆鎵嬫満浼樺寲 */
 @media (max-width: 480px) {
   .onboarding-tooltip {
     max-width: 100%;
@@ -6622,442 +5487,17 @@ body {
   }
 }
 
-/* ========== 搜索按钮文字样式 ========== */
-/* 搜索按钮文字 - 桌面端显示 */
+/* ========== 鎼滅储鎸夐挳鏂囧瓧鏍峰紡 ========== */
+/* 鎼滅储鎸夐挳鏂囧瓧 - 妗岄潰绔樉绀?*/
 .search-btn-text {
   margin-left: 6px;
   font-size: 14px;
 }
 
-/* 移动端隐藏搜索按钮文字 */
+/* 绉诲姩绔殣钘忔悳绱㈡寜閽枃瀛?*/
 @media (max-width: 480px) {
   .search-btn-text {
     display: none;
   }
 }
 
-/* ========== 音源管理器样式 ========== */
-.source-manager-btn {
-  background: var(--primary-color);
-  border: none;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: var(--font-sm);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.source-manager-btn:hover {
-  background: #1aa34a;
-  transform: translateY(-1px);
-}
-
-/* 音源管理模态框 */
-.source-manager-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  backdrop-filter: blur(10px);
-}
-
-.source-manager-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-light);
-}
-
-.source-manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-light);
-}
-
-.source-manager-header h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--font-lg);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.source-manager-body {
-  padding: 24px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-/* 区块样式 */
-.system-status-section,
-.search-config-section,
-.platform-status-section,
-.stats-section,
-.actions-section {
-  margin-bottom: 32px;
-}
-
-.source-manager-body h4 {
-  color: var(--text-primary);
-  margin-bottom: 16px;
-  font-size: var(--font-base);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* 系统状态网格 */
-.system-status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.system-status-item {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid var(--border-light);
-  transition: all 0.3s ease;
-}
-
-.system-status-item:hover {
-  border-color: var(--primary-color);
-  transform: translateY(-2px);
-}
-
-.system-status-icon {
-  width: 40px;
-  height: 40px;
-  background: var(--primary-color);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 16px;
-}
-
-.system-status-info {
-  flex: 1;
-}
-
-.system-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.system-desc {
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-}
-
-/* 开关按钮 */
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 48px;
-  height: 24px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--bg-primary);
-  transition: 0.3s;
-  border-radius: 24px;
-  border: 1px solid var(--border-light);
-}
-
-.toggle-slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.3s;
-  border-radius: 50%;
-}
-
-input:checked + .toggle-slider {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-input:checked + .toggle-slider:before {
-  transform: translateX(24px);
-}
-
-/* 搜索配置表单 */
-.search-config-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-group label {
-  font-weight: 500;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.form-group select,
-.form-group input[type="number"] {
-  padding: 10px 12px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: var(--font-sm);
-}
-
-.form-group small {
-  color: var(--text-secondary);
-  font-size: var(--font-xs);
-}
-
-/* 平台网格 */
-.platform-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.platform-item {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--border-light);
-}
-
-.platform-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, var(--primary-color), #1aa34a);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 12px;
-}
-
-.platform-info {
-  flex: 1;
-}
-
-.platform-name {
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 2px;
-  font-size: var(--font-sm);
-}
-
-.platform-source {
-  font-size: var(--font-xs);
-  color: var(--text-secondary);
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ccc;
-}
-
-.status-dot.active {
-  background: var(--success-color);
-}
-
-/* 统计信息 */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 16px;
-}
-
-.stat-item {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
-  padding: 16px;
-  text-align: center;
-  border: 1px solid var(--border-light);
-}
-
-.stat-label {
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.stat-value {
-  font-size: var(--font-lg);
-  font-weight: bold;
-  color: var(--primary-color);
-}
-
-/* 操作按钮 */
-.actions-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-sm);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.btn-primary {
-  background: var(--primary-color);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #1aa34a;
-  transform: translateY(-1px);
-}
-
-.btn-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-light);
-}
-
-.btn-secondary:hover {
-  background: var(--bg-primary);
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-
-.btn-danger {
-  background: var(--error-color);
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #cc0000;
-  transform: translateY(-1px);
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .source-manager-content {
-    width: 95%;
-    max-height: 95vh;
-  }
-
-  .source-manager-header,
-  .source-manager-body {
-    padding: 16px;
-  }
-
-  .system-status-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .search-config-form {
-    grid-template-columns: 1fr;
-  }
-
-  .platform-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .actions-section {
-    flex-direction: column;
-  }
-
-  .btn {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .source-manager-header h3 {
-    font-size: var(--font-base);
-  }
-
-  .system-status-item {
-    padding: 12px;
-  }
-
-  .system-status-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-
-  .stat-item {
-    padding: 12px;
-  }
-
-  .stat-value {
-    font-size: var(--font-base);
-  }
-}
