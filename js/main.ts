@@ -23,7 +23,6 @@ import { imagePlaceholderManager } from './image-placeholder.js';
 import { unifiedProviderManager } from './providers/unified-provider-manager.js';
 import { loWeb } from './providers/listen1-media-service.js';
 import { enhancedSearch, searchMusic, getMusicPlayUrl, getMusicLyric } from './enhanced-search.js';
-import { sourceManagerUI } from './ui/source-manager.js';
 
 // 优化: 使用动态导入实现代码分割，减少初始加载时间
 let artistModule: any = null; // 老王改：原discover模块改为artist
