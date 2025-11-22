@@ -1416,23 +1416,26 @@ export async function searchMusicAPI(
   // 优化: 使用请求去重
   return requestDeduplicator.dedupe(cacheKey, async () => {
     try {
-      const apiFormat = detectApiFormat(API_BASE);
+      // 老王修复BUG：搜索强制使用GDStudio API
+      // Vercel API搜索也不稳定，会返回HTML错误页面
+      const searchApiBase = 'https://music-api.gdstudio.xyz/api.php';
+      const apiFormat = detectApiFormat(searchApiBase);
       let url: string;
 
       // 根据不同API格式构建请求URL
       switch (apiFormat.format) {
         case 'gdstudio':
-          url = `${API_BASE}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
+          url = `${searchApiBase}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=${limit}`;
           break;
         case 'ncm':
-          url = `${API_BASE}search?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=${source}`;
+          url = `${searchApiBase}search?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=${source}`;
           break;
         case 'clawcloud':
-          url = `${API_BASE}cloudsearch?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=1`;
+          url = `${searchApiBase}cloudsearch?keywords=${encodeURIComponent(keyword)}&limit=${limit}&type=1`;
           break;
         case 'meting':
         default:
-          url = `${API_BASE}?type=search&source=${source}&keywords=${encodeURIComponent(keyword)}&limit=${limit}`;
+          url = `${searchApiBase}?type=search&source=${source}&keywords=${encodeURIComponent(keyword)}&limit=${limit}`;
           break;
       }
 
