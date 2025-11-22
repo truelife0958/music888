@@ -984,6 +984,27 @@ export async function getAlbumCoverUrl(song: Song, size?: number): Promise<strin
   const DEFAULT_COVER =
     'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUiIGhlaWdodD0iNTUiIHZpZXdCb3g9IjAgMCA1NSA1NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjU1IiBoZWlnaHQ9IjU1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHJ4PSI4Ii8+CjxwYXRoIGQ9Ik0yNy41IDE4TDM1IDI3LjVIMzBWMzdIMjVWMjcuNUgyMEwyNy41IDE4WiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIi8+Cjwvc3ZnPgo=';
 
+  // 老王修复BUG：优先使用pic_url完整URL，避免API调用和404错误
+  if (song.pic_url && typeof song.pic_url === 'string' && song.pic_url.startsWith('http')) {
+    // 优化: 智能选择图片尺寸
+    const dpr = window.devicePixelRatio || 1;
+    const isMobile = window.innerWidth <= 768;
+    if (!size) {
+      size = isMobile ? 150 : 300;
+    }
+    const adjustedSize = Math.min(Math.ceil(size * dpr), 1024);
+    const optimizedSize =
+      adjustedSize <= 150 ? 150 : adjustedSize <= 300 ? 300 : adjustedSize <= 500 ? 500 : 1024;
+
+    // 如果URL已经包含参数，直接返回；否则添加param参数
+    if (song.pic_url.includes('?param=') || song.pic_url.includes('y' + size)) {
+      return song.pic_url;
+    } else {
+      // 网易云格式：添加?param=300x300参数
+      return `${song.pic_url}?param=${optimizedSize}x${optimizedSize}`;
+    }
+  }
+
   // 支持多种图片ID字段，包括NCM格式的al.picStr
   const picId =
     song.pic_id ||
@@ -1033,15 +1054,7 @@ export async function getAlbumCoverUrl(song: Song, size?: number): Promise<strin
     // 根据不同API格式构建请求URL
     switch (apiFormat.format) {
       case 'gdstudio':
-        // 老王修复：网易云封面直接使用官方CDN，避免GDStudio API返回404
-        if (song.source === 'netease' && picId && typeof picId === 'string' && picId.length > 0) {
-          // 网易云图片CDN格式
-          url = `https://p1.music.126.net/${picId}/${optimizedSize}y${optimizedSize}.jpg`;
-          // 直接返回CDN链接，不需要API调用
-          cache.set(cacheKey, url, CacheCategory.ALBUM_COVER);
-          return url;
-        }
-        // 其他音源使用GDStudio API: ?types=pic&source=qq&id=pic_id&size=300
+        // 老王修复：所有音源（包括网易云）统一使用GDStudio API获取封面
         url = `${coverApiBase}?types=pic&source=${song.source}&id=${picId}&size=${optimizedSize}`;
         break;
       case 'ncm':

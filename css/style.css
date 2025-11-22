@@ -1870,12 +1870,12 @@ body {
   line-height: 1.5;
   /* 统一从下到上的滚动淡入淡出效果 */
   transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.7);  /* 老王修复：从0.35提高到0.7，更清晰 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   height: 24px;
-  opacity: 0.5;
+  opacity: 0.8;  /* 老王修复：从0.5提高到0.8，更清晰 */
   transform: translateY(0) scale(0.93);
   will-change: opacity, transform, color, font-size;
 }
@@ -1899,8 +1899,8 @@ body {
 /* 上一句歌词 - 向上滚动淡出 */
 .lyrics-container-inline .lyric-line.lyric-prev {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  opacity: 0.6;
+  color: rgba(255, 255, 255, 0.6);  /* 老王修复：从0.4提高到0.6，更清晰 */
+  opacity: 0.75;  /* 老王修复：从0.6提高到0.75，更清晰 */
   transform: translateY(-8px) scale(0.90);
   filter: blur(0.3px);
   animation: scrollUpFadeOut 0.6s ease-out;
@@ -1909,8 +1909,8 @@ body {
 /* 下一句歌词 - 从下方滚动进入 */
 .lyrics-container-inline .lyric-line.lyric-next {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  opacity: 0.6;
+  color: rgba(255, 255, 255, 0.6);  /* 老王修复：从0.4提高到0.6，更清晰 */
+  opacity: 0.75;  /* 老王修复：从0.6提高到0.75，更清晰 */
   transform: translateY(8px) scale(0.90);
   filter: blur(0.3px);
   animation: scrollUpFadeIn 0.6s ease-out;

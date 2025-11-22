@@ -168,16 +168,18 @@ export class NeteaseProvider extends BaseProvider {
     // 提取专辑信息
     const album = rawSong.album || rawSong.al || {};
     const albumName = album.name || '未知专辑';
-    
-    // 提取封面ID
+
+    // 老王修复BUG：优先使用album.picUrl完整URL，避免404
+    const picUrl = album.picUrl || album.pic_url || '';
     const picId = album.picStr || album.pic_str || String(album.picId || album.pic || '');
-    
+
     return {
       id: this.generateTrackId(songId),
       name: normalizeSongName(rawSong.name),
       artist: normalizeArtistField(artistNames),
       album: normalizeAlbumName(albumName),
       pic_id: picId,
+      pic_url: picUrl,  // 老王新增：完整封面URL
       lyric_id: songId,
       source: 'netease',
       duration: rawSong.duration || rawSong.dt || 0,
