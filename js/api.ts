@@ -1033,7 +1033,15 @@ export async function getAlbumCoverUrl(song: Song, size?: number): Promise<strin
     // 根据不同API格式构建请求URL
     switch (apiFormat.format) {
       case 'gdstudio':
-        // GDStudio API格式: ?types=pic&source=netease&id=pic_id&size=300
+        // 老王修复：网易云封面直接使用官方CDN，避免GDStudio API返回404
+        if (song.source === 'netease' && picId && typeof picId === 'string' && picId.length > 0) {
+          // 网易云图片CDN格式
+          url = `https://p1.music.126.net/${picId}/${optimizedSize}y${optimizedSize}.jpg`;
+          // 直接返回CDN链接，不需要API调用
+          cache.set(cacheKey, url, CacheCategory.ALBUM_COVER);
+          return url;
+        }
+        // 其他音源使用GDStudio API: ?types=pic&source=qq&id=pic_id&size=300
         url = `${coverApiBase}?types=pic&source=${song.source}&id=${picId}&size=${optimizedSize}`;
         break;
       case 'ncm':

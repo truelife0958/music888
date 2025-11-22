@@ -251,8 +251,9 @@ export class KuwoProvider extends BaseProvider {
       }
 
       const trackId = this.generateTrackId(rawSong.DC_TARGETID);
+      // 老王修复BUG：Kuwo封面URL必须加.jpg扩展名，否则404
       const picUrl = rawSong.web_albumpic_short
-        ? `https://img2.kuwo.cn/star/albumcover/${rawSong.web_albumpic_short}`
+        ? `https://img2.kuwo.cn/star/albumcover/${rawSong.web_albumpic_short}${rawSong.web_albumpic_short.endsWith('.jpg') ? '' : '.jpg'}`
         : '';
 
       return {

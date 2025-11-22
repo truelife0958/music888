@@ -48,9 +48,9 @@ export class UnifiedProviderManager {
   private constructor() {
     this.listen1Service = loWeb;
     this.enabledSystems = {
-      original: true,    // 原有架构
-      enhanced: true,    // 增强版架构
-      listen1: true,     // Listen1 架构
+      original: true,    // 原有架构 - 使用GDStudio API，无CORS问题
+      enhanced: false,   // 老王禁用：直接访问music.163.com/y.qq.com，CORS阻止
+      listen1: false,    // 老王禁用：Listen1是Chrome扩展，浏览器环境CORS阻止
     };
   }
 
