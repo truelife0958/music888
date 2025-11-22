@@ -154,6 +154,12 @@ export abstract class BaseProvider {
    * @returns 平台内部 ID，如 "12345"
    */
   protected extractPlatformId(trackId: string): string {
+    // 老王修复BUG：添加类型检查，避免 startsWith 报错
+    if (!trackId || typeof trackId !== 'string') {
+      console.warn('[Provider] extractPlatformId 收到无效的 trackId:', trackId);
+      return String(trackId || '');
+    }
+
     const prefix = `${this.config.id}track_`;
     if (trackId.startsWith(prefix)) {
       return trackId.slice(prefix.length);

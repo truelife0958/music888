@@ -1024,14 +1024,17 @@ export async function getAlbumCoverUrl(song: Song, size?: number): Promise<strin
   }
 
   try {
-    const apiFormat = detectApiFormat(API_BASE);
+    // 老王修复BUG：专辑封面查询强制使用GDStudio API
+    // Vercel API不支持封面查询，会返回HTML错误页面
+    const coverApiBase = 'https://music-api.gdstudio.xyz/api.php';
+    const apiFormat = detectApiFormat(coverApiBase);
     let url: string;
 
     // 根据不同API格式构建请求URL
     switch (apiFormat.format) {
       case 'gdstudio':
         // GDStudio API格式: ?types=pic&source=netease&id=pic_id&size=300
-        url = `${API_BASE}?types=pic&source=${song.source}&id=${picId}&size=${optimizedSize}`;
+        url = `${coverApiBase}?types=pic&source=${song.source}&id=${picId}&size=${optimizedSize}`;
         break;
       case 'ncm':
         // NCM API可能不直接提供图片接口，尝试使用网易云的图片CDN
@@ -1045,7 +1048,7 @@ export async function getAlbumCoverUrl(song: Song, size?: number): Promise<strin
       case 'meting':
       default:
         // Meting API格式: ?type=pic&id=pic_id&size=300
-        url = `${API_BASE}?type=pic&id=${picId}&size=${optimizedSize}`;
+        url = `${coverApiBase}?type=pic&id=${picId}&size=${optimizedSize}`;
         break;
     }
 
@@ -1311,27 +1314,30 @@ export async function getLyrics(song: Song): Promise<{ lyric: string }> {
   }
 
   try {
-    const apiFormat = detectApiFormat(API_BASE);
+    // 老王修复BUG：歌词查询强制使用GDStudio API
+    // Vercel API不支持歌词查询，会返回HTML错误页面
+    const lyricApiBase = 'https://music-api.gdstudio.xyz/api.php';
+    const apiFormat = detectApiFormat(lyricApiBase);
     let url: string;
 
     // 根据不同API格式构建请求URL
     switch (apiFormat.format) {
       case 'gdstudio':
         // GDStudio API格式: ?types=lyric&source=netease&id=song_id
-        url = `${API_BASE}?types=lyric&source=${song.source}&id=${song.lyric_id || song.id}`;
+        url = `${lyricApiBase}?types=lyric&source=${song.source}&id=${song.lyric_id || song.id}`;
         break;
       case 'ncm':
         // NCM API格式: /lyric?id=song_id
-        url = `${API_BASE}lyric?id=${song.lyric_id || song.id}`;
+        url = `${lyricApiBase}lyric?id=${song.lyric_id || song.id}`;
         break;
       case 'clawcloud':
         // ClawCloud API = 网易云音乐API Enhanced,完全兼容NCM歌词接口
-        url = `${API_BASE}lyric?id=${song.lyric_id || song.id}`;
+        url = `${lyricApiBase}lyric?id=${song.lyric_id || song.id}`;
         break;
       case 'meting':
       default:
         // Meting API格式: ?type=lyric&source=netease&id=song_id
-        url = `${API_BASE}?type=lyric&source=${song.source}&id=${song.lyric_id || song.id}`;
+        url = `${lyricApiBase}?type=lyric&source=${song.source}&id=${song.lyric_id || song.id}`;
         break;
     }
 
@@ -1917,7 +1923,10 @@ export async function getTopSongs(
   }
 
   try {
-    const apiFormat = detectApiFormat(API_BASE);
+    // 老王修复BUG：排行榜查询强制使用GDStudio API
+    // Vercel API不支持排行榜查询，会返回HTML错误页面
+    const topApiBase = 'https://music-api.gdstudio.xyz/api.php';
+    const apiFormat = detectApiFormat(topApiBase);
     let url: string;
 
     switch (apiFormat.format) {
@@ -1931,7 +1940,7 @@ export async function getTopSongs(
           electronic: '10520166', // 电音榜
         };
         const listId = topListIds[category] || topListIds.hot;
-        url = `${API_BASE}top/list?id=${listId}`;
+        url = `${topApiBase}top/list?id=${listId}`;
         break;
       }
       case 'clawcloud': {
@@ -1944,7 +1953,7 @@ export async function getTopSongs(
           electronic: '10520166', // 电音榜
         };
         const clawcloudListId = clawcloudTopListIds[category] || clawcloudTopListIds.hot;
-        url = `${API_BASE}top/list?id=${clawcloudListId}`;
+        url = `${topApiBase}top/list?id=${clawcloudListId}`;
         break;
       }
       case 'gdstudio': {
@@ -1960,7 +1969,7 @@ export async function getTopSongs(
       case 'meting':
       default:
         // Meting API格式: ?type=top&id=榜单ID
-        url = `${API_BASE}?type=top&id=${category}`;
+        url = `${topApiBase}?type=top&id=${category}`;
         break;
     }
 
