@@ -1916,6 +1916,82 @@ body {
   animation: scrollUpFadeIn 0.6s ease-out;
 }
 
+/* ========== 老王新增：歌词时间轴调节器样式 ========== */
+.lyric-adjuster-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lyric-adjuster-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
+}
+
+.lyric-adjuster-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.2);
+}
+
+.lyric-adjuster-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(29, 185, 84, 0.15);
+}
+
+.lyric-adjuster-btn i {
+  font-size: 12px;
+}
+
+/* 重置按钮特殊样式 */
+.lyric-adjust-reset {
+  background: rgba(255, 107, 107, 0.1);
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+.lyric-adjust-reset:hover {
+  background: rgba(255, 107, 107, 0.2);
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.25);
+}
+
+/* 偏移量显示 */
+.lyric-offset-display {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 50px;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
+}
+
+/* 有偏移量时高亮显示 */
+.lyric-offset-display[style*="color: #ff6b6b"] {
+  text-shadow: 0 0 8px rgba(255, 107, 107, 0.4);
+}
+/* ========== 歌词时间轴调节器样式结束 ========== */
+
 /* 当前歌词高亮动画 - 从下方滚动到中间并高亮 */
 @keyframes lyricHighlight {
   0% {
@@ -2657,6 +2733,28 @@ body {
   .lyrics-container-inline .lyric-line.lyric-prev,
   .lyrics-container-inline .lyric-line.lyric-next {
     font-size: 11px;
+  }
+
+  /* 老王新增：移动端歌词调节器优化 */
+  .lyric-adjuster-container {
+    gap: 6px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+  }
+
+  .lyric-adjuster-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .lyric-adjuster-btn i {
+    font-size: 10px;
+  }
+
+  .lyric-offset-display {
+    font-size: 12px;
+    min-width: 45px;
   }
 
   .progress-container {

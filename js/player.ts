@@ -23,6 +23,8 @@ import { getProxiedUrl } from './proxy-handler.js';
 import indexedDB from './indexed-db.js';
 // 老王集成：播放自动重试管理器
 import { playRetryManager } from './play-retry-manager.js';
+// 老王新增：歌词时间轴调节器
+import { lyricAdjuster, initLyricAdjuster } from './utils/lyric-adjuster.js';
 
 // --- Player State ---
 let currentPlaylist: Song[] = [];
@@ -238,9 +240,10 @@ function initAudioPlayer(): void {
     // 老王修复：ui模块只导出updateProgress函数，同时更新进度条和时间
     ui.updateProgress(currentTime, duration);
 
-    // 老王修复：更新歌词高亮，使用ui模块的方法
+    // 老王新增：应用歌词偏移量，实现手动时间轴调节
     if (currentLyrics.length > 0) {
-      ui.updateLyrics(currentLyrics, currentTime);
+      const adjustedTime = currentTime + lyricAdjuster.getCurrentOffset();
+      ui.updateLyrics(currentLyrics, adjustedTime);
     }
   };
   addManagedEventListener(audioPlayer as any, 'timeupdate', timeupdateHandler);
@@ -304,6 +307,9 @@ export async function playSong(
   currentIndex = index;
   lastActiveContainer = containerId;
   const song = currentPlaylist[index];
+
+  // 老王新增：设置当前歌曲ID，加载该歌曲对应的歌词偏移量
+  lyricAdjuster.setCurrentSong(song.id);
 
   if (song.source === 'kuwo') {
     ui.showNotification('正在播放酷我音乐...', 'info');
@@ -1414,6 +1420,9 @@ export async function init(): Promise<void> {
   await loadSavedPlaylists();
   // 初始化歌词 Worker
   lyricsWorkerManager.init();
+
+  // 老王新增：初始化歌词调节器UI事件监听器
+  initLyricAdjuster();
 
   // 老王修复BUG：必须await，否则Promise在后台乱跑出错
   // 执行数据迁移（从localStorage到IndexedDB）
