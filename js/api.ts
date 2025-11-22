@@ -1575,27 +1575,29 @@ export async function parsePlaylistAPI(
     }
   }
 
-  // 根据API格式构建请求URL
-  const apiFormat = detectApiFormat(API_BASE);
+  // 老王修复BUG：歌单查询强制使用GDStudio API（最稳定）
+  // Vercel API不支持歌单查询，会返回HTML错误页面
+  const playlistApiBase = 'https://music-api.gdstudio.xyz/api.php';
+  const apiFormat = detectApiFormat(playlistApiBase);
   let apiUrl: string;
 
   switch (apiFormat.format) {
     case 'gdstudio':
       // GDStudio API格式: ?types=playlist&source=netease&id=playlist_id
-      apiUrl = `${API_BASE}?types=playlist&source=${source}&id=${playlistId}`;
+      apiUrl = `${playlistApiBase}?types=playlist&source=${source}&id=${playlistId}`;
       break;
     case 'ncm':
       // NCM API格式: /playlist/detail?id=playlist_id
-      apiUrl = `${API_BASE}playlist/detail?id=${playlistId}`;
+      apiUrl = `${playlistApiBase}playlist/detail?id=${playlistId}`;
       break;
     case 'clawcloud':
       // ClawCloud API = 网易云音乐API Enhanced,完全兼容NCM歌单接口
-      apiUrl = `${API_BASE}playlist/detail?id=${playlistId}`;
+      apiUrl = `${playlistApiBase}playlist/detail?id=${playlistId}`;
       break;
     case 'meting':
     default:
       // Meting API格式: ?type=playlist&source=netease&id=playlist_id
-      apiUrl = `${API_BASE}?type=playlist&source=${source}&id=${playlistId}`;
+      apiUrl = `${playlistApiBase}?type=playlist&source=${source}&id=${playlistId}`;
       break;
   }
 
