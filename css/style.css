@@ -2264,7 +2264,7 @@ body {
   }
 
   .player-section .volume-container {
-    margin-bottom: 60px; /* 鑰佺帇淇锛氬鍔犲簳閮ㄩ棿璺濓紝閬垮厤琚〉闈㈡寚绀哄櫒(40px楂樺害+20px搴曢儴浣嶇疆)閬尅 */
+    margin-bottom: 80px; /* 鑰佺帇淇锛氬鍔犲簳閮ㄩ棿璺濓紝閬垮厤琚〉闈㈡寚绀哄櫒(40px楂樺害+20px搴曢儴浣嶇疆)閬尅 */
     padding-bottom: 10px; /* 鑰佺帇鏂板锛氶澶栫殑缂撳啿鍖?*/
   }
 
@@ -2762,7 +2762,7 @@ body {
   }
 
   .volume-container {
-    margin-bottom: 60px; /* 鑰佺帇淇锛氬皬灞忔墜鏈哄悓鏍烽渶瑕佽冻澶熺殑搴曢儴闂磋窛閬垮厤閬尅 */
+    margin-bottom: 80px; /* 鑰佺帇淇锛氬皬灞忔墜鏈哄悓鏍烽渶瑕佽冻澶熺殑搴曢儴闂磋窛閬垮厤閬尅 */
     padding-bottom: 10px; /* 鑰佺帇鏂板锛氶澶栫殑缂撳啿鍖?*/
   }
 }
@@ -3050,6 +3050,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-sizing: border-box;
   overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
   max-width: 100%; /* 鑰佺帇淇锛氶檺鍒舵渶澶у搴?*/
 }
@@ -4514,7 +4515,7 @@ body {
 }
 
 .stats-empty::before {
-  content: '馃摥';
+  content: '🎵';
   display: block;
   font-size: 48px;
   margin-bottom: 16px;
@@ -4764,6 +4765,8 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--spacing-md);
   padding: var(--spacing-sm);
+  overflow-x: hidden; /* 老王修复：禁止横向滚动 */
+  max-width: 100%; /* 老王修复：限制最大宽度 */
 }
 
 .artist-card {
@@ -4902,6 +4905,7 @@ body {
 
 .artist-songs-list {
   min-height: 200px;
+  box-sizing: border-box;
   overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
   max-width: 100%; /* 鑰佺帇淇锛氶檺鍒舵渶澶у搴?*/
 }
@@ -5060,6 +5064,7 @@ body {
 
 .playlist-songs-container {
   min-height: 200px;
+  box-sizing: border-box;
   overflow-x: hidden; /* 鑰佺帇淇锛氱姝㈡í鍚戞粴鍔?*/
   max-width: 100%; /* 鑰佺帇淇锛氶檺鍒舵渶澶у搴?*/
 }
