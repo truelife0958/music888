@@ -67,6 +67,21 @@ const HOT_ARTISTS = [
   { name: '花粥', icon: '🌸', genre: '民谣' },
   { name: '周深', icon: '🌊', genre: '流行' },
   { name: '张碧晨', icon: '🦋', genre: '流行' },
+  { name: '华晨宇', icon: '🌟', genre: '流行' },
+  { name: '吴青峰', icon: '🎵', genre: '流行' },
+  { name: '田馥甄', icon: '🌺', genre: '流行' },
+  { name: '梁静茹', icon: '💝', genre: '流行' },
+  { name: 'TFBOYS', icon: '🎤', genre: '流行' },
+  { name: '鹿晗', icon: '🦌', genre: '流行' },
+  { name: '张艺兴', icon: '🎧', genre: '流行' },
+  { name: '蔡徐坤', icon: '🏀', genre: '流行' },
+  { name: '王源', icon: '🌟', genre: '流行' },
+  { name: '易烊千玺', icon: '⭐', genre: '流行' },
+  { name: '吴亦凡', icon: '🎵', genre: '说唱' },
+  { name: 'GAI', icon: '🔥', genre: '说唱' },
+  { name: '邓伦', icon: '🎤', genre: '流行' },
+  { name: '肖战', icon: '🌟', genre: '流行' },
+  { name: '王一博', icon: '🏍️', genre: '流行' },
 ];
 
 // 初始化歌手模块

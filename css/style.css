@@ -169,7 +169,7 @@ body {
   background: var(--bg-glass-medium);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-light);
-  padding: 15px 0;
+  padding: 8px 0;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -643,11 +643,11 @@ body {
 .main-container {
   max-width: 1800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 10px;
   display: grid;
   grid-template-columns: 2fr 1.5fr 1fr; /* 浼樺寲姣斾緥锛氬唴瀹瑰尯鏇村 */
   gap: 20px;
-  min-height: calc(100vh - 200px);
+  min-height: calc(100vh - 140px);
 }
 
 .content-section,
@@ -679,8 +679,8 @@ body {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 30px 0;
-  margin-top: 40px;
+  padding: 15px 0;
+  margin-top: 10px;
 }
 
 .footer-content {
@@ -743,7 +743,7 @@ body {
 .tab-content {
   display: none;
   flex: 1;
-  overflow: auto;
+  overflow-y: auto; overflow-x: hidden;
   flex-direction: column;
 }
 
@@ -2189,8 +2189,8 @@ body {
     flex-direction: row;
     gap: 0;
     padding: 0;
-    margin-top: 130px; /* 鍑忓皬椤堕儴闂磋窛锛岄伩鍏嶆悳绱㈡閬尅 */
-    min-height: calc(100vh - 130px);
+    margin-top: 80px; /* 鍑忓皬椤堕儴闂磋窛锛岄伩鍏嶆悳绱㈡閬尅 */
+    min-height: calc(100vh - 80px);
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
@@ -2264,7 +2264,7 @@ body {
   }
 
   .player-section .volume-container {
-    margin-bottom: 100px; /* 鑰佺帇淇锛氬鍔犲簳閮ㄩ棿璺濓紝閬垮厤琚〉闈㈡寚绀哄櫒(40px楂樺害+20px搴曢儴浣嶇疆)閬尅 */
+    margin-bottom: 15px; /* 鑰佺帇淇锛氬鍔犲簳閮ㄩ棿璺濓紝閬垮厤琚〉闈㈡寚绀哄櫒(40px楂樺害+20px搴曢儴浣嶇疆)閬尅 */
     padding-bottom: 10px; /* 鑰佺帇鏂板锛氶澶栫殑缂撳啿鍖?*/
   }
 
@@ -2689,8 +2689,8 @@ body {
 
   /* 鑰佺帇浼樺寲锛氬皬灞忔墜鏈洪€傞厤锛屽噺灏戞嫢鎸ゆ劅 + 淇鎼滅储妗嗛伄鎸?*/
   .main-container {
-    margin-top: 125px; /* 淇锛氫粠120px澧炲姞鍒?25px锛岄伩鍏嶆悳绱㈡閬尅 */
-    min-height: calc(100vh - 125px);
+    margin-top: 75px; /* 淇锛氫粠120px澧炲姞鍒?25px锛岄伩鍏嶆悳绱㈡閬尅 */
+    min-height: calc(100vh - 75px);
   }
 
   .content-section,
@@ -2768,7 +2768,7 @@ body {
   }
 
   .volume-container {
-    margin-bottom: 100px; /* 鑰佺帇淇锛氬皬灞忔墜鏈哄悓鏍烽渶瑕佽冻澶熺殑搴曢儴闂磋窛閬垮厤閬尅 */
+    margin-bottom: 15px; /* 鑰佺帇淇锛氬皬灞忔墜鏈哄悓鏍烽渶瑕佽冻澶熺殑搴曢儴闂磋窛閬垮厤閬尅 */
     padding-bottom: 10px; /* 鑰佺帇鏂板锛氶澶栫殑缂撳啿鍖?*/
   }
 }
@@ -5517,3 +5517,23 @@ body {
   }
 }
 
+n/* 老王修复：确保歌手列表和排行榜容器无横向滚动 */
+.artist-container,
+.playlist-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.nav-stage-container {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.nav-buttons-container {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
