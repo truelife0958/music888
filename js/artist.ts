@@ -260,7 +260,7 @@ async function handleArtistClick(e: Event) {
             `;
       const backBtn = document.getElementById('backToArtistList');
       if (backBtn) {
-        registerEventListener(backBtn, 'click', displayHotArtists);
+        registerEventListener(backBtn, 'click', displayArtistList);
       }
       return;
     }
@@ -281,7 +281,7 @@ async function handleArtistClick(e: Event) {
     // 返回按钮
     const backBtn = document.getElementById('artistBackBtn');
     if (backBtn) {
-      registerEventListener(backBtn, 'click', displayHotArtists);
+      registerEventListener(backBtn, 'click', displayArtistList);
     }
 
     // 显示歌曲列表
@@ -300,7 +300,7 @@ async function handleArtistClick(e: Event) {
         `;
     const backBtn = document.getElementById('backToArtistList');
     if (backBtn) {
-      registerEventListener(backBtn, 'click', displayHotArtists);
+      registerEventListener(backBtn, 'click', displayArtistList);
     }
     showNotification('加载歌手歌曲失败', 'error');
   }
