@@ -52,12 +52,26 @@ function calculateSimilarity(str1: string, str2: string): number {
 }
 
 /**
+ * 老王修复：将artist字段统一转换为字符串（支持数组和字符串）
+ */
+function normalizeArtist(artist: any): string {
+  if (!artist) return '';
+  if (Array.isArray(artist)) {
+    return artist.join(' ').toLowerCase().trim();
+  }
+  if (typeof artist === 'string') {
+    return artist.toLowerCase().trim();
+  }
+  return String(artist).toLowerCase().trim();
+}
+
+/**
  * 计算搜索相关性分数（0-100）
  */
 export function calculateRelevanceScore(song: Song, keyword: string): number {
   const searchTerm = keyword.toLowerCase().trim();
   const songName = (song.name || '').toLowerCase().trim();
-  const artistName = (song.artist || '').toLowerCase().trim();
+  const artistName = normalizeArtist(song.artist);
   const albumName = (song.album || '').toLowerCase().trim();
 
   let score = 0;
@@ -120,7 +134,7 @@ export function deduplicateSongs(songs: Song[]): Song[] {
   for (const song of songs) {
     // 生成唯一标识
     const songId = song.id?.toString() || '';
-    const songKey = `${song.name}_${song.artist}`.toLowerCase().trim();
+    const songKey = `${song.name}_${normalizeArtist(song.artist)}`.toLowerCase().trim();
 
     // 使用ID或歌名+歌手组合作为唯一标识
     const uniqueKey = songId || songKey;
@@ -179,12 +193,12 @@ export function getSearchSuggestions(songs: Song[], keyword: string, limit: numb
     if (suggestions.size >= limit) break;
 
     const songName = song.name?.toLowerCase() || '';
-    const artistName = song.artist?.toLowerCase() || '';
+    const artistName = normalizeArtist(song.artist);
     const searchTerm = keyword.toLowerCase();
 
     // 添加歌手名建议
     if (artistName.includes(searchTerm) && artistName !== searchTerm) {
-      suggestions.add(song.artist || '');
+      suggestions.add(normalizeArtist(song.artist));
     }
 
     // 添加歌曲名建议
@@ -220,7 +234,7 @@ export function advancedFilter(songs: Song[], options: AdvancedFilterOptions): S
   if (options.artistFilter) {
     const targetArtist = options.artistFilter.toLowerCase();
     filtered = filtered.filter(song =>
-      song.artist?.toLowerCase().includes(targetArtist)
+      normalizeArtist(song.artist).includes(targetArtist)
     );
   }
 
@@ -228,7 +242,7 @@ export function advancedFilter(songs: Song[], options: AdvancedFilterOptions): S
   if (options.excludeArtist && options.excludeArtist.length > 0) {
     const excludeList = options.excludeArtist.map(a => a.toLowerCase());
     filtered = filtered.filter(song => {
-      const artist = song.artist?.toLowerCase() || '';
+      const artist = normalizeArtist(song.artist);
       return !excludeList.some(excluded => artist.includes(excluded));
     });
   }

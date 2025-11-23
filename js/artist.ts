@@ -84,6 +84,46 @@ const MALE_ARTISTS = [
   { name: '王力宏', icon: '🎸', genre: '流行' },
   { name: '潘玮柏', icon: '🎤', genre: '说唱' },
   { name: '罗大佑', icon: '🎸', genre: '经典' },
+  { name: '五月天', icon: '🎵', genre: '摇滚' },
+  { name: '张信哲', icon: '💝', genre: '经典' },
+  { name: '任贤齐', icon: '🎤', genre: '流行' },
+  { name: '周华健', icon: '🎸', genre: '经典' },
+  { name: '李克勤', icon: '🎤', genre: '流行' },
+  { name: '郭富城', icon: '⭐', genre: '流行' },
+  { name: '黎明', icon: '🌟', genre: '流行' },
+  { name: '谭咏麟', icon: '👑', genre: '经典' },
+  { name: '张国荣', icon: '💫', genre: '经典' },
+  { name: 'Beyond', icon: '🎸', genre: '摇滚' },
+  { name: '张宇', icon: '🎤', genre: '流行' },
+  { name: '品冠', icon: '🎼', genre: '流行' },
+  { name: '光良', icon: '🎹', genre: '流行' },
+  { name: '曹格', icon: '🎵', genre: '流行' },
+  { name: '庾澄庆', icon: '🎤', genre: '流行' },
+  { name: '费玉清', icon: '🎙️', genre: '经典' },
+  { name: '齐秦', icon: '🎸', genre: '流行' },
+  { name: '齐豫', icon: '🎵', genre: '民谣' },
+  { name: '伍佰', icon: '🎸', genre: '摇滚' },
+  { name: '信', icon: '🔥', genre: '流行' },
+  { name: '陈小春', icon: '🎤', genre: '流行' },
+  { name: '郭静', icon: '🎵', genre: '流行' },
+  { name: '苏打绿', icon: '🎸', genre: '独立' },
+  { name: '林志炫', icon: '🎤', genre: '流行' },
+  { name: '黄品源', icon: '🎼', genre: '流行' },
+  { name: '动力火车', icon: '🔥', genre: '流行' },
+  { name: '卜学亮', icon: '🎵', genre: '流行' },
+  { name: '张震岳', icon: '🎸', genre: '流行' },
+  { name: '范逸臣', icon: '🎤', genre: '流行' },
+  { name: '吴克群', icon: '🎹', genre: '流行' },
+  { name: '潘玮柏', icon: '🎧', genre: '说唱' },
+  { name: '黄明志', icon: '🎤', genre: '说唱' },
+  { name: '方大同', icon: '🎵', genre: 'R&B' },
+  { name: '王啸坤', icon: '🎸', genre: '流行' },
+  { name: '李荣浩', icon: '🎹', genre: '流行' },
+  { name: '李玉刚', icon: '🎭', genre: '民族' },
+  { name: '霍尊', icon: '🎵', genre: '民族' },
+  { name: '郁可唯', icon: '🌸', genre: '流行' },
+  { name: '李宇春', icon: '👸', genre: '流行' },
+  { name: '张靓颖', icon: '🌟', genre: '流行' },
 ];
 
 const FEMALE_ARTISTS = [
@@ -112,10 +152,45 @@ const FEMALE_ARTISTS = [
   { name: '徐佳莹', icon: '🎹', genre: '流行' },
   { name: '杨丞琳', icon: '🌺', genre: '流行' },
   { name: '张艾嘉', icon: '🌟', genre: '经典' },
+  { name: 'S.H.E', icon: '🌸', genre: '流行' },
+  { name: '林忆莲', icon: '💫', genre: '流行' },
+  { name: '王心凌', icon: '💝', genre: '流行' },
+  { name: '萧亚轩', icon: '🎵', genre: '流行' },
+  { name: '许茹芸', icon: '🌺', genre: '流行' },
+  { name: '郭静', icon: '🌸', genre: '流行' },
+  { name: '梁文音', icon: '🎤', genre: '流行' },
+  { name: '丁当', icon: '🔥', genre: '流行' },
+  { name: '彭佳慧', icon: '💪', genre: '流行' },
+  { name: 'A-Lin', icon: '🌟', genre: '流行' },
+  { name: '张惠春', icon: '🎵', genre: '流行' },
+  { name: '周蕙', icon: '🌺', genre: '流行' },
+  { name: '辛晓琪', icon: '💝', genre: '流行' },
+  { name: '苏慧伦', icon: '🌸', genre: '流行' },
+  { name: '范晓萱', icon: '🎀', genre: '流行' },
+  { name: '卢巧音', icon: '🎵', genre: '流行' },
+  { name: '梁咏琪', icon: '🌺', genre: '流行' },
+  { name: '叶倩文', icon: '👑', genre: '经典' },
+  { name: '林子祥', icon: '🎤', genre: '经典' },
+  { name: '刘若英', icon: '💫', genre: '流行' },
+  { name: '范玮琪', icon: '🌸', genre: '流行' },
+  { name: '梁静茹', icon: '💝', genre: '流行' },
+  { name: '陈绮贞', icon: '🎸', genre: '独立' },
+  { name: '苏打绿', icon: '🌿', genre: '独立' },
+  { name: '郁可唯', icon: '🌺', genre: '流行' },
+  { name: '谭维维', icon: '🔥', genre: '流行' },
+  { name: '李玟', icon: '💃', genre: '流行' },
+  { name: '戴佩妮', icon: '🎵', genre: '流行' },
+  { name: '梁文音', icon: '🌸', genre: '流行' },
+  { name: '黄小琥', icon: '👸', genre: '流行' },
+  { name: '许慧欣', icon: '🎤', genre: '流行' },
+  { name: '陈嘉桦', icon: '💪', genre: '流行' },
+  { name: '孙盛希', icon: '🌟', genre: '流行' },
+  { name: '魏如萱', icon: '🎵', genre: '独立' },
+  { name: '徐若瑄', icon: '🌺', genre: '流行' },
 ];
 
 // 老王新增：分页状态管理
-const PAGE_SIZE = 20; // 每页显示20个歌手
+const PAGE_SIZE = 10; // 每页显示10个歌手
 interface PaginationState {
   male: { currentPage: number; totalPages: number };
   female: { currentPage: number; totalPages: number };
@@ -221,10 +296,11 @@ function displayArtistList() {
   const categoryIcon = currentCategory === 'male' ? '👨‍🎤' : '👩‍🎤';
 
   // 计算当前页要显示的歌手
-  const startIndex = 0;
-  const endIndex = state.currentPage * PAGE_SIZE;
+  const startIndex = (state.currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
   const displayedArtists = artists.slice(startIndex, endIndex);
-  const hasMore = endIndex < artists.length;
+  const hasPrev = state.currentPage > 1;
+  const hasNext = state.currentPage < state.totalPages;
 
   const artistButtons = displayedArtists.map(
     (artist) => `
@@ -248,20 +324,19 @@ function displayArtistList() {
           <i class="fas fa-arrow-left"></i> 返回
         </button>
         <h3><i class="fas fa-star"></i> ${categoryName}</h3>
-        <p class="result-count">已显示 ${displayedArtists.length} / ${artists.length} 位歌手</p>
+        <p class="result-count">第 ${state.currentPage} / ${state.totalPages} 页（共 ${artists.length} 位歌手）</p>
       </div>
       <div class="nav-buttons-container">
         ${artistButtons}
-        ${hasMore ? `
-          <button class="nav-btn-item load-more-btn" id="loadMoreArtists">
-            <span class="btn-icon">⬇️</span>
-            <span class="btn-content">
-              <span class="btn-title">加载更多歌手</span>
-              <span class="btn-subtitle">还有 ${artists.length - endIndex} 位歌手</span>
-            </span>
-            <i class="fas fa-chevron-down btn-arrow"></i>
-          </button>
-        ` : ''}
+      </div>
+      <div class="pagination-controls">
+        <button class="pagination-btn" id="prevPageBtn" ${!hasPrev ? 'disabled' : ''}>
+          <i class="fas fa-chevron-left"></i> 上一页
+        </button>
+        <span class="page-indicator">第 ${state.currentPage} / ${state.totalPages} 页</span>
+        <button class="pagination-btn" id="nextPageBtn" ${!hasNext ? 'disabled' : ''}>
+          下一页 <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
     </div>
   `;
@@ -277,10 +352,19 @@ function displayArtistList() {
     registerEventListener(btn, 'click', handleArtistClick);
   });
 
-  // 绑定"加载更多"按钮
-  const loadMoreBtn = document.getElementById('loadMoreArtists');
-  if (loadMoreBtn) {
-    registerEventListener(loadMoreBtn, 'click', () => {
+  // 绑定"上一页"按钮
+  const prevBtn = document.getElementById('prevPageBtn');
+  if (prevBtn && hasPrev) {
+    registerEventListener(prevBtn, 'click', () => {
+      state.currentPage--;
+      displayArtistList();
+    });
+  }
+
+  // 绑定"下一页"按钮
+  const nextBtn = document.getElementById('nextPageBtn');
+  if (nextBtn && hasNext) {
+    registerEventListener(nextBtn, 'click', () => {
       state.currentPage++;
       displayArtistList();
     });

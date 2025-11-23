@@ -63,7 +63,7 @@ const RANK_LISTS = [
 ];
 
 // 老王新增：分页状态
-const PAGE_SIZE = 12; // 每页显示12个排行榜
+const PAGE_SIZE = 10; // 每页显示10个排行榜
 let currentPage = 1;
 let totalPages = Math.ceil(RANK_LISTS.length / PAGE_SIZE);
 
@@ -84,7 +84,7 @@ export function initPlaylist(): void {
   renderRankNav();
 }
 
-// ========== 渲染排行榜导航（老王优化：添加分页功能） ==========
+// ========== 渲染排行榜导航（老王优化：上一页/下一页分页） ==========
 function renderRankNav(): void {
   const container = document.getElementById('playlistContainer');
   if (!container) return;
@@ -93,16 +93,17 @@ function renderRankNav(): void {
   currentState.stage = 'rank';
 
   // 计算当前页要显示的排行榜
-  const startIndex = 0;
-  const endIndex = currentPage * PAGE_SIZE;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
   const displayedRanks = RANK_LISTS.slice(startIndex, endIndex);
-  const hasMore = endIndex < RANK_LISTS.length;
+  const hasPrev = currentPage > 1;
+  const hasNext = currentPage < totalPages;
 
   const navHtml = `
     <div class="nav-stage">
       <div class="nav-stage-header">
         <h3><i class="fas fa-trophy"></i> 排行榜</h3>
-        <p class="result-count">已显示 ${displayedRanks.length} / ${RANK_LISTS.length} 个排行榜</p>
+        <p class="result-count">第 ${currentPage} / ${totalPages} 页（共 ${RANK_LISTS.length} 个排行榜）</p>
       </div>
       <div class="nav-buttons-container">
         ${displayedRanks.map(
@@ -117,16 +118,15 @@ function renderRankNav(): void {
           </button>
         `
         ).join('')}
-        ${hasMore ? `
-          <button class="nav-btn-item load-more-btn" id="loadMoreRanks">
-            <span class="btn-icon">⬇️</span>
-            <span class="btn-content">
-              <span class="btn-title">加载更多排行榜</span>
-              <span class="btn-subtitle">还有 ${RANK_LISTS.length - endIndex} 个排行榜</span>
-            </span>
-            <i class="fas fa-chevron-down btn-arrow"></i>
-          </button>
-        ` : ''}
+      </div>
+      <div class="pagination-controls">
+        <button class="pagination-btn" id="prevRankPageBtn" ${!hasPrev ? 'disabled' : ''}>
+          <i class="fas fa-chevron-left"></i> 上一页
+        </button>
+        <span class="page-indicator">第 ${currentPage} / ${totalPages} 页</span>
+        <button class="pagination-btn" id="nextRankPageBtn" ${!hasNext ? 'disabled' : ''}>
+          下一页 <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
     </div>
   `;
@@ -134,7 +134,7 @@ function renderRankNav(): void {
   container.innerHTML = navHtml;
 
   // 绑定排行榜点击事件
-  const rankBtns = container.querySelectorAll('.nav-btn-item:not(.load-more-btn)');
+  const rankBtns = container.querySelectorAll('.nav-btn-item');
   rankBtns.forEach((btn) => {
     registerEventListener(btn, 'click', () => {
       const rankId = (btn as HTMLElement).dataset.rankId;
@@ -145,10 +145,19 @@ function renderRankNav(): void {
     });
   });
 
-  // 绑定"加载更多"按钮事件
-  const loadMoreBtn = document.getElementById('loadMoreRanks');
-  if (loadMoreBtn) {
-    registerEventListener(loadMoreBtn, 'click', () => {
+  // 绑定"上一页"按钮
+  const prevBtn = document.getElementById('prevRankPageBtn');
+  if (prevBtn && hasPrev) {
+    registerEventListener(prevBtn, 'click', () => {
+      currentPage--;
+      renderRankNav();
+    });
+  }
+
+  // 绑定"下一页"按钮
+  const nextBtn = document.getElementById('nextRankPageBtn');
+  if (nextBtn && hasNext) {
+    registerEventListener(nextBtn, 'click', () => {
       currentPage++;
       renderRankNav();
     });
