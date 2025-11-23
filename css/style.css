@@ -5537,3 +5537,28 @@ n/* 老王修复：确保歌手列表和排行榜容器无横向滚动 */
   overflow-x: hidden;
   box-sizing: border-box;
 }
+
+/* 老王新增：加载更多按钮样式 */
+.load-more-btn {
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.1) 0%, rgba(67, 233, 123, 0.1) 100%) !important;
+  border: 2px dashed rgba(29, 185, 84, 0.4) !important;
+}
+
+.load-more-btn:hover {
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.2) 0%, rgba(67, 233, 123, 0.2) 100%) !important;
+  border-color: rgba(29, 185, 84, 0.8) !important;
+  transform: translateY(2px) !important;
+}
+
+.load-more-btn .btn-arrow {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}

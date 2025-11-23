@@ -52,7 +52,20 @@ const RANK_LISTS = [
   { id: '60131', name: '韩国Melon榜', icon: '🇰🇷', desc: '韩国流行音乐' },
   { id: '2809513713', name: '抖音排行榜', icon: '📱', desc: '抖音热门歌曲' },
   { id: '5453912201', name: '听歌识曲榜', icon: '🎵', desc: '热门识曲歌曲' },
+  { id: '112504', name: '日本公信榜', icon: '🇯🇵', desc: '日本流行音乐' },
+  { id: '745956260', name: '云音乐ACG音乐榜', icon: '🎮', desc: 'ACG二次元音乐' },
+  { id: '2617766278', name: '云音乐电音榜', icon: '🎛️', desc: '云音乐电音' },
+  { id: '1978921795', name: '云音乐欧美热歌榜', icon: '🌍', desc: '欧美流行音乐' },
+  { id: '2884035', name: '云音乐韩语榜', icon: '🎤', desc: '韩语流行音乐' },
+  { id: '71384707', name: '云音乐古典音乐榜', icon: '🎻', desc: '古典音乐作品' },
+  { id: '1989635309', name: '云音乐抖音排行榜', icon: '📱', desc: '抖音热门音乐' },
+  { id: '3812895', name: '云音乐UK榜', icon: '🇬🇧', desc: '英国流行榜单' },
 ];
+
+// 老王新增：分页状态
+const PAGE_SIZE = 12; // 每页显示12个排行榜
+let currentPage = 1;
+let totalPages = Math.ceil(RANK_LISTS.length / PAGE_SIZE);
 
 // ========== 模块状态 ==========
 interface PlaylistState {
@@ -67,10 +80,11 @@ const currentState: PlaylistState = {
 
 // ========== 初始化函数 ==========
 export function initPlaylist(): void {
+  currentPage = 1; // 重置页码
   renderRankNav();
 }
 
-// ========== 渲染排行榜导航 ==========
+// ========== 渲染排行榜导航（老王优化：添加分页功能） ==========
 function renderRankNav(): void {
   const container = document.getElementById('playlistContainer');
   if (!container) return;
@@ -78,14 +92,20 @@ function renderRankNav(): void {
   clearCurrentListeners();
   currentState.stage = 'rank';
 
+  // 计算当前页要显示的排行榜
+  const startIndex = 0;
+  const endIndex = currentPage * PAGE_SIZE;
+  const displayedRanks = RANK_LISTS.slice(startIndex, endIndex);
+  const hasMore = endIndex < RANK_LISTS.length;
+
   const navHtml = `
     <div class="nav-stage">
       <div class="nav-stage-header">
         <h3><i class="fas fa-trophy"></i> 排行榜</h3>
-        <p class="result-count">选择一个排行榜查看详情</p>
+        <p class="result-count">已显示 ${displayedRanks.length} / ${RANK_LISTS.length} 个排行榜</p>
       </div>
       <div class="nav-buttons-container">
-        ${RANK_LISTS.map(
+        ${displayedRanks.map(
           (rank) => `
           <button class="nav-btn-item" data-rank-id="${rank.id}">
             <span class="btn-icon">${rank.icon}</span>
@@ -97,13 +117,24 @@ function renderRankNav(): void {
           </button>
         `
         ).join('')}
+        ${hasMore ? `
+          <button class="nav-btn-item load-more-btn" id="loadMoreRanks">
+            <span class="btn-icon">⬇️</span>
+            <span class="btn-content">
+              <span class="btn-title">加载更多排行榜</span>
+              <span class="btn-subtitle">还有 ${RANK_LISTS.length - endIndex} 个排行榜</span>
+            </span>
+            <i class="fas fa-chevron-down btn-arrow"></i>
+          </button>
+        ` : ''}
       </div>
     </div>
   `;
 
   container.innerHTML = navHtml;
 
-  const rankBtns = container.querySelectorAll('.nav-btn-item');
+  // 绑定排行榜点击事件
+  const rankBtns = container.querySelectorAll('.nav-btn-item:not(.load-more-btn)');
   rankBtns.forEach((btn) => {
     registerEventListener(btn, 'click', () => {
       const rankId = (btn as HTMLElement).dataset.rankId;
@@ -113,6 +144,15 @@ function renderRankNav(): void {
       }
     });
   });
+
+  // 绑定"加载更多"按钮事件
+  const loadMoreBtn = document.getElementById('loadMoreRanks');
+  if (loadMoreBtn) {
+    registerEventListener(loadMoreBtn, 'click', () => {
+      currentPage++;
+      renderRankNav();
+    });
+  }
 }
 
 // ========== 加载歌单详情 ==========

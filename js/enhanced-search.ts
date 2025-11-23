@@ -8,6 +8,7 @@ import { loWeb } from './providers/listen1-media-service.js';
 import * as api from './api.js';
 import type { Song } from './api.js';
 import { debounce } from './utils.js';
+import { filterSearchResults, deduplicateSongs } from './search-filter.js';
 
 export interface EnhancedSearchOptions {
   keyword: string;
@@ -152,15 +153,23 @@ export class EnhancedSearch {
   }
 
   /**
-   * 传统搜索 - 使用原有API
+   * 传统搜索 - 使用原有API（老王优化：添加智能过滤和去重）
    */
   private async traditionalSearch(keyword: string, source: string, limit: number): Promise<SearchResult> {
     try {
-      const songs = await api.searchMusicAPI(keyword, source);
+      const rawSongs = await api.searchMusicAPI(keyword, source);
+
+      // 老王修复：智能过滤和去重，解决搜索结果混乱问题
+      // 1. 去重（基于歌曲ID和歌名+歌手组合）
+      // 2. 相关性过滤（最低分数30分）
+      // 3. 按相关性排序
+      const filteredSongs = filterSearchResults(rawSongs, keyword, 30, limit);
+
+      console.log(`[EnhancedSearch] 原始结果: ${rawSongs.length}首, 过滤后: ${filteredSongs.length}首`);
 
       return {
-        songs: songs.slice(0, limit),
-        total: songs.length,
+        songs: filteredSongs,
+        total: filteredSongs.length,
         fromSource: 'traditional',
       };
     } catch (error) {
