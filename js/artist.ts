@@ -2,6 +2,7 @@
 
 import { searchMusicAPI } from './api';
 import { showNotification, displaySearchResults } from './ui';
+import { filterSearchResults } from './search-filter.js';
 
 // ========== 老王修复BUG：事件监听器管理系统 ==========
 interface EventListenerEntry {
@@ -302,7 +303,12 @@ async function handleArtistClick(e: Event) {
       '<div class="loading"><i class="fas fa-spinner"></i><div>正在加载歌手热门歌曲...</div></div>';
 
     // 搜索歌手的歌曲
-    const songs = await searchMusicAPI(artistName, 'netease');
+    const rawSongs = await searchMusicAPI(artistName, 'netease');
+
+    // 老王修复：智能过滤和去重，确保只显示该歌手的相关歌曲
+    const songs = filterSearchResults(rawSongs, artistName, 30, 100);
+
+    console.log(`[Artist] ${artistName} - 原始结果: ${rawSongs.length}首, 过滤后: ${songs.length}首`);
 
     if (!songs || songs.length === 0) {
       container.innerHTML = `
