@@ -3,6 +3,9 @@
   Pragma: no-cache
   Expires: 0
 
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY

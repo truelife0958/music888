@@ -3,7 +3,7 @@
  * 提供离线缓存和快速加载支持
  */
 
-const CACHE_NAME = 'music888-v5';
+const CACHE_NAME = 'music888-v6';
 
 // NOTE: 静态资源列表 - 只缓存确定存在的核心资源
 // 构建后的 JS/CSS 文件名包含哈希值，无法预先知道，采用运行时缓存策略
