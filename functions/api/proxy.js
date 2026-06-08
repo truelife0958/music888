@@ -12,9 +12,52 @@ const RATE_LIMIT = {
     windowMs: 60 * 1000,
     maxRequests: 60,
 };
+const RATE_LIMIT_STORE_MAX_ENTRIES = 5000;
+const UPSTREAM_TIMEOUT_MS = 30000;
+const TURNSTILE_TIMEOUT_MS = 5000;
+
+function getErrorMessage(error) {
+    return error instanceof Error ? error.message : String(error);
+}
+
+function isAbortError(error) {
+    return Boolean(error && typeof error === 'object' && 'name' in error && error.name === 'AbortError');
+}
+
+function pruneRateLimitStore(now) {
+    if (rateLimitStore.size <= RATE_LIMIT_STORE_MAX_ENTRIES) return;
+
+    for (const [ip, data] of rateLimitStore) {
+        if (now - data.windowStart > RATE_LIMIT.windowMs) {
+            rateLimitStore.delete(ip);
+        }
+    }
+
+    while (rateLimitStore.size > RATE_LIMIT_STORE_MAX_ENTRIES) {
+        const oldestIp = rateLimitStore.keys().next().value;
+        if (!oldestIp) break;
+        rateLimitStore.delete(oldestIp);
+    }
+}
+
+async function fetchWithTimeout(resource, init = {}, timeoutMs = UPSTREAM_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        return await fetch(resource, {
+            ...init,
+            signal: controller.signal,
+        });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
 
 function checkRateLimit(ip) {
     const now = Date.now();
+    pruneRateLimitStore(now);
+
     let data = rateLimitStore.get(ip);
 
     if (!data || now - data.windowStart > RATE_LIMIT.windowMs) {
@@ -205,21 +248,25 @@ export async function onRequest(context) {
     const turnstileToken = request.headers.get('X-Turnstile-Token');
     if (turnstileSecret && turnstileToken) {
         try {
-            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    secret: turnstileSecret,
-                    response: turnstileToken,
-                    remoteip: clientIp,
-                }),
-            });
+            const verifyRes = await fetchWithTimeout(
+                'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secret: turnstileSecret,
+                        response: turnstileToken,
+                        remoteip: clientIp,
+                    }),
+                },
+                TURNSTILE_TIMEOUT_MS
+            );
             const verifyData = await verifyRes.json();
             if (!verifyData.success) {
                 console.warn('[proxy] Turnstile token invalid (possibly reused):', JSON.stringify(verifyData));
             }
         } catch (e) {
-            console.error('[proxy] Turnstile verify error:', e.message);
+            console.error('[proxy] Turnstile verify error:', getErrorMessage(e));
         }
     }
 
@@ -295,7 +342,7 @@ export async function onRequest(context) {
         }
 
         // 4. 发起上游请求
-        const response = await fetch(parsedTarget.toString(), {
+        const response = await fetchWithTimeout(parsedTarget.toString(), {
             method: 'GET',
             headers,
             redirect: 'follow',
@@ -337,7 +384,19 @@ export async function onRequest(context) {
             headers: newHeaders,
         });
     } catch (error) {
-        console.error('[proxy] Request failed:', error.message);
+        console.error('[proxy] Request failed:', getErrorMessage(error));
+
+        if (isAbortError(error)) {
+            return createJsonErrorResponse(
+                requestOrigin,
+                504,
+                'UPSTREAM_TIMEOUT',
+                '上游服务响应超时，请稍后重试',
+                {},
+                env
+            );
+        }
+
         return createJsonErrorResponse(
             requestOrigin,
             500,

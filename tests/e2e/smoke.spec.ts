@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { collectUnexpectedPageErrors } from './page-errors';
 
 test('桌面端主界面可见', async ({ page }) => {
-  const pageErrors: string[] = [];
-  page.on('pageerror', (error) => {
-    pageErrors.push(error.message);
-  });
+  const pageErrors = collectUnexpectedPageErrors(page);
 
   await page.goto('/');
 

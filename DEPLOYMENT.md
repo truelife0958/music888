@@ -5,7 +5,8 @@
 ## 📋 目录
 
 - [环境要求](#环境要求)
-- [Vercel 部署（推荐）](#vercel-部署推荐)
+- [Cloudflare Pages 部署（当前推荐）](#cloudflare-pages-部署当前推荐)
+- [Vercel 部署（需适配代理）](#vercel-部署需适配代理)
 - [Netlify 部署](#netlify-部署)
 - [GitHub Pages 部署](#github-pages-部署)
 - [自托管方案](#自托管方案)
@@ -21,9 +22,52 @@
 - 支持静态文件托管的服务器
 - 支持 SPA（单页应用）路由重写
 
-## 🚀 Vercel 部署（推荐）
+## 🚀 Cloudflare Pages 部署（当前推荐）
 
-Vercel 是最简单快速的部署方式，完全免费且支持自动部署。
+本项目当前以 Cloudflare Pages + Functions 为生产部署目标，`functions/api/proxy.js` 会随 Pages Functions 一起部署，用于音乐源代理、CORS、安全校验和 Turnstile 服务端审计验证。
+
+### Git 集成部署
+
+1. 登录 Cloudflare Dashboard → Workers & Pages
+2. 点击 **Create application** → **Pages** → **Connect to Git**
+3. 选择仓库后配置：
+   ```
+   Framework preset: None
+   Build command: npm run build
+   Build output directory: dist
+   ```
+4. 在 Settings → Environment Variables 中按需配置：
+   ```
+   VITE_TURNSTILE_SITE_KEY=你的 Turnstile site key
+   TURNSTILE_SECRET_KEY=你的 Turnstile secret key
+   NETEASE_VIP_COOKIE=可选的网易云 Cookie
+   ```
+5. 部署前本地建议执行：
+   ```bash
+   npm ci
+   npm run check
+   ```
+   `npm run check` 会串联依赖审计、ESLint、TypeScript、单元测试、生产构建、Playwright E2E 和真实 Chromium UI 巡检。
+
+### Wrangler 部署
+
+```bash
+npm ci
+npm run check
+wrangler pages deploy dist --project-name music888
+```
+
+如需单独复核前端布局和核心按钮链路，可执行：
+
+```bash
+npm run audit:ui
+```
+
+该命令会生成 `test-results/ui-audit/browser-ui-audit.json` 以及桌面、移动端截图。
+
+## 🚀 Vercel 部署（需适配代理）
+
+Vercel 可以托管前端静态资源，但当前代理实现是 Cloudflare Pages Functions 格式。若选择 Vercel，需要先将 `functions/api/proxy.js` 适配为 Vercel Serverless Function，或另行提供等价代理服务。
 
 ### 一键部署
 
@@ -162,18 +206,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Build
         run: npm run build
-        
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
@@ -225,34 +269,34 @@ export default {
 server {
     listen 80;
     server_name music.yourdomain.com;
-    
+
     # 如果配置了 SSL
     # listen 443 ssl http2;
     # ssl_certificate /path/to/cert.pem;
     # ssl_certificate_key /path/to/key.pem;
-    
+
     root /var/www/music888/dist;
     index index.html;
-    
+
     # Gzip 压缩
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript 
-               application/x-javascript application/xml+rss 
+    gzip_types text/plain text/css text/xml text/javascript
+               application/x-javascript application/xml+rss
                application/javascript application/json;
-    
+
     # 静态资源缓存
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     # SPA 路由重写
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
+
     # 安全头
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -473,4 +517,4 @@ brotli_types text/plain text/css text/xml text/javascript application/x-javascri
 
 ---
 
-**提示**：推荐使用 Vercel 或 Netlify 进行部署，它们提供了最简单的部署体验和最好的性能。
+**提示**：当前推荐使用 Cloudflare Pages + Functions 部署，以保留内置代理、CORS、安全校验和 Turnstile 服务端审计验证能力。

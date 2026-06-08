@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { collectUnexpectedPageErrors } from './page-errors';
 
 const COVER_DATA_URL =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2ZmNmI2YiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjZmZmIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q292ZXI8L3RleHQ+PC9zdmc+';
@@ -270,10 +271,7 @@ test.describe('核心主链路', () => {
   });
 
   test('搜索、播放、收藏与历史链路可用', async ({ page }) => {
-    const pageErrors: string[] = [];
-    page.on('pageerror', (error) => {
-      pageErrors.push(error.message);
-    });
+    const pageErrors = collectUnexpectedPageErrors(page);
 
     await page.goto('/');
 
@@ -296,10 +294,7 @@ test.describe('核心主链路', () => {
       '回归之歌'
     );
 
-    const unexpectedPageErrors = pageErrors.filter(
-      (message) => message !== 'WebSocket closed without opened.'
-    );
-    expect(unexpectedPageErrors).toEqual([]);
+    expect(pageErrors).toEqual([]);
   });
 
   test('排行榜切换时刷新列表', async ({ page }) => {

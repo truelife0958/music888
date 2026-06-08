@@ -23,8 +23,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Dependency audit
+        run: npm run audit
+
       - name: TypeScript type check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: ESLint code check
         run: npm run lint
@@ -50,7 +53,7 @@ jobs:
           path: dist/
           retention-days: 7
 
-  # E2E tests (optional, runs only if Playwright is configured)
+  # E2E tests protect the production browser flow.
   e2e:
     runs-on: ubuntu-latest
     needs: build-and-test
@@ -83,10 +86,23 @@ jobs:
         env:
           CI: true
 
+      - name: Run browser UI audit
+        run: npm run audit:ui:run
+        env:
+          CI: true
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 7
+
+      - name: Upload browser UI audit
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-ui-audit
+          path: test-results/ui-audit/
           retention-days: 7

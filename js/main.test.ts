@@ -90,6 +90,27 @@ function createAppShell(): void {
     `;
 }
 
+function createStorageMock(): Storage {
+    let store: Record<string, string> = {};
+
+    return {
+        get length() {
+            return Object.keys(store).length;
+        },
+        clear: vi.fn(() => {
+            store = {};
+        }),
+        getItem: vi.fn((key: string) => store[key] ?? null),
+        key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
+        removeItem: vi.fn((key: string) => {
+            delete store[key];
+        }),
+        setItem: vi.fn((key: string, value: string) => {
+            store[key] = String(value);
+        }),
+    };
+}
+
 async function initializeMainModule(): Promise<void> {
     const domReadyHandlers: EventListener[] = [];
     const originalAddEventListener = document.addEventListener.bind(document);
@@ -115,6 +136,9 @@ describe('main event wiring', () => {
     beforeEach(() => {
         vi.resetModules();
         vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+        vi.stubGlobal('localStorage', createStorageMock());
+        vi.stubGlobal('sessionStorage', createStorageMock());
         localStorage.clear();
         sessionStorage.clear();
         createAppShell();

@@ -62,7 +62,7 @@
 
 - **Cloudflare Turnstile** — 首次访问人机验证，API 代理双重校验
 - **引导弹窗** — 首次使用展示免责声明与功能简介
-- **Fail-open** — 验证服务不可用时自动放行，不影响正常使用
+- **服务端审计验证** — 配置 `TURNSTILE_SECRET_KEY` 后，代理会记录 token 验证结果，不因一次性 token 复用误伤播放
 
 ### 移动端适配
 
@@ -79,6 +79,7 @@
 | 语言 | TypeScript |
 | 构建 | Vite |
 | 测试 | Vitest + jsdom |
+| 浏览器验收 | Playwright + Chromium UI Audit |
 | 代码检查 | ESLint + Prettier |
 | 部署 | Cloudflare Pages + Functions |
 | 图标 | Font Awesome 6 |
@@ -176,7 +177,7 @@ wrangler pages deploy dist --project-name music888
 | `NETEASE_VIP_COOKIE` | 网易云 VIP Cookie，用于解锁 VIP 歌曲 |
 | `EXTRA_ALLOWED_HOSTS` | 额外允许代理的域名（逗号分隔） |
 | `VITE_TURNSTILE_SITE_KEY` | Cloudflare Turnstile 站点密钥（构建时注入前端） |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile 服务端密钥（运行时验证） |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile 服务端密钥（运行时审计验证） |
 
 获取步骤：1. 登录控制台：登录 Cloudflare 账户，进入 "Turnstile" 选项卡。
 2. 创建小部件：点击添加站点，填写域名（支持域名白名单）并选择小部件类型。
@@ -227,6 +228,12 @@ npm run build
 # 测试
 npm run test:run
 
+# 真实浏览器 UI 巡检（生成 test-results/ui-audit）
+npm run audit:ui
+
+# 完整质量门禁
+npm run check
+
 # 代码检查
 npm run lint
 ```
@@ -246,7 +253,7 @@ npm run lint
 
 ## 安全措施
 
-- **Turnstile 验证** — 前端人机挑战 + 后端 token 校验双重防护
+- **Turnstile 验证** — 前端人机挑战 + 后端 token 审计记录
 - **XSS 防护** — `escapeHtml()` + `textContent` 防止注入
 - **SSRF 防护** — 代理服务 URL 白名单 + 协议检查
 - **CSP 策略** — Content-Security-Policy 限制资源加载来源

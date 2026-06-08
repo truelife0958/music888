@@ -1,7 +1,7 @@
 /**
  * Vite 开发代理插件
- * 在本地开发环境中模拟 Vercel 无服务器函数的行为
- * NOTE: 仅用于开发环境，生产环境使用 Vercel 的 api/proxy.js
+ * 在本地开发环境中模拟 Cloudflare Pages Functions 代理的行为
+ * NOTE: 仅用于开发环境，生产环境使用 functions/api/proxy.js
  */
 
 import type { Plugin } from 'vite';

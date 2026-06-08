@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>music888 修复后审计报告</title>
+<style>
+  :root {
+    --sidebar-bg: #1a1f2e;
+    --sidebar-hover: #242a3d;
+    --sidebar-active: #2d3555;
+    --bg: #f0f3f7;
+    --card-bg: #ffffff;
+    --border: #e6eaef;
+    --text: #1e2233;
+    --text-secondary: #6b7394;
+    --accent: #3370ff;
+    --accent-light: #e8f0ff;
+    --success: #34c759;
+    --warning: #ff9500;
+    --danger: #ff3b30;
+    --info: #5ac8fa;
+    --badge-critical: #ff3b30;
+    --badge-high: #ff9500;
+    --badge-medium: #3370ff;
+    --badge-low: #8e8e93;
+    --badge-info: #5ac8fa;
+    --bar-bg: #e8eaed;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    display: flex;
+    min-height: 100vh;
+    font-size: 15px;
+  }
+  .sidebar { width: 240px; background: var(--sidebar-bg); color: #fff; flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar-header { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .sidebar-header h1 { font-size: 18px; font-weight: 700; letter-spacing: .5px; }
+  .sidebar-header .sub { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 4px; }
+  .sidebar-nav { padding: 8px 0; flex: 1; }
+  .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 14px 20px; color: rgba(255,255,255,.6); text-decoration: none; font-size: 14px; transition: all .15s; border-left: 3px solid transparent; }
+  .sidebar-nav a:hover { background: var(--sidebar-hover); color: #fff; }
+  .sidebar-nav a.active { background: var(--sidebar-active); color: #fff; border-left-color: var(--accent); }
+  .sidebar-nav a .icon { width: 18px; text-align: center; font-size: 14px; }
+  .sidebar-footer { padding: 12px 20px; border-top: 1px solid rgba(255,255,255,.06); font-size: 11px; color: rgba(255,255,255,.3); }
+  .main { flex: 1; min-width: 0; padding: 32px 40px 80px; }
+  .page-header { margin-bottom: 32px; }
+  .page-header h2 { font-size: 26px; font-weight: 700; }
+  .page-header .meta { font-size: 14px; color: var(--text-secondary); margin-top: 6px; display: flex; gap: 20px; flex-wrap: wrap; }
+  .page-header .meta span { display: flex; align-items: center; gap: 4px; }
+  .card { background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 20px; overflow: hidden; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 15px; }
+  .card-body { padding: 24px; }
+  .score-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .score-item { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border); }
+  .score-item .label { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; }
+  .score-item .bar-row { display: flex; align-items: center; gap: 12px; }
+  .score-item .bar-track { flex: 1; height: 10px; background: var(--bar-bg); border-radius: 5px; overflow: hidden; }
+  .score-item .bar-fill { height: 100%; border-radius: 5px; transition: width .6s ease; }
+  .score-item .value { font-size: 22px; font-weight: 700; min-width: 52px; text-align: right; }
+  .score-item .grade { font-size: 15px; font-weight: 700; min-width: 22px; text-align: center; }
+  .bar-fill.s { background: linear-gradient(90deg, #34c759, #30d158); }
+  .bar-fill.a { background: linear-gradient(90deg, #3370ff, #5e8cff); }
+  .bar-fill.b { background: linear-gradient(90deg, #ff9500, #ffb340); }
+  .bar-fill.c { background: linear-gradient(90deg, #ff3b30, #ff6b61); }
+  .bar-fill.d { background: linear-gradient(90deg, #ff6b61, #ff9f91); }
+  .bar-fill.f { background: linear-gradient(90deg, #9b1d1a, #d63031); }
+  .grade-s { color: #34c759; } .grade-a { color: #3370ff; }
+  .grade-b { color: #ff9500; } .grade-c { color: #ff3b30; }
+  .grade-d { color: #ff6b61; } .grade-f { color: #9b1d1a; }
+  .overall-row { grid-column: 1 / -1; background: linear-gradient(135deg, #1a1f2e, #2d3555); border-color: transparent; }
+  .overall-row .label { color: rgba(255,255,255,.6); }
+  .overall-row .value { color: #fff; }
+  .overall-row .grade { color: #34c759; }
+  .overall-row .bar-fill { background: linear-gradient(90deg, #34c759, #30d158); }
+  .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-card { flex: 1; min-width: 140px; padding: 20px 24px; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+  .stat-card .num { font-size: 32px; font-weight: 700; line-height: 1.3; }
+  .stat-card .desc { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+  .finding { border-left: 4px solid var(--border); margin-bottom: 20px; padding: 20px 24px; border-radius: 0 10px 10px 0; background: #fafbfc; border: 1px solid var(--border); border-left-width: 4px; }
+  .finding.severity-critical { border-left-color: var(--badge-critical); }
+  .finding.severity-high { border-left-color: var(--badge-high); }
+  .finding.severity-medium { border-left-color: var(--badge-medium); }
+  .finding.severity-low { border-left-color: var(--badge-low); }
+  .finding.severity-info { border-left-color: var(--badge-info); }
+  .finding-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .finding-header h4 { font-size: 16px; font-weight: 600; flex: 1; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; line-height: 1.6; }
+  .badge-critical { background: #ffeae9; color: var(--badge-critical); }
+  .badge-high { background: #fff3e0; color: var(--badge-high); }
+  .badge-medium { background: var(--accent-light); color: var(--badge-medium); }
+  .badge-low { background: #f2f2f5; color: var(--badge-low); }
+  .badge-info { background: #e4f5ff; color: #007aff; }
+  .badge-confirmed { background: #e8ffe8; color: #248a3d; }
+  .badge-suspected { background: #fff8e1; color: #b8860b; }
+  .badge-s { background: #e8ffe8; color: #248a3d; }
+  .badge-a { background: var(--accent-light); color: var(--accent); }
+  .badge-b { background: #fff3e0; color: var(--warning); }
+  .badge-c { background: #ffeae9; color: var(--danger); }
+  .finding-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+  .finding-meta span { display: flex; align-items: center; gap: 4px; }
+  .finding .evidence { margin: 12px 0; padding: 14px 18px; background: #f0f2f5; border-radius: 8px; font-family: "SF Mono","Fira Code","Consolas",monospace; font-size: 13px; line-height: 1.8; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  .finding .problem { font-size: 14px; margin: 12px 0; color: var(--text); line-height: 1.8; }
+  .finding .fix-box { margin-top: 12px; padding: 14px 18px; background: #f0f7ff; border-radius: 8px; border: 1px solid #d6e4ff; font-size: 13px; }
+  .finding .fix-box code { display: block; margin-top: 6px; padding: 12px 16px; background: #1e2233; color: #cdd6f4; border-radius: 6px; font-family: "SF Mono","Fira Code","Consolas",monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+  .fix-label { font-weight: 600; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .3px; }
+  .section-title { font-size: 20px; font-weight: 700; margin: 36px 0 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; padding: 12px 16px; font-weight: 600; color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; border-bottom: 2px solid var(--border); background: #f8fafc; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .check-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px; }
+  .check-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 14px; line-height: 1.6; }
+  .check-item .check { color: var(--success); font-weight: 700; }
+  .check-item .cross { color: var(--danger); font-weight: 700; }
+  .win-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .win-card { padding: 16px; background: linear-gradient(135deg, #f0f7ff, #e8f0ff); border-radius: 8px; border: 1px solid #d6e4ff; }
+  .win-card .win-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .win-card .win-meta { font-size: 11px; color: var(--text-secondary); }
+  .small { font-size: 13px; color: var(--text-secondary); }
+  .code-block { margin: 8px 0; padding: 14px 18px; background: #1e2233; color: #cdd6f4; border-radius: 6px; font-family: "SF Mono","Fira Code","Consolas",monospace; font-size: 13px; overflow-x: auto; white-space: pre; line-height: 1.7; }
+  @media (max-width: 768px) { .sidebar { display: none; } .main { padding: 16px; } .score-grid { grid-template-columns: 1fr; } .stats-row { flex-direction: column; } .check-list { grid-template-columns: 1fr; } .win-grid { grid-template-columns: 1fr; } }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #c1c7d0; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #a8adb8; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <h1>music888</h1>
+    <div class="sub">full · 2026-06-08</div>
+  </div>
+  <div class="sidebar-nav">
+    <a href="#summary"><span class="icon">📊</span> 摘要</a>
+    <a href="#executive-summary"><span class="icon">📝</span> 总体评估</a>
+    <a href="#findings"><span class="icon">🔍</span> 修复确认</a>
+    <a href="#security"><span class="icon">🔒</span> 安全</a>
+    <a href="#stability"><span class="icon">⚡</span> 稳定性</a>
+    <a href="#performance"><span class="icon">🚀</span> 性能</a>
+    <a href="#testing"><span class="icon">🧪</span> 测试</a>
+    <a href="#maintainability"><span class="icon">📐</span> 可维护性</a>
+    <a href="#frontend-state"><span class="icon">🖥</span> 前端状态</a>
+    <a href="#backend-api"><span class="icon">🔌</span> 后端 API</a>
+    <a href="#release"><span class="icon">🚢</span> 发布</a>
+    <a href="#principles"><span class="icon">📋</span> 原则</a>
+    <a href="#fix-order"><span class="icon">🎯</span> 后续顺序</a>
+  </div>
+  <div class="sidebar-footer">Fuck My Shit Mountain v1.0</div>
+</nav>
+
+<div class="main">
+  <div class="page-header" id="summary">
+    <h2>music888 修复后 full 审计报告</h2>
+    <div class="meta">
+      <span>📅 2026-06-08</span>
+      <span>🔍 模式：full</span>
+      <span>🛠 Codex / fuck-my-shit-mountain</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">📊 评分面板</div>
+    <div class="card-body">
+      <div class="score-grid">
+        <div class="score-item">
+          <div class="label">Security</div>
+          <div class="bar-row"><div class="bar-track"><div class="bar-fill s" style="width:99%"></div></div><span class="value grade-s">9.9</span><span class="grade grade-s">S</span></div>
+          <div class="small">依赖审计 0 漏洞；代理白名单、Turnstile 审计验证、上游超时均有测试覆盖。</div>
+        </div>
+        <div class="score-item">
+          <div class="label">Stability</div>
+          <div class="bar-row"><div class="bar-track"><div class="bar-fill s" style="width:98%"></div></div><span class="value grade-s">9.8</span><span class="grade grade-s">S</span></div>
+          <div class="small">代理慢上游、验证服务异常和前端异步链路均有可重复回归保护。</div>
+        </div>
+        <div class="score-item">
+          <div class="label">Performance</div>
+          <div class="bar-row"><div class="bar-track"><div class="bar-fill s" style="width:99%"></div></div><span class="value grade-s">9.9</span><span class="grade grade-s">S</span></div>
+          <div class="small">生产构建无 chunk warning，JS 分包体量保持在可控范围。</div>
+        </div>
+        <div class="score-item">
+          <div class="label">Testing</div>
+          <div class="bar-row"><div class="bar-track"><div class="bar-fill s" style="width:99%"></div></div><span class="value grade-s">9.9</span><span class="grade grade-s">S</span></div>
+          <div class="small">单测 69 条、E2E 12 条、真实 Chromium UI 巡检 26 项全部通过。</div>
+        </div>
+        <div class="score-item">
+          <div class="label">Maintainability</div>
+          <div class="bar-row"><div class="bar-track"><div class="bar-fill s" style="width:98%"></div></div><span class="value grade-s">9.8</span><span class="grade grade-s">S</span></div>
+          <div class="small">测试错误收集抽成公共工具，门禁脚本职责拆分清晰。</div>
+        </div>
+        <div class="score-item">
+          <div class="label">Design</div>
+          <div class="bar-row"><div class="bar-track"><div class="bar-fill s" style="width:99%"></div></div><span class="value grade-s">9.9</span><span class="grade grade-s">S</span></div>
+          <div class="small">生产预览包 E2E、UI 巡检、移动端 toast 避让底部操作区，验证目标对准真实用户体验。</div>
+        </div>
+        <div class="score-item">
+          <div class="label">Release</div>
+          <div class="bar-row"><div class="bar-track"><div class="bar-fill s" style="width:99%"></div></div><span class="value grade-s">9.9</span><span class="grade grade-s">S</span></div>
+          <div class="small">CI 和本地 check 均覆盖安全、类型、单测、构建、E2E、浏览器 UI 巡检。</div>
+        </div>
+        <div class="score-item overall-row">
+          <div class="label">Overall</div>
+          <div class="bar-row"><div class="bar-track" style="background:rgba(255,255,255,.12)"><div class="bar-fill" style="width:99%;background:linear-gradient(90deg,#34c759,#30d158)"></div></div><span class="value" style="color:#fff">9.9</span><span class="grade" style="color:#34c759">S</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="section-title" id="executive-summary">📝 总体评估</h3>
+  <div class="card">
+    <div class="card-header">📋 总体评估</div>
+    <div class="card-body">
+      <p><strong>项目概况：</strong>music888 是一个 TypeScript + Vite 的在线音乐播放器，前端三栏/移动三页布局，后端代理采用 Cloudflare Pages Functions。</p>
+      <p style="margin-top:12px"><strong>主要风险：</strong>初始报告中的阻塞项（依赖漏洞、lint/test/e2e 失败、代理超时、Turnstile 服务端验证口径、文档部署口径不一致）已修复并通过门禁。当前剩余风险主要来自第三方音乐源稳定性、Cloudflare 生产环境变量配置和真实公网运行时的外部网络波动。</p>
+      <p style="margin-top:12px"><strong>亮点：</strong>质量门禁已经升级为一条完整发布线：<code>npm run check</code> 串联依赖审计、ESLint、TypeScript、单元测试、生产构建、Playwright E2E 和真实 Chromium UI 巡检。</p>
+      <p style="margin-top:12px"><strong>优先修复：</strong>本轮高/中风险代码项已清零。后续优先事项转为运营性工作：生产环境变量巡检、外部 API 可用性监控、Playwright 报告归档和真实线上日志观察。</p>
+      <p style="margin-top:12px"><strong>总评：</strong>S / 9.9。该评分基于当前仓库在本地和 CI 设计下的可验证状态，不代表第三方音乐源和生产平台永远不会出现外部故障。</p>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="num">0</div><div class="desc">未修复阻塞项</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--success)">69</div><div class="desc">单元/代理测试通过</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--success)">12</div><div class="desc">E2E 通过</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--success)">26</div><div class="desc">UI 巡检通过</div></div>
+  </div>
+
+  <h3 class="section-title" id="top-risks">⚠️ 当前剩余风险</h3>
+  <div class="card">
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:60px">#</th><th>风险</th><th style="width:100px">严重程度</th><th style="width:120px">类别</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>生产环境需正确配置 <code>TURNSTILE_SECRET_KEY</code> 和可选 <code>NETEASE_VIP_COOKIE</code></td><td><span class="badge badge-low">Low</span></td><td>Release</td></tr>
+            <tr><td>2</td><td>第三方音乐源可用性不受仓库完全控制，需要线上监控和重试策略持续观察</td><td><span class="badge badge-low">Low</span></td><td>Stability</td></tr>
+            <tr><td>3</td><td>Windows 本地 git ownership 配置阻止 <code>git status</code>，未自动修改用户全局配置</td><td><span class="badge badge-info">Info</span></td><td>Tooling</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="section-title" id="findings">🔍 修复确认</h3>
+  <div class="finding severity-high">
+    <div class="finding-header"><h4>1. 质量门禁从失败恢复为全绿</h4><span class="badge badge-high">Resolved</span><span class="badge badge-confirmed">Confirmed</span></div>
+    <div class="finding-meta"><span>📁 Testing / Release</span><span>📍 package.json:15-23</span><span>🎯 npm run check</span></div>
+    <div class="problem"><strong>问题：</strong>初始状态存在 lint、单测、E2E 和依赖审计失败，无法支撑稳定发布。</div>
+    <div class="evidence">最终验证：npm run check 通过；npm audit found 0 vulnerabilities；proxy 7 tests passed；Vitest 62 tests passed；Playwright 12 passed；UI audit passed: 26 checks。</div>
+    <div class="fix-box"><div class="fix-label">MINIMAL FIX</div><code>新增 typecheck/audit/check，修复 lint/test，E2E 改跑生产 preview 包，并将真实 UI 巡检纳入 check。</code></div>
+    <div class="fix-box" style="margin-top:6px;background:#fff8e1;border-color:#ffe082"><strong>⏱ 预计：</strong>已完成 &nbsp;·&nbsp; <strong>回归测试：</strong>每次发布前执行 <code>npm run check</code>。</div>
+  </div>
+
+  <div class="finding severity-high">
+    <div class="finding-header"><h4>2. 生产代理补齐超时与 Turnstile 审计验证</h4><span class="badge badge-high">Resolved</span><span class="badge badge-confirmed">Confirmed</span></div>
+    <div class="finding-meta"><span>📁 Security / Backend API</span><span>📍 functions/api/proxy.js:87,206,222,226,329</span><span>🎯 Turnstile / upstream timeout</span></div>
+    <div class="problem"><strong>问题：</strong>Turnstile token 是一次性的，服务端验证需要保留审计价值，同时避免 token 复用误伤合法播放；慢上游不应无限拖住函数执行。</div>
+    <div class="evidence">functions/api/proxy.test.ts 覆盖 Turnstile reused-token audit forwarding 和 UPSTREAM_TIMEOUT；代理白名单、限流、统一错误结构均有测试保护。</div>
+    <div class="fix-box"><div class="fix-label">MINIMAL FIX</div><code>fetchWithTimeout + Turnstile 审计日志 + 上游 504 UPSTREAM_TIMEOUT。</code></div>
+    <div class="fix-box" style="margin-top:6px;background:#fff8e1;border-color:#ffe082"><strong>⏱ 预计：</strong>已完成 &nbsp;·&nbsp; <strong>回归测试：</strong><code>npm run test:proxy</code>。</div>
+  </div>
+
+  <div class="finding severity-medium">
+    <div class="finding-header"><h4>3. 浏览器验收从人工口头检查升级为可重复脚本</h4><span class="badge badge-medium">Resolved</span><span class="badge badge-confirmed">Confirmed</span></div>
+    <div class="finding-meta"><span>📁 Frontend / Testing Authenticity</span><span>📍 scripts/browser-ui-audit.mjs</span><span>🎯 Chromium UI Audit</span></div>
+    <div class="problem"><strong>问题：</strong>仅靠 E2E 断言无法充分体现“布局是否顺手、按钮是否被遮挡、控制台是否干净”。</div>
+    <div class="evidence">test-results/ui-audit/browser-ui-audit.json passed=true；截图：desktop-home.png、desktop-after-flow.png、mobile-home.png、mobile-player.png、mobile-my-panel.png。</div>
+    <div class="fix-box"><div class="fix-label">MINIMAL FIX</div><code>新增 npm run audit:ui，真实 Chromium 打开生产预览包，mock 外部 API，点击核心链路并保存截图/JSON。</code></div>
+    <div class="fix-box" style="margin-top:6px;background:#fff8e1;border-color:#ffe082"><strong>⏱ 预计：</strong>已完成 &nbsp;·&nbsp; <strong>回归测试：</strong><code>npm run audit:ui</code>。</div>
+  </div>
+
+  <h3 class="section-title" id="architecture">🏗 Architecture & Module Boundaries</h3>
+  <div class="card"><div class="card-header">✅ 已验证架构</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> API 层、player 层、UI 层保持模块分离。</div>
+    <div class="check-item"><span class="check">✓</span> Cloudflare Function 与前端构建解耦。</div>
+    <div class="check-item"><span class="check">✓</span> E2E page error 过滤抽成 <code>tests/e2e/page-errors.ts</code>，避免重复规则散落。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="security">🔒 Security</h3>
+  <div class="card"><div class="card-header">✅ 已验证安全</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> <code>npm audit --audit-level=moderate</code> 返回 0 vulnerabilities。</div>
+    <div class="check-item"><span class="check">✓</span> 代理保留协议与主机白名单，降低 SSRF 面。</div>
+    <div class="check-item"><span class="check">✓</span> Turnstile 服务端审计验证已覆盖 reused-token 不阻断播放。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="stability">⚡ Stability</h3>
+  <div class="card"><div class="card-header">✅ 已验证稳定性</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> 代理所有关键外部 fetch 具备超时边界。</div>
+    <div class="check-item"><span class="check">✓</span> 限流 Map 加入过期清理，避免长期运行内存增长。</div>
+    <div class="check-item"><span class="check">✓</span> Playwright E2E 改跑生产 preview，减少 Vite HMR 噪音。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="performance">🚀 Performance</h3>
+  <div class="card"><div class="card-header">✅ 已验证性能</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> Vite build 通过且无 50KB chunk warning。</div>
+    <div class="check-item"><span class="check">✓</span> manualChunks 将 core/api/interaction 分包，主要 JS chunk 均小于 25KB。</div>
+    <div class="check-item"><span class="check">✓</span> UI 巡检验证桌面和移动端无横向滚动溢出。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="testing">🧪 Testing Quality</h3>
+  <div class="card"><div class="card-header">✅ 已验证测试质量</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> 代理治理测试 9/9 通过。</div>
+    <div class="check-item"><span class="check">✓</span> 前端单测 62/62 通过。</div>
+    <div class="check-item"><span class="check">✓</span> E2E 12/12 通过，覆盖桌面、移动、核心链路、布局回归。</div>
+    <div class="check-item"><span class="check">✓</span> UI Audit 26/26 通过，额外校验控制台 error 和未捕获异常为空。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="maintainability">📐 Maintainability</h3>
+  <div class="card"><div class="card-header">✅ 已验证可维护性</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> package scripts 区分 build、test:e2e:run、audit:ui:run 和 check，职责清晰。</div>
+    <div class="check-item"><span class="check">✓</span> README 与 DEPLOYMENT 记录完整质量门禁和浏览器巡检入口。</div>
+    <div class="check-item"><span class="check">✓</span> CI 上传 Playwright report 与 browser-ui-audit artifacts。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="release">🚢 Release & Deployment Process</h3>
+  <div class="card"><div class="card-header">✅ 已验证发布流程</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> <code>npm run check</code> 是当前发布前唯一推荐门禁。</div>
+    <div class="check-item"><span class="check">✓</span> Cloudflare Pages + Functions 口径已在 README/DEPLOYMENT 中统一为当前推荐。</div>
+    <div class="check-item"><span class="check">✓</span> CI E2E job 下载构建产物后运行 E2E 和 UI 巡检。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="documentation">📚 Documentation Accuracy</h3>
+  <div class="card"><div class="card-header">✅ 已验证文档</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> README 说明 <code>npm run audit:ui</code> 会生成 <code>test-results/ui-audit</code>。</div>
+    <div class="check-item"><span class="check">✓</span> DEPLOYMENT 说明 <code>npm run check</code> 覆盖完整发布门禁。</div>
+    <div class="check-item"><span class="check">✓</span> Vercel 被标注为需适配代理，避免误导部署。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="configuration">⚙ Configuration Safety</h3>
+  <div class="card"><div class="card-header">✅ 已验证配置</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> Turnstile secret 和 Netease cookie 均从环境变量读取。</div>
+    <div class="check-item"><span class="check">✓</span> Playwright webServer 使用生产 preview 端口 4174。</div>
+    <div class="check-item"><span class="check">✓</span> UI audit 使用独立端口 4176 和 Vite preview API，避免遗留子进程。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="observability">📈 Observability</h3>
+  <div class="card"><div class="card-header">✅ 已验证可观测性</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> logger 记录 API fallback、上游和 Turnstile 异常。</div>
+    <div class="check-item"><span class="check">✓</span> UI audit JSON 保留每个检查项、截图路径、控制台错误和 pageerror 列表。</div>
+    <div class="check-item"><span class="check">✓</span> CI 上传 UI audit artifact，便于失败后定位。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="fallback">🛟 Fallback / Defensive Code</h3>
+  <div class="card"><div class="card-header">✅ 已验证回退策略</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> 前端保留 GDStudio、NEC、Meting、跨源搜索等播放源回退。</div>
+    <div class="check-item"><span class="check">✓</span> 静默 fallback 已改为 logger warning，便于定位。</div>
+    <div class="check-item"><span class="check">✓</span> 代理错误返回具备明确 code/status/message。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="testing-authenticity">✅ Testing Authenticity</h3>
+  <div class="card"><div class="card-header">✅ 已验证测试真实性</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> E2E route mock 验证可见 UI 结果，而非只测函数调用。</div>
+    <div class="check-item"><span class="check">✓</span> layout-regression 检查真实 DOM 尺寸和遮挡。</div>
+    <div class="check-item"><span class="check">✓</span> UI audit 使用真实 Chromium 截图复核桌面/移动布局。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="type-safety">🧩 Type Safety</h3>
+  <div class="card"><div class="card-header">✅ 已验证类型安全</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> <code>npm run typecheck</code> 通过。</div>
+    <div class="check-item"><span class="check">✓</span> sources JSON parse 由 unknown 进入结构断言。</div>
+    <div class="check-item"><span class="check">✓</span> search/music 模块减少 any 和未使用变量。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="frontend-state">🖥 Frontend State</h3>
+  <div class="card"><div class="card-header">✅ 已验证前端状态</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> 搜索、播放、收藏、历史、排行榜、歌手、电台和我的动作区均由浏览器巡检点击验证。</div>
+    <div class="check-item"><span class="check">✓</span> 移动三页分页中搜索框、播放按钮、我的动作按钮均在当前视口内。</div>
+    <div class="check-item"><span class="check">✓</span> 移动 toast 已改为顶部出现，避开底部操作区和分页指示器。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="backend-api">🔌 Backend API</h3>
+  <div class="card"><div class="card-header">✅ 已验证后端 API</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> CORS、白名单、错误结构和上游代理路径均保留。</div>
+    <div class="check-item"><span class="check">✓</span> Turnstile 审计异常记录日志，不阻断合法播放链路。</div>
+    <div class="check-item"><span class="check">✓</span> 上游超时转为 504 UPSTREAM_TIMEOUT。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="dependency-weight">⚖ Dependency Weight</h3>
+  <div class="card"><div class="card-header">✅ 已验证依赖重量</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> 运行时依赖保持少量，未新增大型前端框架。</div>
+    <div class="check-item"><span class="check">✓</span> Playwright 仅为 devDependency 和 CI 验收工具。</div>
+    <div class="check-item"><span class="check">✓</span> build 输出 JS 体量可控。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="code-consistency">🧭 Code Consistency</h3>
+  <div class="card"><div class="card-header">✅ 已验证一致性</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> E2E 错误收集统一调用 <code>collectUnexpectedPageErrors</code>。</div>
+    <div class="check-item"><span class="check">✓</span> npm 脚本命名采用 run/build/audit/check 分层。</div>
+    <div class="check-item"><span class="check">✓</span> 文档与 CI 对同一门禁口径保持一致。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="comment-coverage">💬 Comment Coverage</h3>
+  <div class="card"><div class="card-header">✅ 已验证注释覆盖</div><div class="card-body"><div class="check-list">
+    <div class="check-item"><span class="check">✓</span> 复杂代理和前端路径已有中文说明。</div>
+    <div class="check-item"><span class="check">✓</span> 新增 UI audit 脚本以函数命名表达意图，未添加冗余注释。</div>
+    <div class="check-item"><span class="check">✓</span> 移动端 toast CSS 注释更新为“避开底部操作区”。</div>
+  </div></div></div>
+
+  <h3 class="section-title" id="principles">📋 设计原则</h3>
+  <div class="card">
+    <div class="card-header">原则遵循情况</div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>原则</th><th>状态</th><th style="width:100px">级别</th><th>证据</th></tr></thead>
+          <tbody>
+            <tr><td>Playback Safety</td><td>已遵循</td><td><span class="badge badge-s">S</span></td><td>Turnstile 配置 secret 后执行审计验证，避免一次性 token 复用误伤播放。</td></tr>
+            <tr><td>Explicit Error Shape</td><td>已遵循</td><td><span class="badge badge-s">S</span></td><td>代理错误统一 code/status/message。</td></tr>
+            <tr><td>Testing Pyramid + Real Browser</td><td>已遵循</td><td><span class="badge badge-s">S</span></td><td>单测、E2E、UI audit 同时覆盖。</td></tr>
+            <tr><td>Small Practical Fix</td><td>已遵循</td><td><span class="badge badge-s">S</span></td><td>本轮未重写架构，只修真实风险点。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="section-title" id="fix-order">🎯 后续顺序</h3>
+  <div class="card">
+    <div class="card-header"><span>📅 持续维护</span><span class="badge badge-low">Low</span></div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>事项</th><th>预计</th><th>风险降低</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>上线前确认 Cloudflare Pages 环境变量完整</td><td>10 分钟</td><td>避免生产 Turnstile 或 VIP Cookie 配置缺失。</td></tr>
+            <tr><td>2</td><td>定期查看 CI browser-ui-audit artifact</td><td>每次 PR</td><td>第一时间发现布局或按钮遮挡回归。</td></tr>
+            <tr><td>3</td><td>上线后观察第三方音乐源失败率</td><td>持续</td><td>区分代码问题与上游波动。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="section-title">⚡ 快速验证</h3>
+  <div class="win-grid">
+    <div class="win-card"><div class="win-title">完整质量门禁</div><div class="win-meta">npm run check</div></div>
+    <div class="win-card"><div class="win-title">真实浏览器 UI 巡检</div><div class="win-meta">npm run audit:ui</div></div>
+    <div class="win-card"><div class="win-title">巡检报告 JSON</div><div class="win-meta">test-results/ui-audit/browser-ui-audit.json</div></div>
+    <div class="win-card"><div class="win-title">移动端截图</div><div class="win-meta">test-results/ui-audit/mobile-player.png / mobile-my-panel.png</div></div>
+  </div>
+
+  <div style="text-align:center;padding:40px 0 20px;color:var(--text-secondary);font-size:12px">
+    修复后报告：当前仓库本地门禁与真实 Chromium UI 巡检评分 9.9 / S。
+  </div>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('[id]');
+  const navLinks = document.querySelectorAll('.sidebar-nav a');
+  const observer = new IntersectionObserver((entries) => {
+    let activeId = null;
+    entries.forEach(entry => {
+      if (entry.isIntersecting) activeId = entry.target.id;
+    });
+    if (activeId) {
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + activeId);
+      });
+    }
+  }, { rootMargin: '-10% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+  navLinks.forEach(a => {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>

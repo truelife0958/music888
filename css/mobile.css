@@ -641,22 +641,24 @@
         transform: scale(0.9);
     }
 
-    /* === 通知移动端居中 === */
+    /* === 通知移动端避开底部操作区 === */
     .notification {
-        top: auto;
-        bottom: 80px;
-        right: 50%;
-        transform: translateX(50%) translateY(100%);
+        top: calc(12px + env(safe-area-inset-top, 0px));
+        bottom: auto;
+        right: 12px;
+        transform: translateY(-120%);
         max-width: calc(100vw - 40px);
+        width: min(210px, calc(100vw - 24px));
+        padding: 10px 14px;
         text-align: center;
     }
 
     .notification-show {
-        transform: translateX(50%) translateY(0);
+        transform: translateY(0);
     }
 
     .notification-hide {
-        transform: translateX(50%) translateY(100%);
+        transform: translateY(-120%);
     }
 
     /* === 搜索结果列表优化 === */

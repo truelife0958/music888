@@ -6,6 +6,7 @@ import { defineConfig, devices } from '@playwright/test';
 const configDir = path.dirname(fileURLToPath(import.meta.url));
 const playwrightPort = process.env.PLAYWRIGHT_PORT ?? '4174';
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${playwrightPort}`;
+const shouldStartLocalPreview = !process.env.PLAYWRIGHT_BASE_URL;
 const localLibraryPaths = [
   path.join(configDir, '.playwright-libs/usr/lib/x86_64-linux-gnu'),
   path.join(configDir, '.playwright-libs/lib/x86_64-linux-gnu'),
@@ -37,12 +38,14 @@ export default defineConfig({
       env: launchEnv,
     },
   },
-  webServer: {
-    command: `npm run dev -- --host 127.0.0.1 --port ${playwrightPort}`,
-    url: baseURL,
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  webServer: shouldStartLocalPreview
+    ? {
+        command: `npm run preview -- --host 127.0.0.1 --port ${playwrightPort}`,
+        url: baseURL,
+        reuseExistingServer: false,
+        timeout: 120_000,
+      }
+    : undefined,
   projects: [
     {
       name: 'desktop-chromium',
