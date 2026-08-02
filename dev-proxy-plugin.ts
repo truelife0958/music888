@@ -16,6 +16,11 @@ const ALLOWED_HOSTS = [
     'api.i-meto.com',
     'meting.qjqq.cn',
     'w7z.indevs.in',
+    // NEC Enhanced 镜像群（主源与回退）
+    'neteaseapi.gksm.store',
+    'www.megumi-ben.cn',
+    'www.fish6.icu',
+    'music888.zeabur.app',
     'netease-cloud-music-api-psi-three.vercel.app',
     'netease-cloud-music-api-five-roan.vercel.app',
     'y.qq.com',
@@ -37,8 +42,13 @@ const ALLOWED_HOSTS = [
     'sycdn.kuwo.cn',
     'other.web.nf01.sycdn.kuwo.cn',
     'other.web.ra01.sycdn.kuwo.cn',
+    'k9w',
     'joox.com',
     'api.joox.com',
+    'stream.music.joox.com',
+    // Bilibili 音频 / 视频 CDN（跨源回退音源）
+    'bilivideo.com',
+    'bilivideo.cn',
     'ximalaya.com',
     'fdfs.xmcdn.com',
     'aod.cos.tx.xmcdn.com',
@@ -80,6 +90,8 @@ function getRefererForHost(hostname: string): string {
         return 'https://www.kuwo.cn/';
     } else if (hostname.includes('joox.com')) {
         return 'https://www.joox.com/';
+    } else if (hostname.includes('bilivideo.com') || hostname.includes('bilivideo.cn')) {
+        return 'https://www.bilibili.com/';
     } else if (hostname.includes('i-meto.com')) {
         return 'https://api.i-meto.com/';
     } else if (hostname.includes('ximalaya.com') || hostname.includes('xmcdn.com')) {
@@ -88,7 +100,16 @@ function getRefererForHost(hostname: string): string {
     return 'https://music.163.com/';
 }
 
-function proxyFetch(targetUrl: string, headers: Record<string, string>, maxRedirects = 5): Promise<{ status: number; contentType: string; contentLength: string | null; body: Buffer }> {
+interface ProxyFetchResult {
+    status: number;
+    contentType: string;
+    contentLength: string | null;
+    contentRange: string | null;
+    acceptRanges: string | null;
+    body: Buffer;
+}
+
+function proxyFetch(targetUrl: string, headers: Record<string, string>, maxRedirects = 5): Promise<ProxyFetchResult> {
     return new Promise((resolve, reject) => {
         if (maxRedirects <= 0) {
             reject(new Error('Too many redirects'));
@@ -125,6 +146,8 @@ function proxyFetch(targetUrl: string, headers: Record<string, string>, maxRedir
                     status: res.statusCode || 502,
                     contentType: res.headers['content-type'] || 'application/octet-stream',
                     contentLength: res.headers['content-length'] || null,
+                    contentRange: res.headers['content-range'] || null,
+                    acceptRanges: res.headers['accept-ranges'] || null,
                     body: Buffer.concat(chunks),
                 });
             });
@@ -224,7 +247,7 @@ function proxyFetch(targetUrl: string, headers: Record<string, string>, maxRedir
 }
 
 async function handleProxyRequest(
-    _req: IncomingMessage,
+    req: IncomingMessage,
     res: ServerResponse,
     urlParam: string
 ): Promise<void> {
@@ -243,13 +266,18 @@ async function handleProxyRequest(
         const parsedUrl = new URL(decodedUrl);
         const referer = getRefererForHost(parsedUrl.hostname);
 
-        const response = await proxyFetch(parsedUrl.toString(), {
+        const upstreamHeaders: Record<string, string> = {
             Referer: referer,
             Origin: referer.replace(/\/$/, ''),
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             Accept: 'application/json, text/plain, */*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        });
+        };
+        if (typeof req.headers.range === 'string') {
+            upstreamHeaders.Range = req.headers.range;
+        }
+
+        const response = await proxyFetch(parsedUrl.toString(), upstreamHeaders);
 
         if (response.status >= 400) {
             console.error(`[dev-proxy] Upstream error: ${response.status} for ${decodedUrl.substring(0, 100)}`);
@@ -262,14 +290,22 @@ async function handleProxyRequest(
 
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
         res.setHeader('Content-Type', response.contentType);
+        res.statusCode = response.status;
 
         if (response.contentLength) {
             res.setHeader('Content-Length', response.contentLength);
         }
 
-        if (response.contentType.includes('audio') || response.contentType.includes('octet-stream')) {
+        if (response.contentRange) {
+            res.setHeader('Content-Range', response.contentRange);
+        }
+
+        if (response.acceptRanges) {
+            res.setHeader('Accept-Ranges', response.acceptRanges);
+        } else if (response.contentType.includes('audio') || response.contentType.includes('octet-stream')) {
             res.setHeader('Accept-Ranges', 'bytes');
         }
 

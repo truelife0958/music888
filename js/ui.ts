@@ -15,26 +15,18 @@ import {
 import { escapeHtml, formatTime, getElement, ensureHttps } from './utils';
 import { APP_CONFIG, logger } from './config';
 
-// NOTE: 延迟导入 player 模块以避免循环依赖
+// NOTE: 由 main.ts 在初始化时注入 player 模块，避免循环依赖
 // ui.ts → player.ts → control.ts/events.ts → ui.ts
-// 通过 loadPlayer() 在初始化时预填充缓存，之后 playerSync() 可安全同步调用
 let _player: typeof import('./player') | null = null;
-async function loadPlayer(): Promise<typeof import('./player')> {
-    if (!_player) _player = await import('./player');
-    return _player;
-}
 function playerSync(): typeof import('./player') {
     if (!_player) {
-        // NOTE: 回退：如果 loadPlayer() 尚未调用，同步 import 并缓存
-        // 这种情况仅在测试或异常初始化顺序下发生
-        throw new Error('player module not loaded - call loadPlayer() first or use setPlayerModule()');
+        throw new Error('player module not loaded - call setPlayerModule() during initialization');
     }
     return _player;
 }
 export function setPlayerModule(mod: typeof import('./player')): void {
     _player = mod;
 }
-export { loadPlayer };
 
 // --- DOM Element Cache ---
 
@@ -64,7 +56,11 @@ export function init(): void {
         downloadLyricBtn: getElement<HTMLButtonElement>('#downloadLyricBtn'),
         inlineLyricText: getElement('#inlineLyricText'),
     };
+
+    // 初始化歌词字体大小（从 localStorage 恢复）
+    initLyricFontSize();
 }
+
 
 // --- UI Functions ---
 
@@ -473,6 +469,55 @@ export function updateProgress(currentTime: number, duration: number): void {
     }
 }
 
+// ============================================
+// 歌词增强：时间戳格式化 + 字体大小调节
+// ============================================
+
+/**
+ * 格式化歌词时间戳 (秒 -> mm:ss)
+ */
+function formatLyricTime(seconds: number): string {
+    if (!isFinite(seconds) || seconds < 0) return '00:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** 歌词字体大小档位（包含当前值，通过 CSS 变量 --lyric-font-size 应用） */
+const LYRIC_FONT_SIZES = [14, 16, 18, 20, 22, 24, 28] as const;
+const LYRIC_FONT_KEY = 'music888_lyric_font_size';
+const LYRIC_FONT_DEFAULT = 18;
+
+function applyLyricFontSize(px: number): void {
+    if (typeof DOM === 'undefined' || !DOM.lyricsContainer) return;
+    DOM.lyricsContainer.style.setProperty('--lyric-font-size', `${px}px`);
+    try { localStorage.setItem(LYRIC_FONT_KEY, String(px)); } catch { /* ignore */ }
+}
+
+/** 调整歌词字体大小，step 为正增、为负减，返回调整后的 px 值 */
+export function adjustLyricFontSize(step: number): number {
+    const current = getLyricFontSize();
+    const idx = LYRIC_FONT_SIZES.indexOf(current as (typeof LYRIC_FONT_SIZES)[number]);
+    const start = idx >= 0 ? idx : LYRIC_FONT_SIZES.indexOf(LYRIC_FONT_DEFAULT as (typeof LYRIC_FONT_SIZES)[number]);
+    const next = Math.max(0, Math.min(LYRIC_FONT_SIZES.length - 1, start + step));
+    const px = LYRIC_FONT_SIZES[next];
+    applyLyricFontSize(px);
+    return px;
+}
+
+export function getLyricFontSize(): number {
+    try {
+        const v = parseInt(localStorage.getItem(LYRIC_FONT_KEY) || '', 10);
+        if (LYRIC_FONT_SIZES.includes(v as (typeof LYRIC_FONT_SIZES)[number])) return v;
+    } catch { /* ignore */ }
+    return LYRIC_FONT_DEFAULT;
+}
+
+/** 初始化时从持久化恢复歌词字体大小 */
+export function initLyricFontSize(): void {
+    applyLyricFontSize(getLyricFontSize());
+}
+
 /**
  * 更新歌词显示
  * @param lyrics 歌词行数组（可包含翻译歌词）
@@ -521,7 +566,9 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
                     const translationHtml = line.ttext
                         ? `<div class="lyric-translation">${escapeHtml(line.ttext)}</div>`
                         : '';
-                    return `<div class="lyric-line${isActive ? ' active' : ''}" data-index="${index}" data-time="${line.time}">${mainText}${translationHtml}</div>`;
+                    const timestamp = formatLyricTime(line.time);
+                    const timestampHtml = `<span class="lyric-time" data-time="${line.time}">${timestamp}</span>`;
+                    return `<div class="lyric-line${isActive ? ' active' : ''}" data-index="${index}" data-time="${line.time}">${timestampHtml}<span class="lyric-text">${mainText}</span>${translationHtml}</div>`;
                 })
                 .join('');
             lastLyricsLength = lyrics.length;
@@ -562,11 +609,20 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
 /**
  * 滚动到当前高亮的歌词行
  */
-function scrollToActiveLine(): void {
+export function scrollToActiveLine(): void {
     if (!DOM.lyricsContainer) return;
-    const activeLine = DOM.lyricsContainer.querySelector('.active');
-    if (activeLine) {
-        activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const activeLine = DOM.lyricsContainer.querySelector('.lyric-line.active') as HTMLElement | null;
+    if (!activeLine) return;
+    const container = DOM.lyricsContainer;
+    // 使用容器自身滚动，避免 scrollIntoView 触发整页跳动；对 jsdom 等无 scrollTo 的环境回退到 scrollTop
+    const targetTop = activeLine.offsetTop - container.clientHeight / 2 + activeLine.offsetHeight / 2;
+    if (typeof container.scrollTo === 'function') {
+        container.scrollTo({ top: targetTop, behavior: 'smooth' });
+    } else {
+        try { container.scrollTop = targetTop; } catch {
+            // 兜底：scrollIntoView（可能触发整页跳动，仅在不支持 scrollTo 的环境）
+            activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 }
 

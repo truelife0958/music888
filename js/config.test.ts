@@ -3,32 +3,77 @@
  */
 import { logger, API_TIMEOUTS, PROXY_DOMAINS, needsProxy, APP_CONFIG, IS_PRODUCTION } from './config';
 
+function createStorageMock(): Storage {
+    let store: Record<string, string> = {};
+
+    return {
+        get length() {
+            return Object.keys(store).length;
+        },
+        clear: vi.fn(() => {
+            store = {};
+        }),
+        getItem: vi.fn((key: string) => store[key] ?? null),
+        key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
+        removeItem: vi.fn((key: string) => {
+            delete store[key];
+        }),
+        setItem: vi.fn((key: string, value: string) => {
+            store[key] = String(value);
+        }),
+    };
+}
+
 describe('Logger', () => {
-    it('应正确输出调试日志', () => {
+    beforeEach(() => {
+        vi.stubGlobal('localStorage', createStorageMock());
+        localStorage.clear();
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('默认应静默控制台调试日志', () => {
         const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         logger.debug('test message');
-        expect(consoleLogSpy).toHaveBeenCalledWith('[DEBUG]', 'test message');
+        expect(consoleLogSpy).not.toHaveBeenCalled();
         consoleLogSpy.mockRestore();
     });
 
-    it('应正确输出信息日志', () => {
+    it('开启调试开关后应输出调试和信息日志', () => {
         const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        localStorage.setItem('music888_debug_logs', '1');
+        logger.debug('debug message');
         logger.info('test message');
+        expect(consoleLogSpy).toHaveBeenCalledWith('[DEBUG]', 'debug message');
         expect(consoleLogSpy).toHaveBeenCalledWith('[INFO]', 'test message');
         consoleLogSpy.mockRestore();
     });
 
-    it('应正确输出警告日志', () => {
+    it('默认应静默控制台警告日志', () => {
         const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         logger.warn('test message');
-        expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN]', 'test message');
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
         consoleWarnSpy.mockRestore();
     });
 
-    it('应正确输出错误日志', () => {
+    it('默认应静默控制台错误日志', () => {
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         logger.error('test message');
-        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR]', 'test message');
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+        consoleErrorSpy.mockRestore();
+    });
+
+    it('开启调试开关后应输出警告和错误日志', () => {
+        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        localStorage.setItem('music888_debug_logs', '1');
+        logger.warn('warn message');
+        logger.error('error message');
+        expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN]', 'warn message');
+        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR]', 'error message');
+        consoleWarnSpy.mockRestore();
         consoleErrorSpy.mockRestore();
     });
 });
@@ -36,6 +81,7 @@ describe('Logger', () => {
 describe('API_TIMEOUTS', () => {
     it('应包含所有超时配置', () => {
         expect(API_TIMEOUTS.API_DETECTION).toBe(8000);
+        expect(API_TIMEOUTS.SOURCE_HEALTH).toBe(4500);
         expect(API_TIMEOUTS.SEARCH).toBe(20000);
         expect(API_TIMEOUTS.SONG_URL).toBe(15000);
         expect(API_TIMEOUTS.LYRICS).toBe(10000);
@@ -69,6 +115,11 @@ describe('PROXY_DOMAINS', () => {
         expect(PROXY_DOMAINS).toContain('kuwo.cn');
         expect(PROXY_DOMAINS).toContain('sycdn.kuwo.cn');
     });
+
+    it('应包含 Bilibili CDN 域名（跨源回退音源）', () => {
+        expect(PROXY_DOMAINS).toContain('bilivideo.com');
+        expect(PROXY_DOMAINS).toContain('bilivideo.cn');
+    });
 });
 
 describe('needsProxy', () => {
@@ -93,6 +144,11 @@ describe('needsProxy', () => {
 
     it('应检测酷我音乐URL需要代理', () => {
         expect(needsProxy('https://sycdn.kuwo.cn/song.mp3')).toBe(true);
+    });
+
+    it('应检测 Bilibili CDN URL 需要代理', () => {
+        expect(needsProxy('https://upos-sz-mirrorcosov.bilivideo.com/audio.m4s')).toBe(true);
+        expect(needsProxy('https://xy122x68x166x12xy.bilivideo.cn/audio.m4s')).toBe(true);
     });
 
     it('应检测其他URL不需要代理', () => {

@@ -89,7 +89,9 @@ export async function getAlbumCoverUrl(song: Song, size: number = 300): Promise<
 
     // 2. 回退到 Meting
     try {
-        const response = await fetchWithRetry(`${metingUrl}/?type=pic&id=${song.pic_id}`);
+        const response = await fetchWithRetry(
+            `${metingUrl}?server=netease&type=pic&id=${encodeURIComponent(song.pic_id)}`
+        );
         const data = await response.json();
         if (data?.url || data?.pic) return data.url || data.pic || '';
     } catch {
@@ -151,24 +153,28 @@ async function searchSingleSource(source: string, songName: string, artistName: 
  * 跨源搜索逻辑
  */
 export async function searchSongFromOtherSources(songName: string, artistName: string, excludeSource: string): Promise<SongUrlResult | null> {
-    const sources = getSortedFallbackSources(excludeSource);
-    const promises = sources.map(source =>
-        searchSingleSource(source, songName, artistName)
-            .then(res => ({ source, res }))
-            .catch(() => ({ source, res: null }))
-    );
+    const sources = getSortedFallbackSources(excludeSource)
+        .slice(0, PREVIEW_DETECTION.MAX_CROSS_SOURCE_ATTEMPTS);
 
-    const results = await Promise.all(promises);
-    for (const { source, res } of results) {
-        if (res) {
-            sourceSuccessCount.set(source, (sourceSuccessCount.get(source) || 0) + 1);
-            saveSourceStats();
-            return res;
-        }
-        sourceFailCount.set(source, (sourceFailCount.get(source) || 0) + 1);
+    try {
+        const result = await Promise.any(
+            sources.map(async source => {
+                const res = await searchSingleSource(source, songName, artistName);
+                if (!res) {
+                    sourceFailCount.set(source, (sourceFailCount.get(source) || 0) + 1);
+                    throw new Error(`${source} has no playable result`);
+                }
+
+                sourceSuccessCount.set(source, (sourceSuccessCount.get(source) || 0) + 1);
+                return res;
+            })
+        );
+        saveSourceStats();
+        return result;
+    } catch {
+        saveSourceStats();
+        return null;
     }
-    saveSourceStats();
-    return null;
 }
 
 /**
@@ -223,6 +229,11 @@ export async function getSongUrl(song: Song, quality: string): Promise<SongUrlRe
     const artist = Array.isArray(song.artist) ? song.artist[0] : song.artist;
     let crossSourcePromise: Promise<SongUrlResult | null> | null = null;
 
+    // 0. 聚合源搜索结果已包含签名地址时直接使用，避免重复解析和丢失 auth 参数。
+    if (song.play_url) {
+        return { url: song.play_url, br: quality, source };
+    }
+
     // 1. 尝试网易云解析
     if (source === 'netease') {
         try {
@@ -266,6 +277,15 @@ export async function getSongUrl(song: Song, quality: string): Promise<SongUrlRe
  */
 export async function getLyrics(song: Song): Promise<LyricResult> {
     const source = song.source || 'netease';
+
+    if (song.lyric_url) {
+        try {
+            const response = await fetchWithRetry(song.lyric_url, {}, 0);
+            return { lyric: await response.text() };
+        } catch {
+            // 继续尝试其他歌词来源
+        }
+    }
 
     // 优先 NEC
     if (source === 'netease') {

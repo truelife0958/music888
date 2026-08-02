@@ -134,6 +134,11 @@ const ALLOWED_HOSTS_EXACT = new Set([
     'api.injahow.cn',
     'api.i-meto.com',
     'w7z.indevs.in',
+    // NEC Enhanced 镜像群（主源与回退）
+    'neteaseapi.gksm.store',
+    'www.megumi-ben.cn',
+    'www.fish6.icu',
+    'music888.zeabur.app',
     'netease-cloud-music-api-psi-three.vercel.app',
     'netease-cloud-music-api-five-roan.vercel.app',
     // QQ 音乐
@@ -164,6 +169,10 @@ const ALLOWED_HOSTS_EXACT = new Set([
     'other.web.ra01.sycdn.kuwo.cn',
     // JOOX CDN
     'api.joox.com',
+    'stream.music.joox.com',
+    // Bilibili 音频 / 视频 CDN（跨源回退音源）
+    'bilivideo.com',
+    'bilivideo.cn',
     // 喜马拉雅 CDN
     'fdfs.xmcdn.com',
     'aod.cos.tx.xmcdn.com',
@@ -177,6 +186,10 @@ const ALLOWED_HOST_SUFFIXES = [
     '.sycdn.kuwo.cn',
     '.xmcdn.com',
     '.nf.migu.cn',
+    '.joox.com',
+    '.bilivideo.com',
+    '.bilivideo.cn',
+    '.migu.cn',
 ];
 
 function isHostAllowed(hostname, env = {}) {

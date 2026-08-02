@@ -54,6 +54,10 @@ export interface Song {
     pic_url?: string;
     /** 歌曲时长（毫秒）- 用于试听检测 */
     duration?: number;
+    /** 已由聚合源签名的播放地址（例如 Meting 搜索结果） */
+    play_url?: string;
+    /** 已由聚合源签名的歌词地址 */
+    lyric_url?: string;
 }
 
 /**
@@ -274,11 +278,15 @@ export interface NeteasePlaylistDetailResponse {
  */
 export interface MetingSong {
     /** 歌曲 ID */
-    id: string;
+    id?: string;
     /** 歌曲名称 */
-    name: string;
+    name?: string;
+    /** 部分 Meting 实现使用 title 作为歌曲名称 */
+    title?: string;
     /** 艺术家 */
-    artist: string | string[];
+    artist?: string | string[];
+    /** 部分 Meting 实现使用 author 作为艺术家 */
+    author?: string | string[];
     /** 专辑名称 */
     album?: string;
     /** 封面 URL */
@@ -476,7 +484,7 @@ export type MainTabName = 'hot' | 'ranking' | 'artist' | 'radio';
 /**
  * “我的”面板子标签名称
  */
-export type MyTabName = 'playlist' | 'favorites' | 'history';
+export type MyTabName = 'playlist' | 'favorites' | 'history' | 'lyrics';
 
 /**
  * “我的”面板动作类型

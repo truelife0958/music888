@@ -26,7 +26,7 @@ describe('UI Helper Functions', () => {
         document.body.innerHTML = '';
         // NOTE: 预填充 player 模块缓存，避免 playerSync() 报错
         const { setPlayerModule } = await import('./ui');
-        setPlayerModule(playerMock as any);
+        setPlayerModule(playerMock as unknown as typeof import('./player'));
     });
 
     describe('showNotification', () => {
@@ -466,6 +466,7 @@ describe('Lyrics Display', () => {
 
         const container = document.getElementById('lyricsContainer');
         const activeLine = container?.querySelector('.lyric-line.active');
-        expect(activeLine?.textContent).toBe('第二行歌词');
+        // 时间戳渲染于独立的 .lyric-time span，歌词文本在 .lyric-text 子元素中
+        expect(activeLine?.querySelector('.lyric-text')?.textContent).toBe('第二行歌词');
     });
 });

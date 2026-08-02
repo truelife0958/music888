@@ -68,18 +68,20 @@ export function toPlayableMediaUrl(url: string): string {
  * @param options fetch 选项
  * @param retries 重试次数
  * @param useProxy 是否使用代理（默认 true）
+ * @param timeoutMs 单次请求超时时间
  */
 export async function fetchWithRetry(
     url: string,
     options: RequestInit = {},
     retries: number = 2,
-    useProxy: boolean = true
+    useProxy: boolean = true,
+    timeoutMs: number = 20000
 ): Promise<Response> {
     const requestUrl = useProxy ? toProxyUrl(url) : url;
 
     for (let i = 0; i <= retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
             // 附加 Turnstile token（仅代理请求，一次性使用后清除）

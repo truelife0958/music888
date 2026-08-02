@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8" />
@@ -357,6 +357,7 @@
                     <button class="my-tab-btn active" data-mytab="playlist"><i class="fas fa-list-ul"></i> 歌单</button>
                     <button class="my-tab-btn" data-mytab="favorites"><i class="fas fa-heart"></i> 收藏</button>
                     <button class="my-tab-btn" data-mytab="history"><i class="fas fa-history"></i> 历史</button>
+                    <button class="my-tab-btn" data-mytab="lyrics"><i class="fas fa-music"></i> 歌词</button>
                 </div>
                 <div id="myPlaylistPanel" class="my-tab-content active">
                     <div class="playlist-input-container">
@@ -425,6 +426,19 @@
                             <i class="fas fa-history"></i>
                             <div>暂无播放记录</div>
                         </div>
+                    </div>
+                </div>
+                <!-- 歌词面板 -->
+                <div id="myLyricsPanel" class="my-tab-content">
+                    <div class="my-section-header lyrics-header">
+                        <h3><i class="fas fa-music"></i> 歌词</h3>
+                        <div class="lyric-font-controls" role="group" aria-label="歌词字体大小">
+                            <button class="lyric-font-btn" id="lyricFontDecreaseBtn" aria-label="减小歌词字体" title="减小字体">A-</button>
+                            <button class="lyric-font-btn" id="lyricFontIncreaseBtn" aria-label="增大歌词字体" title="增大字体">A+</button>
+                        </div>
+                    </div>
+                    <div class="lyrics-container" id="lyricsContainer" aria-live="polite">
+                        <div class="lyric-line">暂无歌词</div>
                     </div>
                 </div>
             </div>

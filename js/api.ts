@@ -25,7 +25,11 @@ export {
     getNecApiUrl,
     getGDStudioApiUrl,
     testAPI,
-    findWorkingAPI
+    findWorkingAPI,
+    MUSIC_SOURCE_CANDIDATES,
+    availableMusicSources,
+    detectAvailableMusicSources,
+    getPreferredSearchSources
 } from './api/sources';
 
 // 导出资源解析

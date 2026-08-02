@@ -7,7 +7,7 @@
 
 ### 三栏布局
 
-| 左栏 — 内容发现 | 中栏 — 播放器 | 右栏 — 我的 |
+| 搜索 / 排行榜 / 歌手 / 电台 | 封面 / 控制 / 单行歌词 / 进度 | 歌单 / 收藏 / 历史 / 歌词 |
 |:---:|:---:|:---:|
 | 搜索 / 排行榜 / 歌手 / 电台 | 封面 / 控制 / 单行歌词 / 进度 | 歌单 / 收藏 / 播放历史 |
 
@@ -57,6 +57,16 @@
 - **播放历史** — 自动记录最近 50 首，支持一键清空
 - **歌曲下载** — 下载高品质音乐和 LRC 歌词文件
 - **自动恢复** — 刷新页面自动恢复已保存的用户 ID 和电台
+
+### 歌词体验
+
+- **歌词面板** — 右栏新增"歌词"页签，随播放同步展示完整歌词
+- **平滑滚动居中** — 当前行始终居中且滚动平滑，不打乱整页布局
+- **高亮动效** — 当前行会放大、渐变背景、入场淡入动画
+- **时间戳展示** — 当前行前显示 mm:ss 时间戳，准确定位
+- **字体大小调节** — A+/A- 按钮调整歌词字号，本地持久化记住偏好
+- **双语歌词** — 原词下方以较小字体显示翻译歌词
+- **单行歌词** — 播放器栏仍保留单行实时歌词
 
 ### 安全与引导
 
@@ -124,6 +134,7 @@ music888/
 │   ├── manifest.json        # PWA 清单
 │   └── sw.js                # Service Worker
 ├── index.html               # 主页面
+├── dev-proxy-plugin.ts      # Vite dev 服务器代理插件（开发环境转发 /api/proxy）
 ├── wrangler.toml             # Cloudflare Pages 配置
 ├── vite.config.ts
 └── package.json
@@ -231,26 +242,29 @@ npm run test:run
 # 真实浏览器 UI 巡检（生成 test-results/ui-audit）
 npm run audit:ui
 
-# 完整质量门禁
-npm run check
+# 新版 Linux 发行版若 Playwright 无法自动安装浏览器，可指定已有 Chromium
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chrome npm run test:e2e:run
 
-# 代码检查
-npm run lint
-```
+# 系统已具备 Chromium 依赖时，可关闭仓库内的兼容库注入
+PLAYWRIGHT_USE_LOCAL_LIBS=0 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chrome npm run test:e2e:run
 
 ## API 架构
 
 ```
-请求歌曲的优先级：
-1. NEC Unblock (match)  → 解锁网易云 VIP
-2. GDStudio API         → 多源聚合搜索
-3. NEC 常规接口          → 网易云官方
-4. Meting API           → 备用接口
-5. 跨源搜索              → 酷我/酷狗/咪咕等自动换源
+音乐源优先级（运行时按健康动态选择）：
+1. GDStudio API          → 多源聚合搜索（netease/joox/kuwo/bilibili）
+2. NEC Enhanced 镜像群  → 网易云官方 match/Song/lyric/playlist 等接口
+   ┊   neteaseapi.gksm.store  →  www.megumi-ben.cn  →  www.fish6.icu
+   └→ music888.zeabur.app  →  w7z.indevs.in  （末两个仅作兑底，不稳定）
+3. Meting API           → 备用接口（搜索/封面/歌单）
+4. 跨源搜索              → joox/kuwo/bilibili 竞速回退，解 VIP/试听版
 ```
 
-代理层（`functions/api/proxy.js`）提供 URL 白名单校验和 CORS 头注入，所有外部请求经由代理中转。
+项目在启动时对所有镜像倾以纯净探测（顺序，首个可用即选中），运行时仅使用选中的镜像；
+选中镜像连续失败后自动顺延到下一个（`setActiveNecBase`/`getActiveNecBaseUrl`）。`FALLBACK_SOURCES 中含 ['joox','kuwo','bilibili']，数据驱动地决定 cross-source 搜索与试听回退。
 
+代理层（`functions/api/proxy.js`）提供 URL 白名单校验与 CORS 头注入，所有外部请求经由代理中转；
+开发环境下由 `dev-proxy-plugin.ts` 在 Vite dev server 上转发同名路径。
 ## 安全措施
 
 - **Turnstile 验证** — 前端人机挑战 + 后端 token 审计记录
@@ -280,6 +294,8 @@ MIT License
 
 ## 致谢
 
-- [music-api.gdstudio.xyz](https://music-api.gdstudio.xyz) — 音乐 API
+- [NeteaseCloudMusicApi Enhanced](https://github.com/neteasecloudmusicapiapienhanced/api-enhanced) — 网易云 API 增强版（主力音乐源）
+- [music-api.gdstudio.xyz](https://music-api.gdstudio.xyz) — GDStudio 多源聚合音乐 API（备用接口）
+- [api.injahow.cn/meting](https://api.injahow.cn/meting/) — Meting API（备用接口）
 - [Font Awesome](https://fontawesome.com/) — 图标库
 - [Vite](https://vitejs.dev/) — 构建工具

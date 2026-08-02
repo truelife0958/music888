@@ -46,6 +46,7 @@ let artistDetailCurrentId = 0;
 let artistListRequestId = 0;
 let artistDetailRequestId = 0;
 let albumDetailRequestId = 0;
+let searchRequestId = 0;
 
 // NOTE: “我的”动作区统一状态
 let playlistActionSubmitting = false;
@@ -309,32 +310,32 @@ async function initializeApp(): Promise<void> {
     initPerformanceMonitoring();
 
     ui.init();
+    ui.initLyricFontSize(); // 恢复上次设置的歌词字体大小
     player.initPlayer(); // NOTE: 初始化播放器，绑定 DOM 音频元素
 
     // NOTE: 注册 Service Worker 实现 PWA 功能
     registerServiceWorker();
 
-    // NOTE: 异步检测可用 API，不阻塞主流程
+    // NOTE: 后台检测可用 API 与音乐源，不阻塞首屏推荐
     api.findWorkingAPI()
         .then(result => {
-            if (result.success) {
-                ui.showNotification(`已连接到 ${result.name}`, 'success');
-                // NOTE: API 连接成功后自动加载推荐
-                handleExplore();
-            } else {
-                ui.showNotification('所有 API 均不可用，请稍后重试', 'error');
+            if (!result.success) {
+                logger.warn('No working API source detected');
             }
         })
         .catch(error => {
             logger.error('API detection failed:', error);
-            ui.showNotification('API 检测失败', 'error');
         });
+    void api.detectAvailableMusicSources();
 
     // --- Event Listeners ---
     bindEventListeners();
 
     // Initial tab state - 使用热门标签
     switchTab('hot');
+
+    // NOTE: 首屏默认加载热门推荐，避免等待后台源检测导致空白
+    void handleExplore({ silent: true });
 
     // 加载收藏和播放历史（右栏"我的"面板）
     loadMyTabData();
@@ -369,7 +370,9 @@ function bindEventListeners(): void {
     }
 
     if (exploreBtn) {
-        exploreBtn.addEventListener('click', handleExplore);
+        exploreBtn.addEventListener('click', () => {
+            void handleExplore();
+        });
     }
 
     // 下拉选择器切换事件
@@ -535,6 +538,16 @@ function bindEventListeners(): void {
         });
     }
 
+    // 歌词字体大小调节按钮
+    const lyricFontDecreaseBtn = getElement('#lyricFontDecreaseBtn');
+    const lyricFontIncreaseBtn = getElement('#lyricFontIncreaseBtn');
+    if (lyricFontDecreaseBtn) {
+        lyricFontDecreaseBtn.addEventListener('click', () => ui.adjustLyricFontSize(-1));
+    }
+    if (lyricFontIncreaseBtn) {
+        lyricFontIncreaseBtn.addEventListener('click', () => ui.adjustLyricFontSize(1));
+    }
+
     // 歌手地区筛选按钮
     document.querySelectorAll('#artistAreaFilter .filter-btn').forEach(button => {
         button.addEventListener('click', () => {
@@ -684,6 +697,8 @@ async function handleSearch(): Promise<void> {
         return;
     }
 
+    const requestId = ++searchRequestId;
+
     // 搜索时自动切换到搜索标签
     showPrimaryContentTab('hot');
 
@@ -697,6 +712,7 @@ async function handleSearch(): Promise<void> {
 
     try {
         const songs = await api.searchMusicAPI(keyword, source);
+        if (requestId !== searchRequestId) return;
         ui.displaySearchResults(songs, 'searchResults', songs);
 
         if (songs.length === 0) {
@@ -705,6 +721,7 @@ async function handleSearch(): Promise<void> {
             ui.showNotification(`找到 ${songs.length} 首歌曲`, 'success');
         }
     } catch (error) {
+        if (requestId !== searchRequestId) return;
         logger.error('Search failed:', error);
         ui.showError('搜索失败，请稍后重试', 'searchResults');
         ui.showNotification('搜索失败，请检查网络连接', 'error');
@@ -714,7 +731,9 @@ async function handleSearch(): Promise<void> {
 /**
  * 处理探索雷达请求
  */
-async function handleExplore(): Promise<void> {
+async function handleExplore(options: { silent?: boolean } = {}): Promise<void> {
+    const requestId = ++searchRequestId;
+
     // 自动切换到搜索标签
     showPrimaryContentTab('hot');
 
@@ -722,10 +741,16 @@ async function handleExplore(): Promise<void> {
 
     try {
         const songs = await api.exploreRadarAPI();
+        if (requestId !== searchRequestId) return;
         ui.displaySearchResults(songs, 'searchResults', songs);
     } catch (error) {
+        if (requestId !== searchRequestId) return;
         logger.error('Explore failed:', error);
-        ui.showError('探索失败，请稍后重试', 'searchResults');
+        if (options.silent) {
+            ui.showEmptyState('searchResults', '热门推荐暂时不可用', 'fas fa-music', '可以直接搜索歌曲或稍后重试');
+        } else {
+            ui.showError('探索失败，请稍后重试', 'searchResults');
+        }
     }
 }
 
@@ -817,6 +842,7 @@ function switchMyTab(tabName: MyTabName): void {
         playlist: 'myPlaylistPanel',
         favorites: 'myFavoritesPanel',
         history: 'myHistoryPanel',
+        lyrics: 'myLyricsPanel',
     };
 
     const panelId = panelMap[tabName];
@@ -828,6 +854,8 @@ function switchMyTab(tabName: MyTabName): void {
     // 切换到收藏或历史时刷新数据
     if (tabName === 'favorites') loadFavorites();
     if (tabName === 'history') loadPlayHistory();
+    // 切换到歌词面板时立即滚动到当前播放行（若在播放）
+    if (tabName === 'lyrics') requestAnimationFrame(() => ui.scrollToActiveLine());
 }
 
 /**

@@ -14,6 +14,9 @@
     scroll-behavior: smooth;
     /* 性能优化：启用 GPU 加速 */
     will-change: scroll-position;
+    /* 歌词基础字号（可通过界面调节，见 adjustLyricFontSize） */
+    --lyric-font-size: 18px;
+    --lyric-active-scale: 1.25;
 }
 
 .lyrics-container::-webkit-scrollbar {
@@ -21,21 +24,27 @@
 }
 
 .lyric-line {
-    padding: 12px 14px;
     color: var(--color-text-muted);
-    font-size: 16px;
+    font-size: var(--lyric-font-size, 16px);
     transition:
         color 0.3s ease,
         font-size 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
         transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
         margin 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-        text-shadow 0.3s ease;
+        text-shadow 0.3s ease,
+        opacity 0.35s ease;
     cursor: pointer;
     border-radius: 12px;
     margin-bottom: 8px;
     line-height: 1.6;
     /* 性能优化：减少重绘 */
     contain: content;
+    /* 切行入场动效 */
+    animation: lyric-line-enter 0.4s ease both;
+}
+@keyframes lyric-line-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .lyric-line:hover {
@@ -45,10 +54,10 @@
 
 .lyric-line.active {
     color: #fff;
-    font-size: 20px;
+    font-size: calc(var(--lyric-font-size, 16px) * var(--lyric-active-scale));
     font-weight: 700;
     text-shadow: 0 0 20px rgba(255, 107, 107, 0.6);
-    transform: scale(1.05);
+    transform: scale(1.08);
     margin: 20px 0;
     /* 高亮行的背景效果 */
     background: linear-gradient(90deg, transparent 0%, rgba(255, 107, 107, 0.1) 50%, transparent 100%);
@@ -63,6 +72,65 @@
 .lyric-line:has(+ .active) {
     color: rgba(255, 255, 255, 0.6);
 }
+
+/* 歌词面板头部与字体调节按钮 */
+.lyrics-header {
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.lyrics-header h3 {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+.lyric-font-controls {
+    display: flex;
+    gap: 6px;
+}
+.lyric-font-btn {
+    min-width: 26px;
+    height: 24px;
+    padding: 0 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.lyric-font-btn:hover {
+    background: rgba(255, 107, 107, 0.15);
+    border-color: rgba(255, 107, 107, 0.5);
+    color: #fff;
+}
+.lyric-font-btn:active {
+    transform: scale(0.94);
+}
+
+
+/* 时间戳：默认隐藏，仅 active 行显示于行前 */
+.lyric-time {
+    display: none;
+    font-size: 0.7em;
+    font-weight: 400;
+    opacity: 0.6;
+    margin-right: 8px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+}
+.lyric-line.active .lyric-time {
+    display: inline;
+    color: rgba(255, 107, 107, 0.85);
+}
+.lyric-text {
+    display: inline;
+}
+
 
 /* ============================================
    翻译歌词样式

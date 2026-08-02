@@ -22,7 +22,27 @@
 - 支持静态文件托管的服务器
 - 支持 SPA（单页应用）路由重写
 
-## 🚀 Cloudflare Pages 部署（当前推荐）
+## 🎵 音乐源配置
+
+本项目依赖多个第三方公开 API 源，按优先级作回退链条，启动时则探测首个可用镜像。
+如需自建可参考官方项目：https://github.com/neteasecloudmusicapiapienhanced/api-enhanced
+
+| 优先级 | 源 | 用途 | 均衡地址 |
+|:---:|:---:|:---|:---|
+| 1 | GDStudio 多源聚合 | 搜索/备源解 URL | https://music-api.gdstudio.xyz/api.php |
+| 2 | NEC Enhanced 镜像群 | 网易云主源 | neteaseapi.gksm.store |
+|   | www.megumi-ben.cn | 网易云主源 | www.megumi-ben.cn |
+|   | www.fish6.icu | 网易云主源 | www.fish6.icu |
+|   | music888.zeabur.app | 网易云主源（不稳定） | music888.zeabur.app |
+|   | w7z.indevs.in | 老端点（易 502） | w7z.indevs.in |
+| 3 | Meting API | 备用接口（搜索/封面） | https://api.injahow.cn/meting/ |
+|   | Meting 镜像 | 备用接口 | https://api.i-meto.com/meting/api |
+| 4 | 跨源搜索 | joox/kuwo/bilibili 竞速回退，解 VIP/试听版 | 交由 GDStudio 实现 |
+
+镜像列表定义在 `js/config.ts` 的 `NEC_MIRROR_URLS`，运行时由 `setActiveNecBase`/`getActiveNecBaseUrl` 动态选择，
+`setActiveNecBase` 在连续失败后会顺延到下一个镜像；代理白名单见 `functions/api/proxy.js`。
+如需添加额外的可代理域名，使用环境变量 `EXTRA_ALLOWED_HOSTS`（逗号分隔）。
+
 
 本项目当前以 Cloudflare Pages + Functions 为生产部署目标，`functions/api/proxy.js` 会随 Pages Functions 一起部署，用于音乐源代理、CORS、安全校验和 Turnstile 服务端审计验证。
 

@@ -14,9 +14,36 @@
 export const IS_PRODUCTION = import.meta.env.PROD;
 
 /**
- * NCM Docker 部署地址（统一 NEC API 来源）
+ * NCM API 镜像列表（NEC Enhanced 部署，按优先级排序）
+ * NOTE: 2026-08 实测可用镜像。w7z.indevs.in 已退务不可用，music888.zeabur.app 不稳定，
+ * 改用多个 Enhanced 社区镜像做回退。getNecApiUrl() 运行时动态选择首个健康镜像。
  */
-export const NCM_BASE_URL = 'https://w7z.indevs.in';
+export const NCM_BASE_URL = 'https://neteaseapi.gksm.store';
+
+/** NEC API 镜像候选列表（按优先级排序，主源在前） */
+export const NEC_MIRROR_URLS: readonly string[] = [
+    'https://neteaseapi.gksm.store',
+    'https://www.megumi-ben.cn',
+    'https://www.fish6.icu',
+    'https://music888.zeabur.app',
+    'https://w7z.indevs.in',
+];
+
+/**
+ * 运行时健康检测后选中的 NEC 镜像（默认取主源，检测失败后自动顺延）
+ */
+let activeNecBase = NCM_BASE_URL;
+
+export function setActiveNecBase(url: string): void {
+    if (NEC_MIRROR_URLS.includes(url)) {
+        activeNecBase = url;
+    }
+}
+
+/** 获取当前生效的 NEC API URL（运行时健康选择后） */
+export function getActiveNecBaseUrl(): string {
+    return activeNecBase;
+}
 
 // ============================================
 // 错误缓冲区（用于未来远程上报）
@@ -32,6 +59,18 @@ interface ErrorEntry {
 
 const ERROR_BUFFER_SIZE = 50;
 const errorBuffer: ErrorEntry[] = [];
+
+function shouldLogToConsole(): boolean {
+    if (IS_PRODUCTION) {
+        return false;
+    }
+
+    try {
+        return localStorage.getItem('music888_debug_logs') === '1';
+    } catch {
+        return false;
+    }
+}
 
 /**
  * 添加错误到缓冲区
@@ -54,7 +93,7 @@ function addToErrorBuffer(level: 'WARN' | 'ERROR', message: string, details?: an
 }
 
 /**
- * 日志工具 - 生产环境禁用详细日志
+ * 日志工具 - 默认静默，仅在开发调试开关开启时输出到控制台
  * NOTE: 添加日志级别前缀 [DEBUG]/[INFO]/[WARN]/[ERROR]
  */
 export const logger = {
@@ -63,7 +102,7 @@ export const logger = {
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     debug: (...args: any[]): void => {
-        if (!IS_PRODUCTION) {
+        if (shouldLogToConsole()) {
             console.log('[DEBUG]', ...args);
         }
     },
@@ -73,26 +112,30 @@ export const logger = {
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     info: (...args: any[]): void => {
-        if (!IS_PRODUCTION) {
+        if (shouldLogToConsole()) {
             console.log('[INFO]', ...args);
         }
     },
 
     /**
-     * 警告日志 - 始终输出 + 加入错误缓冲区
+     * 警告日志 - 默认仅加入错误缓冲区
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     warn: (...args: any[]): void => {
-        console.warn('[WARN]', ...args);
+        if (shouldLogToConsole()) {
+            console.warn('[WARN]', ...args);
+        }
         addToErrorBuffer('WARN', args[0], args.slice(1));
     },
 
     /**
-     * 错误日志 - 始终输出 + 加入错误缓冲区
+     * 错误日志 - 默认仅加入错误缓冲区
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     error: (...args: any[]): void => {
-        console.error('[ERROR]', ...args);
+        if (shouldLogToConsole()) {
+            console.error('[ERROR]', ...args);
+        }
         addToErrorBuffer('ERROR', args[0], args.slice(1));
     },
 };
@@ -104,6 +147,9 @@ export const logger = {
 export const API_TIMEOUTS = {
     /** API 可用性检测超时 */
     API_DETECTION: 8000,
+
+    /** 音乐源健康检测超时 */
+    SOURCE_HEALTH: 4500,
 
     /** 搜索请求超时 */
     SEARCH: 20000,
@@ -147,6 +193,9 @@ export const PROXY_DOMAINS = [
     'sycdn.kuwo.cn',
     // JOOX CDN
     'joox.com',
+    // Bilibili 音频 / 视频 CDN（跨源回退音源）
+    'bilivideo.com',
+    'bilivideo.cn',
     // 喜马拉雅 CDN
     'xmcdn.com',
     'ximalaya.com',

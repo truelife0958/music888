@@ -201,18 +201,34 @@ export const sourceSuccessCount = new Map<string, number>();
 export const sourceFailCount = new Map<string, number>();
 
 /**
+ * 可参与 GDStudio 跨源搜索和补全的音乐源。
+ *
+ * 这里只保留同时支持搜索和播放地址解析的源。失效或仅能搜索的源会让
+ * 每次播放额外等待一个完整超时周期，因此不能仅凭“曾经支持”写入列表。
+ */
+export const FALLBACK_SOURCES = ['joox', 'kuwo', 'bilibili'] as const;
+/** 最近一次健康检测判定可用的音乐源 */
+const healthySourceHints = new Set<string>();
+
+export function setHealthySourceHints(sources: string[]): void {
+    healthySourceHints.clear();
+    sources.forEach(source => healthySourceHints.add(source));
+}
+
+export function getSourceHealthScore(source: string): number {
+    const success = sourceSuccessCount.get(source) || 0;
+    const fail = sourceFailCount.get(source) || 0;
+    const healthBonus = healthySourceHints.has(source) ? 1000 : 0;
+    return healthBonus + success - fail * 0.5;
+}
+
+/**
  * 获取排序后的备选源
  */
 export function getSortedFallbackSources(excludeSource: string): string[] {
-    const FALLBACK_SOURCES = ['kuwo', 'kugou', 'migu', 'tencent', 'ximalaya', 'joox'];
-
     return FALLBACK_SOURCES
         .filter(s => s !== excludeSource)
-        .sort((a, b) => {
-            const successA = sourceSuccessCount.get(a) || 0;
-            const successB = sourceSuccessCount.get(b) || 0;
-            return successB - successA;
-        });
+        .sort((a, b) => getSourceHealthScore(b) - getSourceHealthScore(a));
 }
 
 /**

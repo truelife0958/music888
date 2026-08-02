@@ -6,6 +6,7 @@ vi.mock('./api', () => ({
     getRadioDetail: vi.fn(),
     getRadioPrograms: vi.fn(),
     findWorkingAPI: vi.fn(() => Promise.resolve({ success: false })),
+    detectAvailableMusicSources: vi.fn(() => Promise.resolve(['netease'])),
 }));
 
 vi.mock('./ui', async (importOriginal) => {

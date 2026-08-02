@@ -35,16 +35,18 @@ import {
     RadioDetailResponse
 } from '../types';
 
-import { logger } from '../config';
+import { API_TIMEOUTS, logger } from '../config';
 import { fetchWithRetry } from './client';
 import {
     getGDStudioApiUrl,
     getNecApiUrl,
     getMetingApiUrl,
+    getPreferredSearchSources,
     isGDStudioApiAvailable,
     markGDStudioApiAvailable,
     markGDStudioApiUnavailable
 } from './sources';
+import { saveSourceStats, sourceFailCount, sourceSuccessCount } from './utils';
 
 /**
  * 将网易云详情映射为内部 Song
@@ -65,53 +67,205 @@ export function convertNeteaseDetailToSong(song: NeteaseSongDetail): Song {
     };
 }
 
+function convertGDStudioSongToSong(song: GDStudioSong, fallbackSource: string): Song {
+    return {
+        id: song.id,
+        name: song.name,
+        artist: Array.isArray(song.artist) ? song.artist : [song.artist],
+        album: song.album || '',
+        pic_id: song.pic_id || '',
+        pic_url: '',
+        lyric_id: song.lyric_id || song.id,
+        source: song.source || fallbackSource
+    };
+}
+
+function getMetingResourceId(resourceUrl?: string): string {
+    if (!resourceUrl) return '';
+
+    try {
+        return new URL(resourceUrl).searchParams.get('id') || '';
+    } catch {
+        return '';
+    }
+}
+
+function convertMetingSearchSongToSong(song: MetingSong, index: number): Song | null {
+    const name = song.name || song.title || '';
+    const rawArtist = song.artist || song.author || '';
+    const artist = Array.isArray(rawArtist)
+        ? rawArtist
+        : rawArtist.split(/\s*\/\s*/).filter(Boolean);
+    const id = song.id || song.url_id || getMetingResourceId(song.url) || `meting-${index}`;
+
+    if (!name || !song.url) return null;
+
+    return {
+        id,
+        name,
+        artist: artist.length > 0 ? artist : ['未知歌手'],
+        album: song.album || '',
+        pic_id: song.pic_id || '',
+        pic_url: song.pic || '',
+        lyric_id: song.lyric_id || getMetingResourceId(song.lrc) || id,
+        source: 'meting',
+        play_url: song.url,
+        lyric_url: song.lrc,
+    };
+}
+
+function getSongDedupKey(song: Song): string {
+    return [
+        song.name.trim().toLowerCase(),
+        song.artist.join('/').trim().toLowerCase(),
+        song.album.trim().toLowerCase(),
+    ].join('|');
+}
+
+function mergeUniqueSongs(...groups: Song[][]): Song[] {
+    const seen = new Set<string>();
+    const merged: Song[] = [];
+
+    for (const songs of groups) {
+        for (const song of songs) {
+            const key = getSongDedupKey(song);
+            if (!seen.has(key)) {
+                seen.add(key);
+                merged.push(song);
+            }
+        }
+    }
+
+    return merged;
+}
+
+async function searchGDStudioSource(keyword: string, source: string): Promise<Song[]> {
+    try {
+        const res = await fetchWithRetry(
+            `${getGDStudioApiUrl()}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=12`,
+            {},
+            0,
+            true,
+            Math.min(API_TIMEOUTS.SEARCH, 6500)
+        );
+        const data: unknown = await res.json();
+        const songs: GDStudioSong[] = Array.isArray(data)
+            ? data
+            : data && typeof data === 'object'
+                ? Object.values(data) as GDStudioSong[]
+                : [];
+
+        if (songs.length > 0) {
+            markGDStudioApiAvailable();
+            sourceSuccessCount.set(source, (sourceSuccessCount.get(source) || 0) + 1);
+            return songs.map(song => convertGDStudioSongToSong(song, source));
+        }
+
+        sourceFailCount.set(source, (sourceFailCount.get(source) || 0) + 1);
+        return [];
+    } catch (e) {
+        if (e instanceof MusicError && e.message.includes('403')) {
+            markGDStudioApiUnavailable();
+        }
+        sourceFailCount.set(source, (sourceFailCount.get(source) || 0) + 1);
+        return [];
+    }
+}
+
+async function searchNeteaseFallback(keyword: string): Promise<Song[]> {
+    try {
+        const res = await fetchWithRetry(
+            `${getNecApiUrl()}/search?keywords=${encodeURIComponent(keyword)}&limit=30`,
+            {},
+            1,
+            true,
+            API_TIMEOUTS.SEARCH
+        );
+        const data: NeteaseSearchResponse = await res.json();
+        if (data.code === 200 && data.result?.songs) {
+            // 获取详情以补全封面
+            const ids = data.result.songs.map(s => s.id).join(',');
+            const detailRes = await fetchWithRetry(
+                `${getNecApiUrl()}/song/detail?ids=${ids}`,
+                {},
+                1,
+                true,
+                API_TIMEOUTS.SEARCH
+            );
+            const detailData: NeteaseSongDetailResponse = await detailRes.json();
+            if (detailData.code === 200 && detailData.songs) {
+                return detailData.songs.map(convertNeteaseDetailToSong);
+            }
+        }
+    } catch {
+        // 统一走空结果回退
+    }
+
+    return [];
+}
+
+async function searchMetingFallback(keyword: string): Promise<Song[]> {
+    try {
+        const res = await fetchWithRetry(
+            `${getMetingApiUrl()}?server=netease&type=search&id=${encodeURIComponent(keyword)}`,
+            {},
+            0,
+            true,
+            Math.min(API_TIMEOUTS.SEARCH, 8000)
+        );
+        const data: unknown = await res.json();
+        if (!Array.isArray(data)) return [];
+
+        return (data as MetingSong[])
+            .map(convertMetingSearchSongToSong)
+            .filter((song): song is Song => song !== null)
+            .slice(0, 20);
+    } catch {
+        return [];
+    }
+}
+
+async function firstNonEmptyResult(providers: Array<Promise<Song[]>>): Promise<Song[]> {
+    try {
+        return await Promise.any(
+            providers.map(provider => provider.then(songs => {
+                if (songs.length === 0) throw new Error('empty result');
+                return songs;
+            }))
+        );
+    } catch {
+        return [];
+    }
+}
+
 /**
  * 搜索音乐
  */
 export async function searchMusicAPI(keyword: string, source: string = 'netease'): Promise<Song[]> {
-    // 1. GDStudio 优先
-    if (isGDStudioApiAvailable()) {
-        try {
-            const res = await fetchWithRetry(`${getGDStudioApiUrl()}?types=search&source=${source}&name=${encodeURIComponent(keyword)}&count=20`, {}, 0);
-            const data = await res.json();
-            const songs: GDStudioSong[] = Array.isArray(data) ? data : Object.values(data || {});
+    let gdstudioSongs: Song[] = [];
 
-            if (songs.length > 0) {
-                markGDStudioApiAvailable();
-                return songs.map(s => ({
-                    id: s.id,
-                    name: s.name,
-                    artist: Array.isArray(s.artist) ? s.artist : [s.artist],
-                    album: s.album || '',
-                    pic_id: s.pic_id || '',
-                    pic_url: '',
-                    lyric_id: s.lyric_id || s.id,
-                    source: s.source || source
-                }));
-            }
-        } catch (e) {
-            if (e instanceof MusicError && e.message.includes('403')) markGDStudioApiUnavailable();
+    // 1. GDStudio 多源并发搜索，近期可用源优先
+    if (isGDStudioApiAvailable()) {
+        const preferredSources = getPreferredSearchSources(source, 3);
+        const sourceResults = await Promise.all(
+            preferredSources.map(preferredSource => searchGDStudioSource(keyword, preferredSource))
+        );
+        gdstudioSongs = mergeUniqueSongs(...sourceResults);
+        if (gdstudioSongs.length > 0) {
+            saveSourceStats();
         }
     }
 
-    // 2. NEC 回退
-    if (source === 'netease') {
-        try {
-            const res = await fetchWithRetry(`${getNecApiUrl()}/search?keywords=${encodeURIComponent(keyword)}&limit=30`);
-            const data: NeteaseSearchResponse = await res.json();
-            if (data.code === 200 && data.result?.songs) {
-                // 获取详情以补全封面
-                const ids = data.result.songs.map(s => s.id).join(',');
-                const detailRes = await fetchWithRetry(`${getNecApiUrl()}/song/detail?ids=${ids}`);
-                const detailData: NeteaseSongDetailResponse = await detailRes.json();
-                if (detailData.code === 200 && detailData.songs) {
-                    return detailData.songs.map(convertNeteaseDetailToSong);
-                }
-            }
-        } catch { /* ignore */ }
+    // 2. NEC 与 Meting 竞速回退。任一源先返回有效结果即可，避免被慢源拖满超时。
+    if (source === 'netease' && gdstudioSongs.length < 12) {
+        const fallbackSongs = await firstNonEmptyResult([
+            searchNeteaseFallback(keyword),
+            searchMetingFallback(keyword),
+        ]);
+        return mergeUniqueSongs(gdstudioSongs, fallbackSongs).slice(0, 30);
     }
 
-    return [];
+    return gdstudioSongs.slice(0, 30);
 }
 
 /**
@@ -152,21 +306,16 @@ export async function parsePlaylistAPI(playlistUrlOrId: string): Promise<Playlis
     }
 
     try {
-        const res = await fetchWithRetry(`${getMetingApiUrl()}/?type=playlist&id=${id}`);
+        const res = await fetchWithRetry(
+            `${getMetingApiUrl()}?server=netease&type=playlist&id=${id}`
+        );
         const data: unknown = await res.json();
         if (Array.isArray(data)) {
             const songs = data as MetingSong[];
             return {
-                songs: songs.map((s) => ({
-                    id: s.id,
-                    name: s.name,
-                    artist: Array.isArray(s.artist) ? s.artist : [s.artist],
-                    album: s.album || '',
-                    pic_id: '',
-                    pic_url: s.pic || '',
-                    lyric_id: s.id,
-                    source: 'netease'
-                })),
+                songs: songs
+                    .map(convertMetingSearchSongToSong)
+                    .filter((song): song is Song => song !== null),
                 name: '网易云歌单'
             };
         }
