@@ -33,8 +33,6 @@
 | 2 | NEC Enhanced 镜像群 | 网易云主源 | neteaseapi.gksm.store |
 |   | www.megumi-ben.cn | 网易云主源 | www.megumi-ben.cn |
 |   | www.fish6.icu | 网易云主源 | www.fish6.icu |
-|   | music888.zeabur.app | 网易云主源（不稳定） | music888.zeabur.app |
-|   | w7z.indevs.in | 老端点（易 502） | w7z.indevs.in |
 | 3 | Meting API | 备用接口（搜索/封面） | https://api.injahow.cn/meting/ |
 |   | Meting 镜像 | 备用接口 | https://api.i-meto.com/meting/api |
 | 4 | 跨源搜索 | joox/kuwo/bilibili 竞速回退，解 VIP/试听版 | 交由 GDStudio 实现 |

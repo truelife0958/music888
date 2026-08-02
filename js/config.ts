@@ -20,13 +20,13 @@ export const IS_PRODUCTION = import.meta.env.PROD;
  */
 export const NCM_BASE_URL = 'https://neteaseapi.gksm.store';
 
-/** NEC API 镜像候选列表（按优先级排序，主源在前） */
+/** NEC API 镜像候选列表（按优先级排序，2026-08 实测可用镜像）
+ * 注：未使用 music-api.gdstudio.xyz（国际版被墙），国内版 music.gdstudio.org 可直连但非 NEC。
+ * 已移除不稳定的 music888.zeabur.app 与已退务的 w7z.indevs.in。 */
 export const NEC_MIRROR_URLS: readonly string[] = [
     'https://neteaseapi.gksm.store',
     'https://www.megumi-ben.cn',
     'https://www.fish6.icu',
-    'https://music888.zeabur.app',
-    'https://w7z.indevs.in',
 ];
 
 /**

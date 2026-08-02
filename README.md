@@ -252,10 +252,11 @@ PLAYWRIGHT_USE_LOCAL_LIBS=0 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chrome 
 
 ```
 音乐源优先级（运行时按健康动态选择）：
-1. GDStudio API          → 多源聚合搜索（netease/joox/kuwo/bilibili）
-2. NEC Enhanced 镜像群  → 网易云官方 match/Song/lyric/playlist 等接口
+1. GDStudio API          → 多源聚合搜索（netease/joox/bilibili）
+2. NEC Enhanced 镜像群  → 网易云官方 search/song/url/v1/lyric/playlist 等接口
    ┊   neteaseapi.gksm.store  →  www.megumi-ben.cn  →  www.fish6.icu
-   └→ music888.zeabur.app  →  w7z.indevs.in  （末两个仅作兑底，不稳定）
+   （另有两个不稳定镜像 music888.zeabur.app / w7z.indevs.in 已从列表移除）
+
 3. Meting API           → 备用接口（搜索/封面/歌单）
 4. 跨源搜索              → joox/kuwo/bilibili 竞速回退，解 VIP/试听版
 ```
