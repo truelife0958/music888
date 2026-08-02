@@ -57,6 +57,7 @@ export async function playSong(
         if (requestId !== currentPlayRequestId) return;
 
         if (!urlResult.url) {
+            console.error('[music888] 无法获取有效播放地址:', { song: { id: song.id, name: song.name, source: song.source }, result: urlResult });
             throw new Error('无法获取有效播放地址');
         }
 

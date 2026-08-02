@@ -305,6 +305,8 @@ export async function getSongUrl(song: Song, quality: string): Promise<SongUrlRe
     }
 
     if (candidates.length > 0) return candidates[0];
+    const allFailed = ['NEC v1/match', isGDStudioApiAvailable() ? 'GDStudio' : 'GDStudio(不可用)', 'crossSource'].join(', ');
+    console.error('[music888] getSongUrl 返回空 url，所有源失败:', allFailed, '\n  song:', { id: song.id, name: song.name, source });
     return { url: '', br: quality };
 }
 

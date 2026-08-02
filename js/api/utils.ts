@@ -206,7 +206,7 @@ export const sourceFailCount = new Map<string, number>();
  * 这里只保留同时支持搜索和播放地址解析的源。失效或仅能搜索的源会让
  * 每次播放额外等待一个完整超时周期，因此不能仅凭“曾经支持”写入列表。
  */
-export const FALLBACK_SOURCES = ['joox', 'kuwo', 'bilibili'] as const;
+export const FALLBACK_SOURCES = ['joox', 'bilibili'] as const;
 /** 最近一次健康检测判定可用的音乐源 */
 const healthySourceHints = new Set<string>();
 

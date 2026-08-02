@@ -74,8 +74,16 @@ export function bindAudioEvents(): void {
     });
 
     audioPlayer.addEventListener('error', () => {
-        logger.error('Audio Error:', audioPlayer.error?.message);
-        ui.showNotification('音频资源加载错误', 'error');
+        const err = audioPlayer.error;
+        const src = audioPlayer.src?.slice(0, 120);
+        // 详细诊断：code 1=ABORTED, 2=NETWORK, 3=DECODE, 4=SRC_NOT_SUPPORTED
+        const errMap: Record<number, string> = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+        const detail = err ? `code=${err.code}(${errMap[err.code] || 'UNKNOWN'}) msg=${err.message}` : 'no error object';
+        logger.error('Audio Error:', detail, '\nsrc:', src);
+        console.error('[music888] 播放失败诊断:', detail, '\n  src:', src);
+        // 暴露到全局便于用户复制
+        (globalThis as any).__music888LastError = { detail, src: audioPlayer.src, error: err };
+        ui.showNotification('音频资源加载错误，详情见控制台（F12）', 'error');
     });
 
     // 页面可见性变化：恢复被系统中断的播放
