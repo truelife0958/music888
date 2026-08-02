@@ -18,7 +18,9 @@ import {
     incrementRequestId,
     currentPlayRequestId,
     setCurrentLyrics,
-    setPlayMode
+    setPlayMode,
+    activeContainerId,
+    setActiveContainerId
 } from './core';
 import { fadeIn, fadeOut, persistVolume, setSavedVolume } from './effects';
 import { addToHistory } from './playlist';
@@ -31,7 +33,7 @@ import { updateMediaSession, resetPreviewDetection } from './events';
 export async function playSong(
     index: number,
     playlist: Song[],
-    _containerId: string,
+    _containerId: string = activeContainerId,
     fromHistory: boolean = false
 ): Promise<void> {
     if (index < 0 || index >= playlist.length) return;
@@ -78,6 +80,7 @@ export async function playSong(
             document.dispatchEvent(new CustomEvent('music888:history-updated'));
         }
         ui.updateCurrentSongInfo(song, song.pic_url || '');
+        setActiveContainerId(_containerId);
         ui.updateActiveItem(index, _containerId);
 
         // 移动端播放成功后自动切换到播放器页面
@@ -132,7 +135,7 @@ export function nextSong(): void {
     } else if (nextIndex >= currentPlaylist.length) {
         nextIndex = 0;
     }
-    playSong(nextIndex, currentPlaylist, 'searchResults');
+    playSong(nextIndex, currentPlaylist, activeContainerId);
 }
 
 /**
@@ -142,7 +145,7 @@ export function previousSong(): void {
     if (currentPlaylist.length === 0) return;
     let prevIndex = currentIndex - 1;
     if (prevIndex < 0) prevIndex = currentPlaylist.length - 1;
-    playSong(prevIndex, currentPlaylist, 'searchResults');
+    playSong(prevIndex, currentPlaylist, activeContainerId);
 }
 
 /**

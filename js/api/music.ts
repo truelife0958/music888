@@ -178,6 +178,17 @@ export async function searchSongFromOtherSources(songName: string, artistName: s
 }
 
 /**
+ * 码率数值 → NEC level 参数（/song/url/v1 端点用）
+ */
+function brToLevel(br: string): string {
+    const n = parseInt(br, 10);
+    if (n >= 999) return 'hires';
+    if (n >= 700) return 'lossless';
+    if (n >= 190) return 'exhigh';
+    return 'standard';
+}
+
+/**
  * 当检测到试听版本时，优先再次尝试 NEC Unblock 以获取完整版本（仅网易云）
  */
 export async function tryGetFullVersionFromNeteaseUnblock(song: Song, quality: string): Promise<SongUrlResult | null> {
@@ -188,6 +199,19 @@ export async function tryGetFullVersionFromNeteaseUnblock(song: Song, quality: s
     for (let attempt = 0; attempt < 2; attempt++) {
         for (const br of brQueue) {
             try {
+                // 先试 /song/url/v1（标准端点，VIP 歌曲成功率更高）
+                const level = brToLevel(br);
+                const v1Url = `${getNecApiUrl()}/song/url/v1?id=${song.id}&level=${encodeURIComponent(level)}&t=${Date.now()}`;
+                const v1Res = await fetchWithRetry(v1Url, {}, 0);
+                const v1Data: NeteaseSongUrlResponse = await v1Res.json();
+                if (v1Data.code === 200 && v1Data.data?.[0]?.url) {
+                    return {
+                        url: v1Data.data[0].url,
+                        br: String(v1Data.data[0].br || br || quality),
+                        size: v1Data.data[0].size,
+                    };
+                }
+                // 回退 /song/url/match（带 randomCNIP 解锁试听版）
                 const url = `${getNecApiUrl()}/song/url/match?id=${song.id}&br=${encodeURIComponent(br)}&randomCNIP=true&t=${Date.now()}`;
                 const response = await fetchWithRetry(url, {}, 0);
                 const data: NeteaseSongUrlResponse = await response.json();
@@ -237,12 +261,24 @@ export async function getSongUrl(song: Song, quality: string): Promise<SongUrlRe
     // 1. 尝试网易云解析
     if (source === 'netease') {
         try {
-            const matchRes = await fetchWithRetry(`${getNecApiUrl()}/song/url/match?id=${song.id}&randomCNIP=true`);
-            const matchData: NeteaseSongUrlResponse = await matchRes.json();
-            if (matchData.code === 200 && matchData.data?.[0]?.url) {
-                const res = { url: matchData.data[0].url, br: String(matchData.data[0].br), size: matchData.data[0].size };
-                if (!isProbablyPreview(res.url, res.size)) return res;
-                candidates.push(res);
+            // 先试 /song/url/v1（标准端点，VIP 歌曲成功率更高）
+            const level = brToLevel(quality);
+            const v1Res = await fetchWithRetry(`${getNecApiUrl()}/song/url/v1?id=${song.id}&level=${encodeURIComponent(level)}&t=${Date.now()}`);
+            const v1Data: NeteaseSongUrlResponse = await v1Res.json();
+            let necRes: { url: string; br: string; size?: number } | null = null;
+            if (v1Data.code === 200 && v1Data.data?.[0]?.url) {
+                necRes = { url: v1Data.data[0].url, br: String(v1Data.data[0].br), size: v1Data.data[0].size };
+            } else {
+                // 回退 /song/url/match（带 randomCNIP 解锁）
+                const matchRes = await fetchWithRetry(`${getNecApiUrl()}/song/url/match?id=${song.id}&randomCNIP=true`);
+                const matchData: NeteaseSongUrlResponse = await matchRes.json();
+                if (matchData.code === 200 && matchData.data?.[0]?.url) {
+                    necRes = { url: matchData.data[0].url, br: String(matchData.data[0].br), size: matchData.data[0].size };
+                }
+            }
+            if (necRes) {
+                if (!isProbablyPreview(necRes.url, necRes.size)) return necRes;
+                candidates.push(necRes);
                 if (PREVIEW_DETECTION.PROACTIVE_CHECK) crossSourcePromise = searchSongFromOtherSources(song.name, artist, source);
             }
         } catch { /* ignore */ }

@@ -19,6 +19,8 @@ export let isPlaying = false;
 export let currentLyrics: LyricLine[] = [];
 /** 当前播放请求 ID，用于取消过期请求 */
 export let currentPlayRequestId = 0;
+/** 当前活跃列表容器 ID（焦点高亮所在容器） */
+export let activeContainerId = 'searchResults';
 
 /**
  * 设置播放状态
@@ -46,6 +48,13 @@ export function setCurrentIndex(index: number): void {
  */
 export function setPlayMode(mode: PlayMode): void {
     playMode = mode;
+}
+
+/**
+ * 设置当前活跃容器 ID
+ */
+export function setActiveContainerId(id: string): void {
+    activeContainerId = id;
 }
 
 /**
