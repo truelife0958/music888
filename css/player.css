@@ -70,12 +70,10 @@
     border-radius: 50%;
     object-fit: cover;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-    transition: all 0.3s ease;
+    transition:
+        border-color var(--transition-normal),
+        box-shadow var(--transition-normal);
     border: 6px solid rgba(255, 255, 255, 0.1);
-}
-
-.current-cover.playing {
-    animation: rotate 20s linear infinite;
 }
 
 .current-info h3 {
@@ -105,7 +103,10 @@
     border-radius: 50%;
     color: #fff;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition:
+        background var(--transition-fast),
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -205,7 +206,7 @@
     background: #fff;
     border-radius: 50%;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform var(--transition-fast);
 }
 
 .volume-slider::-webkit-slider-thumb:hover {
@@ -232,7 +233,9 @@
     cursor: pointer;
     appearance: none;
     text-align: center;
-    transition: all 0.3s ease;
+    transition:
+        background var(--transition-fast),
+        border-color var(--transition-fast);
 }
 
 .quality-select:hover {
@@ -256,7 +259,11 @@
     border-radius: 20px;
     cursor: pointer;
     font-size: 12px;
-    transition: all 0.3s ease;
+    transition:
+        color var(--transition-fast),
+        background var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
 }
 
 .download-btn:hover:not(:disabled) {

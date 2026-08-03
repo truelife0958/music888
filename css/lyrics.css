@@ -12,8 +12,6 @@
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
     scrollbar-width: none;
     scroll-behavior: smooth;
-    /* 性能优化：启用 GPU 加速 */
-    will-change: scroll-position;
     /* 歌词基础字号（可通过界面调节，见 adjustLyricFontSize） */
     --lyric-font-size: 18px;
     --lyric-active-scale: 1.25;
@@ -39,12 +37,6 @@
     line-height: 1.6;
     /* 性能优化：减少重绘 */
     contain: content;
-    /* 切行入场动效 */
-    animation: lyric-line-enter 0.4s ease both;
-}
-@keyframes lyric-line-enter {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .lyric-line:hover {
@@ -100,7 +92,11 @@
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+        color var(--transition-fast),
+        background var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
 }
 .lyric-font-btn:hover {
     background: rgba(255, 107, 107, 0.15);
@@ -110,7 +106,6 @@
 .lyric-font-btn:active {
     transform: scale(0.94);
 }
-
 
 /* 时间戳：默认隐藏，仅 active 行显示于行前 */
 .lyric-time {
@@ -130,7 +125,6 @@
 .lyric-text {
     display: inline;
 }
-
 
 /* ============================================
    翻译歌词样式

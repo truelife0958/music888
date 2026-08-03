@@ -296,9 +296,9 @@ async function expectDomText(page, selector, expected, name) {
   record(name, text.includes(expected), `实际文本：${text.trim()}`);
 }
 
-async function screenshot(page, name) {
+async function screenshot(page, name, options = {}) {
   const file = path.join(OUT_DIR, `${name}.png`);
-  await page.screenshot({ path: file, fullPage: true });
+  await page.screenshot({ path: file, fullPage: options.fullPage ?? true });
   results.screenshots.push(file);
 }
 
@@ -324,6 +324,34 @@ async function measureLayout(page, name) {
 
   const noHorizontalOverflow = metrics.scrollWidth <= metrics.viewportWidth;
   record(`${name}: 无横向溢出`, noHorizontalOverflow, JSON.stringify(metrics));
+}
+
+async function auditMotionBudget(page) {
+  const motion = await page.evaluate(() => {
+    const broadTransitions = Array.from(document.querySelectorAll('*'))
+      .filter(element => {
+        const style = getComputedStyle(element);
+        const hasDuration = style.transitionDuration
+          .split(',')
+          .some(duration => Number.parseFloat(duration) > 0);
+        return hasDuration && style.transitionProperty.split(',').some(property => property.trim() === 'all');
+      })
+      .slice(0, 12)
+      .map(element => element.id || element.className || element.tagName);
+
+    const infiniteAnimations = document
+      .getAnimations()
+      .filter(animation => animation.playState === 'running' && animation.effect?.getTiming().iterations === Infinity)
+      .map(animation => {
+        const target = animation.effect?.target;
+        return target instanceof Element ? target.id || target.className || target.tagName : 'unknown';
+      });
+
+    return { broadTransitions, infiniteAnimations };
+  });
+
+  record('动效预算: 未使用 transition all', motion.broadTransitions.length === 0, motion.broadTransitions.join(', '));
+  record('动效预算: 空闲态无持续动画', motion.infiniteAnimations.length === 0, motion.infiniteAnimations.join(', '));
 }
 
 async function expectInViewport(page, selector, name, options = {}) {
@@ -393,6 +421,7 @@ async function runDesktopAudit(page) {
   await expectVisible(page, '#playBtn', '桌面首屏: 播放按钮可见');
   await expectVisible(page, '#playlistActionBtn', '桌面首屏: 我的动作按钮可见');
   await measureLayout(page, '桌面首屏');
+  await auditMotionBudget(page);
   await screenshot(page, 'desktop-home');
 
   await page.locator('#searchInput').fill('巡检');
@@ -448,14 +477,14 @@ async function runMobileAudit(page) {
   await expectVisible(page, '#searchInput', '移动搜索页: 搜索框可见');
   await expectInViewport(page, '#searchInput', '移动搜索页: 搜索框在当前视口内');
   await measureLayout(page, '移动搜索页');
-  await screenshot(page, 'mobile-home');
+  await screenshot(page, 'mobile-home', { fullPage: false });
 
   await page.evaluate(() => window.switchMobilePage?.(1));
   await page.waitForTimeout(300);
   await expectInViewport(page, '#playBtn', '移动播放器页: 播放按钮在当前视口内', {
     avoidSelector: '.mobile-page-indicators',
   });
-  await screenshot(page, 'mobile-player');
+  await screenshot(page, 'mobile-player', { fullPage: false });
 
   await page.evaluate(() => window.switchMobilePage?.(2));
   await page.waitForTimeout(300);
@@ -463,7 +492,7 @@ async function runMobileAudit(page) {
     avoidSelector: '.mobile-page-indicators',
   });
   await measureLayout(page, '移动我的页');
-  await screenshot(page, 'mobile-my-panel');
+  await screenshot(page, 'mobile-my-panel', { fullPage: false });
 }
 
 async function main() {

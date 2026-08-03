@@ -24,7 +24,10 @@
     height: 8px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.3);
-    transition: all 0.3s ease;
+    transition:
+        width var(--transition-normal),
+        background var(--transition-normal),
+        transform var(--transition-fast);
 }
 
 .page-indicator.active {
@@ -94,7 +97,7 @@
         overflow: hidden !important;
         width: 300vw !important;
         flex-direction: row;
-        transition: transform 0.3s ease-out;
+        transition: transform var(--motion-standard) var(--ease-out);
         align-items: stretch;
         gap: 0 !important;
         max-width: none !important;
