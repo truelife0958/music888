@@ -6,6 +6,7 @@ import { preview } from 'vite';
 const PORT = Number(process.env.UI_AUDIT_PORT ?? 4176);
 const BASE_URL = process.env.UI_AUDIT_URL ?? `http://127.0.0.1:${PORT}/`;
 const OUT_DIR = path.resolve('test-results/ui-audit');
+const CHROMIUM_EXECUTABLE_PATH = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const COVER_URL = new URL('__ui-audit-cover.svg', BASE_URL).toString();
 const COVER_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="20" fill="#4a90e2"/><text x="50%" y="50%" fill="#fff" font-size="24" text-anchor="middle" dy=".3em">Audit</text></svg>';
@@ -433,6 +434,10 @@ async function runDesktopAudit(page) {
   await page.locator('#playlistActionBtn').click();
   await expectText(page, '#parseResults .song-item', '巡检专辑主打歌', '我的链路: 歌单解析');
 
+  await page.locator('.my-tab-btn[data-mytab="lyrics"]').click();
+  await expectVisible(page, '#myLyricsPanel', '我的链路: 歌词面板可切换');
+  await page.locator('.my-tab-btn[data-mytab="playlist"]').click();
+
   await measureLayout(page, '桌面流程后');
   await screenshot(page, 'desktop-after-flow');
 }
@@ -468,7 +473,10 @@ async function main() {
 
   try {
     await waitForServer(BASE_URL);
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({
+      headless: true,
+      ...(CHROMIUM_EXECUTABLE_PATH ? { executablePath: CHROMIUM_EXECUTABLE_PATH } : {}),
+    });
     const context = await browser.newContext({ locale: 'zh-CN' });
     const page = await context.newPage();
 

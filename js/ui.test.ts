@@ -175,7 +175,7 @@ describe('UI Helper Functions', () => {
             const currentTime = document.getElementById('currentTime');
             const totalTime = document.getElementById('totalTime');
 
-            expect(progressFill?.style.width).toBe('33.33333333333333%');
+            expect(progressFill?.style.transform).toBe('scaleX(0.3333333333333333)');
             expect(currentTime?.textContent).toBe('1:00');
             expect(totalTime?.textContent).toBe('3:00');
         });
@@ -187,6 +187,7 @@ describe('UI Helper Functions', () => {
 
             document.body.innerHTML = `
                 <button id="playBtn"><i class="fas fa-play"></i></button>
+                <img id="currentCover" alt="" />
             `;
 
             init();
@@ -194,10 +195,14 @@ describe('UI Helper Functions', () => {
             updatePlayButton(true);
             let icon = document.querySelector('#playBtn i');
             expect(icon?.className).toBe('fas fa-pause');
+            expect(document.getElementById('playBtn')?.classList.contains('is-playing')).toBe(true);
+            expect(document.getElementById('currentCover')?.classList.contains('playing')).toBe(true);
 
             updatePlayButton(false);
             icon = document.querySelector('#playBtn i');
             expect(icon?.className).toBe('fas fa-play');
+            expect(document.getElementById('playBtn')?.classList.contains('is-playing')).toBe(false);
+            expect(document.getElementById('currentCover')?.classList.contains('playing')).toBe(false);
         });
     });
 

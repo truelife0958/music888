@@ -227,6 +227,8 @@ docker run -d -p 80:80 music888
 git clone https://github.com/truelife0958/music888.git
 cd music888
 
+# Node.js 20.19+（推荐使用当前 LTS）
+
 # 安装依赖
 npm install
 

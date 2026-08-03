@@ -52,6 +52,7 @@ let searchRequestId = 0;
 let playlistActionSubmitting = false;
 let playlistActionFeedbackMessage = '';
 let playlistActionFeedbackType: PlaylistActionFeedbackType = 'neutral';
+let turnstileScriptPromise: Promise<void> | null = null;
 
 // NOTE: 触摸滑动状态
 let touchStartX = 0;
@@ -114,8 +115,10 @@ function switchMobilePage(pageIndex: number): void {
     indicators.forEach((indicator, index) => {
         if (index === pageIndex) {
             indicator.classList.add('active');
+            indicator.setAttribute('aria-current', 'page');
         } else {
             indicator.classList.remove('active');
+            indicator.removeAttribute('aria-current');
         }
     });
 
@@ -179,6 +182,7 @@ function switchTab(tabName: MainTabName): void {
     });
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
     });
 
     const selectedTabContent = document.getElementById(tabName + 'Tab');
@@ -190,6 +194,7 @@ function switchTab(tabName: MainTabName): void {
     const selectedTabButton = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
     if (selectedTabButton) {
         selectedTabButton.classList.add('active');
+        selectedTabButton.setAttribute('aria-selected', 'true');
     }
 }
 
@@ -614,7 +619,7 @@ function bindEventListeners(): void {
     document.querySelectorAll('.my-tab-btn').forEach(button => {
         button.addEventListener('click', () => {
             const tabName = (button as HTMLElement).dataset.mytab;
-            if (tabName === 'playlist' || tabName === 'favorites' || tabName === 'history') {
+            if (tabName === 'playlist' || tabName === 'favorites' || tabName === 'history' || tabName === 'lyrics') {
                 switchMyTab(tabName);
             }
         });
@@ -830,13 +835,19 @@ function loadMyTabData(): void {
  * 切换右栏"我的"子标签
  */
 function switchMyTab(tabName: MyTabName): void {
-    document.querySelectorAll('.my-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.my-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+    });
     document.querySelectorAll('.my-tab-content').forEach(content => {
         content.classList.remove('active');
     });
 
     const selectedBtn = document.querySelector(`.my-tab-btn[data-mytab="${tabName}"]`);
-    if (selectedBtn) selectedBtn.classList.add('active');
+    if (selectedBtn) {
+        selectedBtn.classList.add('active');
+        selectedBtn.setAttribute('aria-selected', 'true');
+    }
 
     const panelMap: { [key: string]: string } = {
         playlist: 'myPlaylistPanel',
@@ -1659,7 +1670,30 @@ function handleSwipe(): void {
 /**
  * 显示 Turnstile 验证挑战
  */
-function showTurnstileChallenge(siteKey: string): Promise<void> {
+function loadTurnstileScript(): Promise<void> {
+    if (window.turnstile) return Promise.resolve();
+    if (turnstileScriptPromise) return turnstileScriptPromise;
+
+    turnstileScriptPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.addEventListener('load', () => resolve(), { once: true });
+        script.addEventListener('error', () => reject(new Error('Turnstile script failed to load')), { once: true });
+        document.head.appendChild(script);
+    });
+    return turnstileScriptPromise;
+}
+
+async function showTurnstileChallenge(siteKey: string): Promise<void> {
+    try {
+        await loadTurnstileScript();
+    } catch (error) {
+        logger.warn('Turnstile script unavailable, proceeding without challenge', error);
+        return;
+    }
+
     return new Promise(resolve => {
         const modal = getElement('#turnstileModal');
         const widgetContainer = getElement('#turnstileWidget');

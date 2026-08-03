@@ -5,7 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
         <!-- 性能优化：DNS 预解析 -->
-        <link rel="dns-prefetch" href="//w7z.indevs.in" />
+        <link rel="preconnect" href="https://music-api.gdstudio.xyz" crossorigin />
+        <link rel="dns-prefetch" href="//music-api.gdstudio.xyz" />
         <link rel="dns-prefetch" href="//music.126.net" />
 
         <!-- SEO 基础标签 -->
@@ -60,8 +61,6 @@
         <!-- 样式表 -->
         <link rel="stylesheet" href="css/style.css" />
 
-        <!-- Cloudflare Turnstile -->
-        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
     </head>
 
     <body>
@@ -101,11 +100,11 @@
         </nav>
         <div class="main-container">
             <div class="content-section">
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="hot"><i class="fas fa-fire"></i> 搜索</button>
-                    <button class="tab-btn" data-tab="ranking"><i class="fas fa-trophy"></i> 排行榜</button>
-                    <button class="tab-btn" data-tab="artist"><i class="fas fa-microphone-alt"></i> 歌手</button>
-                    <button class="tab-btn" data-tab="radio"><i class="fas fa-podcast"></i> 电台</button>
+                <div class="tabs" role="tablist" aria-label="内容分类">
+                    <button class="tab-btn active" data-tab="hot" role="tab" aria-selected="true"><i class="fas fa-fire"></i> 搜索</button>
+                    <button class="tab-btn" data-tab="ranking" role="tab" aria-selected="false"><i class="fas fa-trophy"></i> 排行榜</button>
+                    <button class="tab-btn" data-tab="artist" role="tab" aria-selected="false"><i class="fas fa-microphone-alt"></i> 歌手</button>
+                    <button class="tab-btn" data-tab="radio" role="tab" aria-selected="false"><i class="fas fa-podcast"></i> 电台</button>
                 </div>
                 <!-- 热门推荐标签 -->
                 <div id="hotTab" class="tab-content active">
@@ -353,11 +352,11 @@
             </div>
             <div class="my-panel-section">
                 <h2 class="section-title"><i class="fas fa-user"></i> 我的</h2>
-                <div class="my-tabs">
-                    <button class="my-tab-btn active" data-mytab="playlist"><i class="fas fa-list-ul"></i> 歌单</button>
-                    <button class="my-tab-btn" data-mytab="favorites"><i class="fas fa-heart"></i> 收藏</button>
-                    <button class="my-tab-btn" data-mytab="history"><i class="fas fa-history"></i> 历史</button>
-                    <button class="my-tab-btn" data-mytab="lyrics"><i class="fas fa-music"></i> 歌词</button>
+                <div class="my-tabs" role="tablist" aria-label="我的音乐">
+                    <button class="my-tab-btn active" data-mytab="playlist" role="tab" aria-selected="true"><i class="fas fa-list-ul"></i> 歌单</button>
+                    <button class="my-tab-btn" data-mytab="favorites" role="tab" aria-selected="false"><i class="fas fa-heart"></i> 收藏</button>
+                    <button class="my-tab-btn" data-mytab="history" role="tab" aria-selected="false"><i class="fas fa-history"></i> 历史</button>
+                    <button class="my-tab-btn" data-mytab="lyrics" role="tab" aria-selected="false"><i class="fas fa-music"></i> 歌词</button>
                 </div>
                 <div id="myPlaylistPanel" class="my-tab-content active">
                     <div class="playlist-input-container">
@@ -443,10 +442,10 @@
                 </div>
             </div>
         </div>
-        <div class="mobile-page-indicators">
-            <div class="page-indicator active" data-page="0"></div>
-            <div class="page-indicator" data-page="1"></div>
-            <div class="page-indicator" data-page="2"></div>
+        <div class="mobile-page-indicators" role="navigation" aria-label="移动端页面导航">
+            <button class="page-indicator active" data-page="0" aria-label="搜索页" aria-current="page"></button>
+            <button class="page-indicator" data-page="1" aria-label="播放器页"></button>
+            <button class="page-indicator" data-page="2" aria-label="我的页面"></button>
         </div>
 
         <!-- 页脚 -->
@@ -454,7 +453,7 @@
             <div class="footer-content">
                 <div class="footer-links">
                     <a href="https://github.com/truelife0958/music888" target="_blank" rel="noopener noreferrer">
-                        <i class="fab fa-github"></i> GitHub
+                        <i class="fas fa-code-branch"></i> GitHub
                     </a>
                     <span class="footer-divider">|</span>
                     <a href="https://github.com/truelife0958/music888/issues" target="_blank" rel="noopener noreferrer">

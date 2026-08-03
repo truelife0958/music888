@@ -3,7 +3,7 @@
  * 提供离线缓存和快速加载支持
  */
 
-const CACHE_NAME = 'music888-v6';
+const CACHE_NAME = 'music888-v7';
 
 // NOTE: 静态资源列表 - 只缓存确定存在的核心资源
 // 构建后的 JS/CSS 文件名包含哈希值，无法预先知道，采用运行时缓存策略
@@ -72,7 +72,24 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 其他同源请求使用网络优先策略
+    // 构建产物带内容哈希，可永久缓存并直接复用，减少重复导航的网络等待。
+    if (url.pathname.startsWith('/assets/')) {
+        event.respondWith(
+            caches.match(request).then((cachedResponse) => {
+                if (cachedResponse) return cachedResponse;
+                return fetch(request).then((response) => {
+                    if (response.ok) {
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+                    }
+                    return response;
+                });
+            })
+        );
+        return;
+    }
+
+    // HTML、清单等非哈希资源使用网络优先，保证版本及时更新。
     event.respondWith(
         fetch(request)
             .then((response) => {

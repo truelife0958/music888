@@ -14,6 +14,7 @@ import {
 } from './types';
 import { escapeHtml, formatTime, getElement, ensureHttps } from './utils';
 import { APP_CONFIG, logger } from './config';
+import { createFeedbackState, createIconButton, createLoadMoreButton, createMediaItem } from './ui-components';
 
 // NOTE: 由 main.ts 在初始化时注入 player 模块，避免循环依赖
 // ui.ts → player.ts → control.ts/events.ts → ui.ts
@@ -151,7 +152,6 @@ function renderSongItems(songs: Song[], startIndex: number, container: HTMLEleme
 
         const isFavorite = playerSync().isSongInFavorites(song);
         const favoriteIconClass = isFavorite ? 'fas fa-heart' : 'far fa-heart';
-        const favoriteStyle = isFavorite ? 'color: #ff6b6b;' : '';
         const artistText = Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist;
 
         songItem.innerHTML = `
@@ -160,15 +160,20 @@ function renderSongItems(songs: Song[], startIndex: number, container: HTMLEleme
                 <div class="song-name">${escapeHtml(song.name)}</div>
                 <div class="song-artist">${escapeHtml(artistText)} · ${escapeHtml(song.album)}</div>
             </div>
-            <div class="song-actions">
-                <button class="action-btn favorite-btn" title="添加到我的喜欢" aria-label="添加到我的喜欢">
-                    <i class="${favoriteIconClass}" style="${favoriteStyle}"></i>
-                </button>
-                <button class="action-btn download-icon-btn" title="下载" aria-label="下载">
-                    <i class="fas fa-download"></i>
-                </button>
-            </div>
+            <div class="song-actions"></div>
         `;
+
+        const favoriteBtn = createIconButton({
+            className: `action-btn favorite-btn${isFavorite ? ' is-active' : ''}`,
+            iconClass: favoriteIconClass,
+            label: isFavorite ? '取消收藏' : '添加到我的喜欢',
+        });
+        const downloadIconBtn = createIconButton({
+            className: 'action-btn download-icon-btn',
+            iconClass: 'fas fa-download',
+            label: '下载',
+        });
+        songItem.querySelector('.song-actions')?.append(favoriteBtn, downloadIconBtn);
 
         // 点击歌曲播放
         songItem.onclick = () => {
@@ -179,9 +184,7 @@ function renderSongItems(songs: Song[], startIndex: number, container: HTMLEleme
             );
         };
 
-        const favoriteBtn = songItem.querySelector('.favorite-btn');
-        if (favoriteBtn) {
-            favoriteBtn.addEventListener('click', e => {
+        favoriteBtn.addEventListener('click', e => {
                 e.stopPropagation();
                 playerSync().toggleFavoriteButton(song);
                 // 乐观更新 UI
@@ -189,10 +192,12 @@ function renderSongItems(songs: Song[], startIndex: number, container: HTMLEleme
                 if (icon) {
                     if (playerSync().isSongInFavorites(song)) {
                         icon.className = 'fas fa-heart';
-                        (icon as HTMLElement).style.color = '#ff6b6b';
+                        favoriteBtn.classList.add('is-active');
+                        favoriteBtn.setAttribute('aria-label', '取消收藏');
                     } else {
                         icon.className = 'far fa-heart';
-                        (icon as HTMLElement).style.color = '';
+                        favoriteBtn.classList.remove('is-active');
+                        favoriteBtn.setAttribute('aria-label', '添加到我的喜欢');
                     }
                 }
 
@@ -206,12 +211,9 @@ function renderSongItems(songs: Song[], startIndex: number, container: HTMLEleme
                 }
 
                 dispatchUiSyncEvent('music888:favorites-updated');
-            });
-        }
+        });
 
-        const downloadIconBtn = songItem.querySelector('.download-icon-btn');
-        if (downloadIconBtn) {
-            downloadIconBtn.addEventListener('click', async e => {
+        downloadIconBtn.addEventListener('click', async e => {
                 e.stopPropagation();
                 const btn = e.currentTarget as HTMLButtonElement;
                 if (btn.disabled) return;
@@ -245,8 +247,7 @@ function renderSongItems(songs: Song[], startIndex: number, container: HTMLEleme
                     btn.disabled = false;
                     btn.classList.remove('loading');
                 }
-            });
-        }
+        });
 
         fragment.appendChild(songItem);
     }
@@ -353,25 +354,7 @@ export function displaySearchResults(songs: Song[], containerId: string, playlis
 export function renderFeedbackState(containerId: string, options: FeedbackRenderOptions): void {
     const container = getElement(`#${containerId}`);
     if (!container) return;
-
-    const variantClassMap: Record<FeedbackRenderOptions['state'], string> = {
-        loading: 'loading',
-        empty: 'empty-state',
-        error: 'error',
-    };
-    const rootClassName = variantClassMap[options.state];
-    const descriptionHtml = options.description
-        ? `<div${options.descriptionStyle ? ` style="${escapeHtml(options.descriptionStyle)}"` : ''}>${escapeHtml(options.description)}</div>`
-        : '';
-    const styleAttr = options.contentStyle ? ` style="${escapeHtml(options.contentStyle)}"` : '';
-
-    container.innerHTML = `
-        <div class="${rootClassName}" data-feedback-state="${options.state}"${styleAttr}>
-            <i class="${escapeHtml(options.iconClass)}"></i>
-            <div>${escapeHtml(options.message)}</div>
-            ${descriptionHtml}
-        </div>
-    `;
+    container.replaceChildren(createFeedbackState(options));
 }
 
 /**
@@ -418,6 +401,8 @@ export function updatePlayButton(isPlaying: boolean): void {
     if (icon) {
         icon.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
     }
+    DOM.playBtn?.classList.toggle('is-playing', isPlaying);
+    DOM.currentCover?.classList.toggle('playing', isPlaying);
 }
 
 /**
@@ -457,9 +442,9 @@ export function updateCurrentSongInfo(song: Song, coverUrl: string): void {
  * @param duration 总时长（秒）
  */
 export function updateProgress(currentTime: number, duration: number): void {
-    const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+    const progressRatio = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
     if (DOM.progressFill) {
-        DOM.progressFill.style.width = `${progressPercent}%`;
+        DOM.progressFill.style.transform = `scaleX(${progressRatio})`;
     }
     if (DOM.currentTime) {
         DOM.currentTime.textContent = formatTime(currentTime);
@@ -527,6 +512,24 @@ let lastLyricsLength = 0; // 缓存上次歌词数量，用于判断是否需要
 let lastActiveIndex = -1; // 缓存上次高亮行索引
 let lyricsUpdateFrame: number | null = null; // 用于节流歌词更新
 
+function findActiveLyricIndex(lyrics: LyricLine[], currentTime: number): number {
+    let low = 0;
+    let high = lyrics.length - 1;
+    let activeIndex = -1;
+
+    while (low <= high) {
+        const middle = Math.floor((low + high) / 2);
+        if (lyrics[middle].time <= currentTime) {
+            activeIndex = middle;
+            low = middle + 1;
+        } else {
+            high = middle - 1;
+        }
+    }
+
+    return activeIndex;
+}
+
 export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
     if (!DOM.lyricsContainer) return;
 
@@ -547,14 +550,7 @@ export function updateLyrics(lyrics: LyricLine[], currentTime: number): void {
         }
 
         // 计算当前应该高亮的行
-        let activeIndex = -1;
-        for (let i = 0; i < lyrics.length; i++) {
-            const nextLine = lyrics[i + 1];
-            if (currentTime >= lyrics[i].time && (!nextLine || currentTime < nextLine.time)) {
-                activeIndex = i;
-                break;
-            }
-        }
+        const activeIndex = findActiveLyricIndex(lyrics, currentTime);
 
         // NOTE: 只有歌词数量变化时才重新渲染整个 HTML
         if (lyrics.length !== lastLyricsLength) {
@@ -729,14 +725,8 @@ export function updateInlineLyrics(lyrics: LyricLine[], currentTime: number): vo
         return;
     }
 
-    let activeText = '';
-    for (let i = 0; i < lyrics.length; i++) {
-        const nextLine = lyrics[i + 1];
-        if (currentTime >= lyrics[i].time && (!nextLine || currentTime < nextLine.time)) {
-            activeText = lyrics[i].text;
-            break;
-        }
-    }
+    const activeIndex = findActiveLyricIndex(lyrics, currentTime);
+    const activeText = activeIndex >= 0 ? lyrics[activeIndex].text : '';
 
     if (activeText) {
         DOM.inlineLyricText.textContent = activeText;
@@ -780,17 +770,19 @@ export function displayArtistGrid(
     const fragment = document.createDocumentFragment();
 
     for (const artist of artists) {
-        const card = document.createElement('div');
-        card.className = 'artist-card';
-
         const avatarUrl = artist.picUrl
             ? ensureHttps(`${artist.picUrl}?param=120y120`)
             : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PHRleHQgeD0iMzIiIHk9IjQwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMykiPu+ZjjwvdGV4dD48L3N2Zz4=';
 
-        card.innerHTML = `
-            <img class="artist-avatar" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(artist.name)}" loading="lazy">
-            <div class="artist-name">${escapeHtml(artist.name)}</div>
-        `;
+        const card = createMediaItem({
+            className: 'artist-card',
+            imageClassName: 'artist-avatar',
+            imageUrl: avatarUrl,
+            imageAlt: artist.name,
+            bodyClassName: 'artist-info',
+            titleClassName: 'artist-name',
+            title: artist.name,
+        });
 
         card.addEventListener('click', () => onClick(artist));
         fragment.appendChild(card);
@@ -798,11 +790,7 @@ export function displayArtistGrid(
 
     // 如果还有更多数据，追加"加载更多"按钮
     if (options?.hasMore && options.onLoadMore) {
-        const btn = document.createElement('button');
-        btn.className = 'load-more-btn';
-        btn.innerHTML = '<i class="fas fa-plus-circle"></i> 加载更多';
-        btn.addEventListener('click', options.onLoadMore);
-        fragment.appendChild(btn);
+        fragment.appendChild(createLoadMoreButton(options.onLoadMore));
     }
 
     container.appendChild(fragment);
@@ -840,22 +828,23 @@ export function displayRadioList(
     const fragment = document.createDocumentFragment();
 
     for (const radio of radios) {
-        const item = document.createElement('div');
-        item.className = 'radio-item';
-
         const coverUrl = radio.picUrl
             ? ensureHttps(`${radio.picUrl}?param=100y100`)
             : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHJ4PSI4IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiLz48dGV4dCB4PSIyNSIgeT0iMzIiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSI+8J+OmTwvdGV4dD48L3N2Zz4=';
         const djName = radio.dj?.nickname || '未知主播';
         const meta = radio.programCount ? `${radio.programCount} 期` : '';
 
-        item.innerHTML = `
-            <img class="radio-cover" src="${escapeHtml(coverUrl)}" alt="${escapeHtml(radio.name)}" loading="lazy">
-            <div class="radio-info">
-                <div class="radio-name">${escapeHtml(radio.name)}</div>
-                <div class="radio-meta">${escapeHtml(djName)}${meta ? ' · ' + escapeHtml(meta) : ''}</div>
-            </div>
-        `;
+        const item = createMediaItem({
+            className: 'radio-item',
+            imageClassName: 'radio-cover',
+            imageUrl: coverUrl,
+            imageAlt: radio.name,
+            bodyClassName: 'radio-info',
+            titleClassName: 'radio-name',
+            title: radio.name,
+            metaClassName: 'radio-meta',
+            meta: `${djName}${meta ? ` · ${meta}` : ''}`,
+        });
 
         item.addEventListener('click', () => onClick(radio));
         fragment.appendChild(item);
@@ -863,11 +852,7 @@ export function displayRadioList(
 
     // 如果还有更多数据，追加"加载更多"按钮
     if (options?.hasMore && options.onLoadMore) {
-        const btn = document.createElement('button');
-        btn.className = 'load-more-btn';
-        btn.innerHTML = '<i class="fas fa-plus-circle"></i> 加载更多';
-        btn.addEventListener('click', options.onLoadMore);
-        fragment.appendChild(btn);
+        fragment.appendChild(createLoadMoreButton(options.onLoadMore));
     }
 
     container.appendChild(fragment);
@@ -951,9 +936,6 @@ export function displayAlbumGrid(
     const fragment = document.createDocumentFragment();
 
     for (const album of albums) {
-        const card = document.createElement('div');
-        card.className = 'album-card';
-
         const coverUrl = album.picUrl
             ? ensureHttps(`${album.picUrl}?param=100y100`)
             : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiLz48dGV4dCB4PSIzMiIgeT0iNDAiIGZvbnQtc2l6ZT0iMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSI+8J6OtTwvdGV4dD48L3N2Zz4=';
@@ -961,24 +943,24 @@ export function displayAlbumGrid(
         const sizePart = album.size ? `${album.size}首` : '';
         const metaParts = [year, sizePart].filter(Boolean).join(' · ');
 
-        card.innerHTML = `
-            <img class="album-cover" src="${escapeHtml(coverUrl)}" alt="${escapeHtml(album.name)}" loading="lazy">
-            <div class="album-info">
-                <div class="album-name">${escapeHtml(album.name)}</div>
-                ${metaParts ? `<div class="album-year">${metaParts}</div>` : ''}
-            </div>
-        `;
+        const card = createMediaItem({
+            className: 'album-card',
+            imageClassName: 'album-cover',
+            imageUrl: coverUrl,
+            imageAlt: album.name,
+            bodyClassName: 'album-info',
+            titleClassName: 'album-name',
+            title: album.name,
+            metaClassName: 'album-year',
+            meta: metaParts,
+        });
 
         card.addEventListener('click', () => onClick(album));
         fragment.appendChild(card);
     }
 
     if (options?.hasMore && options.onLoadMore) {
-        const btn = document.createElement('button');
-        btn.className = 'load-more-btn';
-        btn.innerHTML = '<i class="fas fa-plus-circle"></i> 加载更多';
-        btn.addEventListener('click', options.onLoadMore);
-        fragment.appendChild(btn);
+        fragment.appendChild(createLoadMoreButton(options.onLoadMore));
     }
 
     container.appendChild(fragment);

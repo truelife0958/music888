@@ -12,7 +12,9 @@
  * 8. mobile.css - 移动端适配及响应式
  */
 
-@import '@fortawesome/fontawesome-free/css/all.min.css';
+@import '@fortawesome/fontawesome-free/css/fontawesome.min.css';
+@import '@fortawesome/fontawesome-free/css/solid.min.css';
+@import '@fortawesome/fontawesome-free/css/regular.min.css';
 @import 'variables.css';
 @import 'base.css';
 @import 'layout.css';
@@ -21,3 +23,4 @@
 @import 'lyrics.css';
 @import 'animations.css';
 @import 'mobile.css';
+@import 'refinements.css';
