@@ -183,6 +183,7 @@ const ALLOWED_HOST_SUFFIXES = [
     '.music.126.net',
     '.stream.qqmusic.qq.com',
     '.kugou.com',
+    '.kuwo.cn',
     '.sycdn.kuwo.cn',
     '.xmcdn.com',
     '.nf.migu.cn',

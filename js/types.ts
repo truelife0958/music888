@@ -217,7 +217,7 @@ export interface NeteaseSongDetailResponse {
 export interface NeteaseSongUrlResponse {
     /** 响应状态码 */
     code: number;
-    /** URL 数据列表 */
+    /** URL 数据列表；部分 Enhanced 镜像的 match 接口会直接返回 URL 字符串 */
     data?: {
         /** 歌曲 ID */
         id: number;
@@ -229,7 +229,9 @@ export interface NeteaseSongUrlResponse {
         size: number;
         /** 音质类型 */
         type: string;
-    }[];
+    }[] | string;
+    /** Enhanced 镜像为跨域播放提供的 HTTPS 代理地址 */
+    proxyUrl?: string;
 }
 
 /**

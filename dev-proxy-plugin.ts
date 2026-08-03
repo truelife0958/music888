@@ -39,6 +39,7 @@ const ALLOWED_HOSTS = [
     'trackercdn.kugou.com',
     'webfs.tx.kugou.com',
     'freetyst.nf.migu.cn',
+    'kuwo.cn',
     'sycdn.kuwo.cn',
     'other.web.nf01.sycdn.kuwo.cn',
     'other.web.ra01.sycdn.kuwo.cn',

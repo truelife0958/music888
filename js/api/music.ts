@@ -189,6 +189,27 @@ function brToLevel(br: string): string {
 }
 
 /**
+ * 兼容网易云标准 URL 数组和 Enhanced /song/url/match 的字符串响应。
+ */
+function parseNeteaseSongUrl(data: NeteaseSongUrlResponse, fallbackBr: string): SongUrlResult | null {
+    if (data.code !== 200) return null;
+
+    if (Array.isArray(data.data)) {
+        const item = data.data[0];
+        if (item?.url) {
+            return {
+                url: item.url,
+                br: String(item.br || fallbackBr),
+                size: item.size || undefined,
+            };
+        }
+    }
+
+    const url = (typeof data.data === 'string' ? data.data : '') || data.proxyUrl || '';
+    return url ? { url, br: fallbackBr } : null;
+}
+
+/**
  * 当检测到试听版本时，优先再次尝试 NEC Unblock 以获取完整版本（仅网易云）
  */
 export async function tryGetFullVersionFromNeteaseUnblock(song: Song, quality: string): Promise<SongUrlResult | null> {
@@ -204,25 +225,14 @@ export async function tryGetFullVersionFromNeteaseUnblock(song: Song, quality: s
                 const v1Url = `${getNecApiUrl()}/song/url/v1?id=${song.id}&level=${encodeURIComponent(level)}&t=${Date.now()}`;
                 const v1Res = await fetchWithRetry(v1Url, {}, 0);
                 const v1Data: NeteaseSongUrlResponse = await v1Res.json();
-                if (v1Data.code === 200 && v1Data.data?.[0]?.url) {
-                    return {
-                        url: v1Data.data[0].url,
-                        br: String(v1Data.data[0].br || br || quality),
-                        size: v1Data.data[0].size,
-                    };
-                }
+                const v1Result = parseNeteaseSongUrl(v1Data, br || quality);
+                if (v1Result) return v1Result;
                 // 回退 /song/url/match（带 randomCNIP 解锁试听版）
                 const url = `${getNecApiUrl()}/song/url/match?id=${song.id}&br=${encodeURIComponent(br)}&randomCNIP=true&t=${Date.now()}`;
                 const response = await fetchWithRetry(url, {}, 0);
                 const data: NeteaseSongUrlResponse = await response.json();
-
-                if (data.code === 200 && data.data?.[0]?.url) {
-                    return {
-                        url: data.data[0].url,
-                        br: String(data.data[0].br || br || quality),
-                        size: data.data[0].size,
-                    };
-                }
+                const matchResult = parseNeteaseSongUrl(data, br || quality);
+                if (matchResult) return matchResult;
             } catch { /* ignore */ }
         }
     }
@@ -265,16 +275,12 @@ export async function getSongUrl(song: Song, quality: string): Promise<SongUrlRe
             const level = brToLevel(quality);
             const v1Res = await fetchWithRetry(`${getNecApiUrl()}/song/url/v1?id=${song.id}&level=${encodeURIComponent(level)}&t=${Date.now()}`);
             const v1Data: NeteaseSongUrlResponse = await v1Res.json();
-            let necRes: { url: string; br: string; size?: number } | null = null;
-            if (v1Data.code === 200 && v1Data.data?.[0]?.url) {
-                necRes = { url: v1Data.data[0].url, br: String(v1Data.data[0].br), size: v1Data.data[0].size };
-            } else {
+            let necRes = parseNeteaseSongUrl(v1Data, quality);
+            if (!necRes) {
                 // 回退 /song/url/match（带 randomCNIP 解锁）
                 const matchRes = await fetchWithRetry(`${getNecApiUrl()}/song/url/match?id=${song.id}&randomCNIP=true`);
                 const matchData: NeteaseSongUrlResponse = await matchRes.json();
-                if (matchData.code === 200 && matchData.data?.[0]?.url) {
-                    necRes = { url: matchData.data[0].url, br: String(matchData.data[0].br), size: matchData.data[0].size };
-                }
+                necRes = parseNeteaseSongUrl(matchData, quality);
             }
             if (necRes) {
                 if (!isProbablyPreview(necRes.url, necRes.size)) return necRes;

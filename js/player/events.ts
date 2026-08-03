@@ -82,7 +82,9 @@ export function bindAudioEvents(): void {
         logger.error('Audio Error:', detail, '\nsrc:', src);
         console.error('[music888] 播放失败诊断:', detail, '\n  src:', src);
         // 暴露到全局便于用户复制
-        (globalThis as any).__music888LastError = { detail, src: audioPlayer.src, error: err };
+        Object.assign(globalThis, {
+            __music888LastError: { detail, src: audioPlayer.src, error: err },
+        });
         ui.showNotification('音频资源加载错误，详情见控制台（F12）', 'error');
     });
 

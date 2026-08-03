@@ -67,6 +67,39 @@ describe('proxy governance', () => {
         });
     });
 
+    it('allows Kuwo CDN subdomains returned by the NEC match endpoint', async () => {
+        const fetchMock = vi.fn(async () =>
+            new Response(new Uint8Array([0x66, 0x4c, 0x61, 0x43]), {
+                status: 206,
+                headers: {
+                    'content-type': 'audio/x-flac',
+                    'content-range': 'bytes 0-3/1024',
+                },
+            })
+        );
+        vi.stubGlobal('fetch', fetchMock);
+
+        const targetUrl = 'https://bd-lw.kuwo.cn/resource/track.flac';
+        const { onRequest } = await import('./proxy.js');
+        const response = await onRequest(
+            createContext(proxyUrl(targetUrl), {
+                headers: { Range: 'bytes=0-3' },
+                ip: '203.0.113.9',
+            })
+        );
+
+        expect(response.status).toBe(206);
+        expect(response.headers.get('Content-Type')).toBe('audio/x-flac');
+        expect(response.headers.get('Content-Range')).toBe('bytes 0-3/1024');
+        expect(fetchMock).toHaveBeenCalledWith(
+            targetUrl,
+            expect.objectContaining({
+                method: 'GET',
+                headers: expect.any(Headers),
+            })
+        );
+    });
+
     it('returns a normalized 429 error when the in-memory rate limit is hit', async () => {
         const fetchMock = vi.fn(async () =>
             new Response(JSON.stringify({ ok: true }), {
